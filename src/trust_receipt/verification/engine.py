@@ -14,7 +14,7 @@ from trust_receipt.verification.findings import confirmed_finding, insufficient_
 from trust_receipt.verification.normalization import address_key, equivalent_reference, event_key
 from trust_receipt.verification.scope import scope_violation
 
-VERIFIER_VERSION = "m2.1"
+VERIFIER_VERSION = "m2.2"
 
 
 def _inconclusive(
@@ -52,9 +52,15 @@ def _reference_records(
     records: tuple[TransferRecord, ...],
 ) -> tuple[dict[tuple[int, str, int], TransferRecord], str | None]:
     merged: dict[tuple[int, str, int], TransferRecord] = {}
+    block_hashes: dict[int, str] = {}
     for record in records:
         if record.chain_id != task.chain_id:
             return {}, "Reference source returned a transfer from a different chain"
+        if record.block_hash is not None:
+            block_hash = record.block_hash.lower()
+            if record.block_number in block_hashes and block_hashes[record.block_number] != block_hash:
+                return {}, f"Reference sources disagree on block hash at block {record.block_number}"
+            block_hashes[record.block_number] = block_hash
         key = event_key(record)
         existing = merged.get(key)
         if existing is not None and not equivalent_reference(existing, record):
@@ -241,6 +247,19 @@ def verify_submission(
             finished_at=finished_at,
         )
     reference, problem = _reference_records(task, collected.transfers)
+    if problem is None:
+        # Each complete stream covers the same confirmed task. Disagreement is
+        # missing evidence, not permission to assemble a union of alleged truth.
+        for stream in evidence.streams:
+            stream_keys = {
+                event_key(record)
+                for page in stream.pages
+                for record in page.transfers
+                if scope_violation(task, record) is None
+            }
+            if stream_keys != reference.keys():
+                problem = "Complete reference sources disagree on the eligible event set"
+                break
     if problem is not None:
         return _inconclusive(
             run_id=run_id,

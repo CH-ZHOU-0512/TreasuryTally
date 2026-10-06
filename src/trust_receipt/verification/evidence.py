@@ -19,6 +19,8 @@ class ReferencePage(DomainModel):
 
 
 class ReferenceStream(DomainModel):
+    """One source's complete query for the entire confirmed task scope."""
+
     source: SourceDescriptor
     pages: tuple[ReferencePage, ...]
 
