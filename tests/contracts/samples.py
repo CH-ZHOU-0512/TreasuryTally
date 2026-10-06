@@ -200,6 +200,55 @@ def fixture_manifest_data() -> dict[str, Any]:
     return {"fixture_version": "1.0", "fixtures": fixtures}
 
 
+def task_candidate_data() -> dict[str, Any]:
+    task = task_data()
+    return {
+        "schema_version": "1.0",
+        "candidate_id": "candidate-1",
+        "chain_id": task["chain_id"],
+        "token_address": task["token_address"],
+        "treasury_addresses": task["treasury_addresses"],
+        "recipient_addresses": task["recipient_addresses"],
+        "start_block": task["start_block"],
+        "end_block": task["end_block"],
+        "exclusion_rules": task["exclusion_rules"],
+        "max_records": 200,
+        "ambiguities": [],
+        "missing_fields": [],
+        "clarification_questions": [],
+    }
+
+
+def claim_extraction_data() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "report_id": "report-1",
+        "claims": [{"claim_id": "claim-1", "claim_type": "CLAIMED_TOTAL", "value": "120000"}],
+        "ambiguities": [],
+        "clarification_questions": [],
+        "source_summary": "The report explicitly claims a total.",
+    }
+
+
+def follow_up_advice_data() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "outcome": "PASS",
+        "suggestions": [{"action": "NO_ACTION", "rationale": "No follow-up is needed.", "evidence_refs": []}],
+    }
+
+
+def result_explanation_data() -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "outcome": "PASS",
+        "calculated_total_base_units": "120000",
+        "calculated_count": 1,
+        "summary": "The report matches the complete reference evidence.",
+        "finding_explanations": [],
+    }
+
+
 def top_level_samples() -> dict[str, dict[str, Any]]:
     return {
         "task_spec.schema.json": task_data(),
@@ -210,4 +259,8 @@ def top_level_samples() -> dict[str, dict[str, Any]]:
         "receipt.schema.json": receipt_data(),
         "fixture_case.schema.json": fixture_case_data(),
         "fixture_manifest.schema.json": fixture_manifest_data(),
+        "task_spec_candidate.schema.json": task_candidate_data(),
+        "claim_extraction.schema.json": claim_extraction_data(),
+        "follow_up_advice.schema.json": follow_up_advice_data(),
+        "result_explanation.schema.json": result_explanation_data(),
     }

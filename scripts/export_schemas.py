@@ -1,4 +1,4 @@
-"""Generate stable M1 JSON Schemas and validate fixture directories."""
+"""Generate stable public JSON Schemas and validate fixture directories."""
 
 from __future__ import annotations
 
@@ -17,6 +17,12 @@ if str(SOURCE_ROOT) not in sys.path:
 from jsonschema import Draft202012Validator, FormatChecker  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from trust_receipt.agents.models import (  # noqa: E402
+    ClaimExtraction,
+    FollowUpAdvice,
+    ResultExplanation,
+    TaskSpecCandidate,
+)
 from trust_receipt.models import (  # noqa: E402
     FixtureCase,
     FixtureManifest,
@@ -42,6 +48,10 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("receipt.schema.json", "receipt", Receipt),
     ("fixture_case.schema.json", "fixture-case", FixtureCase),
     ("fixture_manifest.schema.json", "fixture-manifest", FixtureManifest),
+    ("task_spec_candidate.schema.json", "task-spec-candidate", TaskSpecCandidate),
+    ("claim_extraction.schema.json", "claim-extraction", ClaimExtraction),
+    ("follow_up_advice.schema.json", "follow-up-advice", FollowUpAdvice),
+    ("result_explanation.schema.json", "result-explanation", ResultExplanation),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
@@ -66,6 +76,17 @@ MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
         "fixture IDs and files are unique",
         "each file is cases/<fixture_id>.json",
     ),
+    "TaskSpecCandidate": (
+        "missing_fields exactly identify null required task fields",
+        "unresolved candidates require clarification questions",
+        "resolved candidates contain no clarification questions",
+    ),
+    "ClaimExtraction": (
+        "claim IDs and claim types are unique and values match their closed claim type",
+        "ambiguous claims require clarification questions",
+    ),
+    "FollowUpAdvice": ("follow-up actions are restricted by deterministic outcome",),
+    "ResultExplanation": ("application validation binds values and finding references to VerificationResult",),
 }
 
 
@@ -99,7 +120,7 @@ def build_schema(model: type[BaseModel], kebab_name: str) -> dict[str, Any]:
 
 
 def generate_schemas() -> dict[str, dict[str, Any]]:
-    """Return all eight schemas keyed by their frozen file names."""
+    """Return every versioned schema keyed by its stable file name."""
     return {
         filename: build_schema(model, kebab_name)
         for filename, kebab_name, model in SCHEMA_MODELS

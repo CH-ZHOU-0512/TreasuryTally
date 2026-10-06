@@ -11,7 +11,7 @@ last-reviewed: 2026-10-06
 
 # 外部集成与 M0 连通性规格
 
-本文是 RPC、Blockscout、Agent0 和 ERC-8004 外部集成的权威入口。它记录需要核实的端点、公开合约与资产、最小探针、成功条件和降级策略。总体进度仍由 [STATUS.md](STATUS.md) 负责，密钥规则由 [SECURITY.md](SECURITY.md) 负责。
+本文是 RPC、Blockscout、Agent0、ERC-8004 和结构化模型供应商外部集成的权威入口。它记录需要核实的端点、公开合约与资产、最小探针、成功条件和降级策略。总体进度仍由 [STATUS.md](STATUS.md) 负责，密钥规则由 [SECURITY.md](SECURITY.md) 负责。
 
 ## 共同约束
 
@@ -119,6 +119,25 @@ last-reviewed: 2026-10-06
 | Blockscout MCP | initialize、tools、交易或地址查询 | 工具名、脱敏结果摘要、分页状态 | 缺少密钥、限流、服务不可达 | 已实测通过；发现 16 项工具并读回同一交易 |
 | Agent0 | 读取或创建受控身份 | 服务 ID、所有者、公网交易或读结果 | 网络或 Registry 错配 | 已实测通过；受控 ID `11155111:10691` |
 | ERC-8004 | 写入、receipt、读回 | 交易哈希、区块、读回摘要 | 余额不足、revert、未知提交状态 | 已实测通过；中性反馈已确认并读回 |
+
+## M4 结构化模型供应商
+
+用途：把自然语言任务和服务报告组织成严格候选，并生成白名单计划、受限补查建议与结果解释。模型不拥有金额、
+Finding、三态结论、数据库、发布或写链权限。
+
+- OpenAI：要求 `OPENAI_API_KEY` 与非空 `OPENAI_MODEL`；通过 LangChain `ChatOpenAI` 请求严格 JSON Schema 输出。
+- DeepSeek：要求 `DEEPSEEK_API_KEY` 与非空 `DEEPSEEK_MODEL`；使用官方 `https://api.deepseek.com` 的
+  OpenAI-compatible Responses API 和 JSON Schema 输出。
+- 两者统一 30 秒默认超时、只读请求最多重试两次；原始响应必须立即进入 Pydantic 与确定性白名单校验。
+- 外部测试分别位于 `tests/external/test_openai_ai_probe.py` 和 `test_deepseek_ai_probe.py`，统一使用 `external` marker。
+- 缺少 key 或固定模型名时报告阻塞；离线 mock 只能验证 adapter 映射和安全边界，不能宣称供应商已实测。
+
+2026-10-07 已使用固定 `deepseek-flash` 完成一次真实结构化调用，返回的 `TaskSpecCandidate` 通过严格 Pydantic
+校验；该次临时凭据随后已从本地环境删除，不在 Git、日志或文档中保留。OpenAI 真实调用仍因缺少
+`OPENAI_API_KEY` 和 `OPENAI_MODEL` 阻塞。后续再次运行 DeepSeek 探针需要新生成并仅在本机配置的凭据。
+
+失败降级：结构化输出为空、截断、schema 不符、未知操作或与确定性结果冲突时拒绝该候选，保留用户确认或纯确定性流程；
+不得自动采用模型猜测，也不得把模型失败映射成服务负面信誉。
 
 ## 2026-10-06 脱敏执行记录
 
