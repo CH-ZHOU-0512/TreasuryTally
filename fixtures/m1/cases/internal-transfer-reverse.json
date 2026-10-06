@@ -77,8 +77,8 @@
   "reference": {
     "sources": [
       {
-        "source": "rpc",
-        "source_id": "fixture-rpc-08",
+        "source": "blockscout",
+        "source_id": "fixture-blockscout-08",
         "retrieved_at": "2026-10-06T07:30:00Z",
         "complete": true,
         "details": {
