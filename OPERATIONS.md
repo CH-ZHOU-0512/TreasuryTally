@@ -127,8 +127,14 @@ docker compose -f deploy/docker-compose.prod.yml ps
 ```
 
 反向代理使用 `deploy/nginx-location.conf` 中的路径规则，入口为 `/trust-receipt/`。规则包含 WebSocket、
-长连接和 HTTP Basic Auth；认证文件必须位于反向代理容器可读取、但不可公开下载的位置。部署后分别检查
-容器内健康端点、经认证的公网入口以及一次页面 WebSocket 会话。`.env`、访问口令和 PEM 私钥不得进入镜像。
+长连接和 HTTP Basic Auth；Basic Auth 只能放在有效 HTTPS 证书之后，明文 HTTP 入口必须重定向到 HTTPS。
+认证文件必须位于反向代理容器可读取、但不可公开下载的位置。如果 Nginx 配置使用单文件 bind mount，宿主机
+原子替换配置后应重建代理容器，使新 inode 被重新挂载。部署后分别检查容器内健康端点、经认证的公网入口以及
+一次页面 WebSocket 会话。`.env`、访问口令和 PEM 私钥不得进入镜像。
+
+若部署地域无法连接 `api.blockscout.com`，清空部署环境的 `BLOCKSCOUT_PRO_API_KEY` 并重建主应用容器，页面会
+明确显示 `RPC-only`。此时必须单独验证 `ETH_RPC_URL` 的真实 Sepolia 读取；不得保留已配置提示并让每次操作等待
+Blockscout 超时，也不得把 RPC 结果伪装成 Blockscout 抽样成功。
 
 首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面

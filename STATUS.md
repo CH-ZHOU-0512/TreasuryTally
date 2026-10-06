@@ -20,6 +20,7 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 `d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
 M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面、
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
+M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理提供受认证访问。
 
 ## 已完成
 
@@ -102,6 +103,13 @@ fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已�
   `PASS`、合法受限 AI 产物和两个独立回执；目标区块读取 1 页、6 条 RPC 原始事件，Blockscout 对真实交易完成补充抽样。
 - 真实浏览器复跑得到同样的 `FAIL → PASS`，两个 attempt 均展示 RPC `COMPLETE` 与 Blockscout `SAMPLED`；重启 Streamlit
   后输入相同工作区 ID，可从 SQLite 与私有回执恢复已确认任务及两个 attempt，历史 AI 文本不会重新生成。
+- 已新增不包含 `.env`、PEM、私有回执和本地数据的容器构建文件；生产容器以非 root 用户运行，SQLite 与私有回执挂载到
+  宿主机持久化目录，应用端口不直接发布到公网。
+- 广州服务器入口为 `https://creatoros.top/trust-receipt/`，使用 HTTPS + Basic Auth；IP 明文入口只执行 HTTPS 重定向。
+  公网验收得到未认证 `401`、认证页面 `200`、健康检查 `200/ok`、WebSocket `101`，既有 IP 站点仍返回 `200`。
+- 部署服务器已真实调用 DeepSeek 并得到 schema 合法候选，真实 Sepolia RPC 读回固定交易与整数金额。该地域对
+  `api.blockscout.com` 返回污染 DNS 结果并不可达，因此部署实例按既定降级策略明确运行 RPC-only；本地 M5 的
+  Blockscout `SAMPLED` 真实联调证据不受影响。
 
 ## 待集成或尚未开始
 
@@ -119,6 +127,7 @@ fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已�
 - ERC-8004 上游参考仓库存在 npm peer dependency 冲突，安装需 `--legacy-peer-deps`。
 - 上游 npm 审计报告 35 个依赖漏洞；该仓库当前仅作参考和合约测试，没有执行自动修复。
 - GitHub Actions 仅覆盖无需密钥的本地质量门；真实 external 探针仍需显式配置后单独执行。
+- 广州生产实例无法直连 Blockscout Pro API；当前部署明确使用真实 Sepolia RPC-only，未将降级状态伪装为抽样成功。
 
 ## 下一步
 
