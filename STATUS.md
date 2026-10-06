@@ -15,7 +15,7 @@ last-reviewed: 2026-10-06
 
 ## 当前阶段
 
-开发前准备。环境与上游参考已就绪，文档治理已建立，业务代码尚未开始。
+M0 外部连通性验证已完成：RPC、Blockscout MCP、Agent0 和 ERC-8004 均已通过真实外部读取验证。
 
 ## 已完成
 
@@ -29,10 +29,16 @@ last-reviewed: 2026-10-06
 - 开发前产品、架构、数据、测试、安全、运维和协作文档已建立。
 - M0 外部集成规格、分阶段依赖门槛和代码文件规模约束已建立。
 - Git 仓库已连接到 `https://github.com/CH-ZHOU-0512/xinjv`，默认分支为 `main`。
+- 已创建 `pyproject.toml`、`src/trust_receipt/` 包和 `tests/external/`，包含 RPC、Blockscout MCP、
+  Agent0 与 ERC-8004 的最小探针。
+- 外部调用统一设置超时；只读操作最多重试两次；ERC-8004 写探针默认关闭且不自动重发未知交易。
+- RPC 已在 Sepolia 读取固定历史区块和真实 WETH Transfer，保留整数金额及完整事件键。
+- Blockscout MCP 已完成 initialize、16 项工具发现及同一笔 Sepolia 交易查询；客户端与服务端统一使用 MCP 1.26.0。
+- 已创建团队控制的 Agent0 身份 `11155111:10691`，Agent0 SDK 1.7.1 可重复读取名称、owner 和 active 状态。
+- 三个 ERC-8004 Registry 的链上 bytecode 与相互关联已核验；中性反馈交易已确认并从链上读回一致内容。
 
 ## 尚未开始
 
-- `src/trust_receipt/` Python 包。
 - Pydantic 领域模型和 JSON Schema。
 - 12 份人工标注 fixtures。
 - 确定性验收引擎。
@@ -42,15 +48,9 @@ last-reviewed: 2026-10-06
 - SQLite repository。
 - 公共回执发布与 ERC-8004 接入。
 
-## 外部配置待办
+## 后续阶段外部配置待办
 
 - 提供 `OPENAI_API_KEY`。
-- 提供 `BLOCKSCOUT_PRO_API_KEY`。
-- 提供可用的 `ETH_RPC_URL`。
-- 核实 Sepolia 上的 Agent0/ERC-8004 Registry 合约地址和 ABI 来源。
-- 确认测试 ERC-20、已知 Transfer 交易与小区块范围。
-- 创建三个只用于测试网的钱包并准备少量测试币。
-- 确认用于演示的 ERC-20 代币及历史/自造交易数据。
 - 如使用 Pinata，提供 `PINATA_JWT`。
 
 ## 已知问题
@@ -62,7 +62,8 @@ last-reviewed: 2026-10-06
 
 ## 下一步
 
-先执行 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) 的 M0 外部连通性验证；详细检查项见 [INTEGRATIONS.md](INTEGRATIONS.md)。M0 受外部配置阻塞时，可并行进入 M1 和第一条 fixture 驱动的确定性纵向切片，但不得把 mock 结果记为 M0 完成。
+M1 尚未开始。启动时先由主负责人按 [M1_HANDOFF.md](M1_HANDOFF.md) 建立集成分支并冻结领域契约，
+再让 AI 同事 A、B 分别并行处理 fixtures 与 Schema/契约测试；同时保持 M0 外部探针可重复运行。
 
 ## 状态更新规则
 

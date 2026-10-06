@@ -20,6 +20,8 @@ last-reviewed: 2026-10-06
 4. 外部服务、链上合约或网络探针相关变更必须读 [INTEGRATIONS.md](INTEGRATIONS.md)。
 5. 测试、安全或运行相关变更分别按需读取 [TEST_PLAN.md](TEST_PLAN.md)、[SECURITY.md](SECURITY.md)、[OPERATIONS.md](OPERATIONS.md)。
 6. 不要默认递归读取 `.venv/`、`.venv-blockscout/` 或 `references/`。只有需要核实上游行为时才定向读取参考仓库。
+7. 参与 M1 并行开发时必须再读 [M1_HANDOFF.md](M1_HANDOFF.md)，并且只执行主负责人、AI 同事 A
+   或 AI 同事 B 中被明确分配的一个岗位。
 
 ## 实现约束
 
@@ -43,6 +45,7 @@ last-reviewed: 2026-10-06
 - 开发计划完成项只在 `STATUS.md` 记录，不逐日改写 `DEVELOPMENT_PLAN.md`。
 - 凭据名称变化：同步 `.env.example`、`OPERATIONS.md` 和 `SECURITY.md`。
 - 外部端点、网络、合约地址、探针和降级策略变化：更新 `INTEGRATIONS.md`。
+- M1 并行岗位、分支所有权和 AI 交接流程变化：更新 `M1_HANDOFF.md`；当前进展仍只写 `STATUS.md`。
 
 ## 验证命令
 

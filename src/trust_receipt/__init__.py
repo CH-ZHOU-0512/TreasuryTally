@@ -1,0 +1,1 @@
+"""Trust Receipt application package."""
