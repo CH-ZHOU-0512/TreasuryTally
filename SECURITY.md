@@ -20,6 +20,8 @@ last-reviewed: 2026-10-06
 - 只使用 `.env` 或运行环境注入密钥；`.env` 已被 `.gitignore` 排除。
 - `.env.example` 只能包含变量名和无敏感示例。
 - `SERVICE_A_PRIVATE_KEY`、`SERVICE_B_PRIVATE_KEY`、`REVIEWER_PRIVATE_KEY` 必须是测试网专用钱包。
+- 团队控制报表服务使用测试钱包对 canonical `report_hash` 签名；repository 接收前必须恢复并比对预配置签名者地址。
+  自动化测试只在运行时生成临时无资产账户，不得把测试或真实私钥提交到仓库。
 - ERC-8004 写探针还必须显式设置 `M0_ENABLE_WRITES=true`；默认值为 `false`，未知提交状态禁止自动重发。
 - `AGENT0_SERVICE_ID` 必须配合公开的 `AGENT0_EXPECTED_OWNER` 校验，避免向非团队控制身份写入测试反馈。
 - 禁止使用持有主网资产的钱包、个人常用钱包或复用助记词。

@@ -22,6 +22,8 @@ last-reviewed: 2026-10-06
 - 哈希使用带 `0x` 的十六进制字符串，并记录算法；默认 `keccak256` 或 `sha256`，不得混用而不标注。
 - 金额使用代币最小单位的十进制整数字符串，展示值不是计算权威。
 - 规范化哈希使用稳定字段顺序、UTF-8 和明确的 canonical JSON 算法。
+- 当前 canonical JSON 规则为：JSON 对象键按 Unicode 字符串排序、无非必要空白、UTF-8 编码、数组保留顺序，
+  且递归拒绝二进制浮点值；稳定哈希为带 `0x` 前缀的小写 `sha256`。
 - 新增字段应向后兼容；破坏性变更必须提升顶层 schema 版本。
 - M1 的 Pydantic 领域模型使用严格输入、`extra=forbid` 和冻结实例；适配器必须在进入领域层前完成类型转换。
 - M1 地址边界只校验 `0x` 加 40 个十六进制字符并保留输入大小写；地址集合去重和比较使用小写比较键，EIP-55
@@ -57,6 +59,7 @@ spec_hash: hash
 - `max_records` 在 schema `1.0` 中固定为 `200`。
 - 任务确认后除 `task_id` 外参与判断的字段不可变。
 - 任何修改产生新的任务版本和新的 `spec_hash`。
+- `spec_hash` 覆盖除 `spec_hash` 自身外的完整 canonical `TaskSpec`。
 
 ## TransferRecord
 
@@ -110,6 +113,8 @@ signature: string | null
 - `attempt` 只能为 1 或 2。
 - `transfers` 最多 200 条，且其中每条记录的 `source` 必须为 `service`。
 - `claimed_count` 为非负整数；不得根据 `transfers` 长度静默改写服务声明。
+- `report_hash` 覆盖除 `report_hash` 与 `signature` 外的完整 canonical `ServiceSubmission`；签名绑定
+  `report_hash`，当前团队控制 adapter 使用 EVM personal-sign 消息恢复签名者地址。
 
 ## VerificationPlan
 
@@ -222,6 +227,16 @@ publication:
 ```
 
 公开回执不得包含私钥、API 密钥、未授权个人信息或未脱敏的私有报告正文。
+
+`receipt_hash` 覆盖除 `receipt_hash` 自身外的完整 canonical `Receipt`。publication 状态变化会产生新的回执内容和
+新哈希，不得沿用旧哈希。
+
+## Attempt 持久化不变量
+
+- SQLite 分别保存 `TaskSpec`、每个 `ServiceSubmission`/故障注入元数据和每个 `VerificationResult`。
+- `(task_id, attempt)` 与 `submission_id` 唯一；attempt 只能追加，禁止 UPSERT 或覆盖。
+- attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
+- 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
 ## M1 fixture 契约
 

@@ -95,6 +95,8 @@ last-reviewed: 2026-10-06
 - Ruff 检查通过。
 - `pip check` 无破损依赖。
 - 涉及外部系统的能力必须报告“已实测”或“未实测”，不能用 mock 结果代替实测声明。
+- GitHub Actions 的普通质量门只运行 `not external` 测试、Ruff 和 `pip check`；外部探针没有显式密钥时保持跳过，
+  不得以 mock 或空配置标记为外部成功。
 
 ## 标准命令
 

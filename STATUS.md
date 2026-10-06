@@ -16,8 +16,8 @@ last-reviewed: 2026-10-06
 ## 当前阶段
 
 M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
-均已集成到 `codex/m1-integration`。
-独立分支 `codex/m2-verification` 已完成确定性验收核心及 M1/M2 严格样例联调，PR #1 可进入审查。
+均已集成到 `codex/m1-integration`。M2 PR #1 已合并，远端合并提交为
+`d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环已在本地实现并验证。
 
 ## 已完成
 
@@ -49,7 +49,7 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 - A 的 12 份 fixtures 与 B 的 8 份 Schema、导出脚本和契约测试已通过 PR 集成；3 处参考记录与来源描述符
   不一致已修正，来源标签现在可交叉核验。
 
-## M2 分支验证进展
+## M2/M3 验证进展
 
 - 已实现任务范围过滤、完整事件键去重、整数汇总、分页连续性校验和可定位 Finding。
 - 首条纵向切片得到 `110000`、`FAIL` 和两项 Finding。
@@ -57,14 +57,18 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 - 严格联调入口 `python -m pytest tests/verification/test_m1_fixtures.py --m1-fixtures fixtures/m1`
   已实际运行，12 份 fixtures 的金额、数量、三态结果、Finding、规则和事件键全部匹配。
 - 全量测试 97 项通过、5 项因外部配置缺失而跳过；fixture Schema 校验、Ruff 与 pip check 均通过。
+- 已实现拒绝 `float` 的 canonical JSON、SHA-256 稳定哈希及 TaskSpec、ServiceSubmission、Receipt 校验函数。
+- 已实现团队控制服务 A/B 端口、EVM 签名恢复校验和独立故障注入元数据，模拟故障不混入参考来源。
+- 已实现 SQLite task/attempt/verification 分表留档与状态机；attempt 只追加，最多一次补交，签名失败不消耗 attempt。
+- 无 UI 编排已跑通首次遗漏导致 `FAIL`、同服务补交或切换服务后 `PASS`，两个 attempt 均可分别读取。
+- 已增加最小 GitHub Actions 配置：普通 CI 执行非 external pytest、Ruff、pip check；外部探针不伪装成功。
+- 当前全量本地测试为 106 项通过、5 项因外部配置缺失而明确跳过；Ruff 与 pip check 通过。
 
 ## 待集成或尚未开始
 
 - 确定性验收引擎与真实读取 adapter 的产品流程联调。
-- 报表服务 A/B。
 - LangChain 编排。
 - Streamlit 产品页面。
-- SQLite repository。
 - 公共回执发布与 ERC-8004 接入。
 
 ## 后续阶段外部配置待办
@@ -77,11 +81,11 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 - Docker Desktop 4.79.0 当前无法启动，自动升级在管理员阶段失败。Blockscout MCP 本地 Python 运行方案已绕过该问题，Docker 不阻塞 MVP。
 - ERC-8004 上游参考仓库存在 npm peer dependency 冲突，安装需 `--legacy-peer-deps`。
 - 上游 npm 审计报告 35 个依赖漏洞；该仓库当前仅作参考和合约测试，没有执行自动修复。
-- 当前尚未配置文档或测试 CI；进入业务开发后再按实际命令建立检查流程。
+- GitHub Actions 仅覆盖无需密钥的本地质量门；真实 external 探针仍需显式配置后单独执行。
 
 ## 下一步
 
-审查并合并 M2 PR #1，随后启动 M3 报表服务 A/B、签名、故障注入和一次补交实现。
+启动 M4：接入受限 AI 主张/计划编排与 Streamlit 页面，同时保持领域、验证、存储和供应商 adapter 解耦。
 
 ## 状态更新规则
 
