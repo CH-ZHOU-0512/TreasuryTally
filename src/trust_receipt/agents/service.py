@@ -75,10 +75,27 @@ class RestrictedAIService:
         return validate_verification_plan(plan, task=task, claims=extraction.claims)
 
     def suggest_follow_up(self, result: VerificationResult) -> FollowUpAdvice:
+        allowed_actions = {
+            "PASS": ["NO_ACTION"],
+            "FAIL": ["REQUEST_RESUBMISSION", "SWITCH_SERVICE", "MANUAL_REVIEW"],
+            "INCONCLUSIVE": [
+                "REFRESH_REFERENCE_EVIDENCE",
+                "CROSS_CHECK_REFERENCE_SOURCE",
+                "CONFIRM_TASK_SCOPE",
+                "MANUAL_REVIEW",
+            ],
+        }[result.outcome.value]
+        allowed_evidence_refs = sorted(
+            {ref for finding in result.findings for ref in finding.evidence_refs}
+        )
         advice = self._model.generate(
             schema=FollowUpAdvice,
             system_prompt=FOLLOW_UP_PROMPT,
-            payload={"verification_result": result.model_dump(mode="json")},
+            payload={
+                "verification_result": result.model_dump(mode="json"),
+                "allowed_actions": allowed_actions,
+                "allowed_evidence_refs": allowed_evidence_refs,
+            },
         )
         return validate_follow_up(advice, result)
 

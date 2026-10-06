@@ -19,6 +19,7 @@ from trust_receipt.agents import TaskSpecCandidate
 from trust_receipt.models import ExclusionRule, ExclusionRuleType, VerificationOutcome
 
 PROVIDERS = ("离线 fixture 演示", "OpenAI 真实模型", "DeepSeek 真实模型")
+EVIDENCE_MODES = ("完整 fixture 证据", "模拟证据不可用", "真实 Sepolia RPC")
 
 
 def _step(number: int, title: str, subtitle: str) -> None:
@@ -31,25 +32,35 @@ def _step(number: int, title: str, subtitle: str) -> None:
 
 def _runtime() -> AppRuntime | None:
     provider = st.sidebar.selectbox("AI 路径", PROVIDERS, key="provider")
+    if "workspace_id" not in st.session_state:
+        st.session_state.workspace_id = f"workspace-{uuid4().hex[:8]}"
+    workspace_id = st.sidebar.text_input(
+        "工作区 ID",
+        key="workspace_id",
+        help="保存此 ID 可在页面或进程重启后恢复最新任务和 attempt。",
+    )
     evidence_label = st.sidebar.radio(
         "独立证据",
-        ("完整 fixture 证据", "模拟证据不可用"),
+        EVIDENCE_MODES,
         key="evidence_label",
     )
-    config = (provider, evidence_label)
+    config = (provider, evidence_label, workspace_id)
     if st.session_state.get("runtime_config") != config:
         for key in ("runtime", "candidate", "task", "executions", "draft_error"):
             st.session_state.pop(key, None)
         st.session_state.runtime_config = config
-        st.session_state.session_id = uuid4().hex
     if "runtime" not in st.session_state:
         try:
             st.session_state.runtime = create_runtime(
                 project_root=PROJECT_ROOT,
-                session_id=st.session_state.session_id,
+                session_id=workspace_id,
                 provider=provider,
-                evidence_sufficient=evidence_label == "完整 fixture 证据",
+                evidence_mode=evidence_label,
             )
+            restored = st.session_state.runtime.workflow.restore_latest()
+            if restored is not None:
+                st.session_state.task, st.session_state.executions = restored
+                st.session_state.restore_notice = True
         except ConfigurationBlocked as error:
             st.error(str(error))
             st.info("可切换到“离线 fixture 演示”继续；该路径会明确标注，且不会冒充真实模型调用。")
@@ -183,6 +194,24 @@ def _render_attempts() -> None:
                 st.info("受限解释：" + execution.explanation.summary)
             for error in execution.ai_errors:
                 st.warning(error)
+            if execution.evidence_diagnostics:
+                st.markdown("**证据来源状态**")
+                for diagnostic in execution.evidence_diagnostics:
+                    st.markdown(
+                        f'<div class="status-card"><strong>{diagnostic.source}</strong> · '
+                        f'{diagnostic.role}<br><span class="badge badge-submitted">'
+                        f'{diagnostic.status}</span> {diagnostic.detail}<br>'
+                        f'<small>{diagnostic.pages} pages · {diagnostic.records} records · '
+                        f'{diagnostic.elapsed_ms} ms</small></div>',
+                        unsafe_allow_html=True,
+                    )
+            elif result.reference_sources:
+                st.markdown("**证据来源状态**")
+                for source in result.reference_sources:
+                    st.write(
+                        f"{source.source.value} · complete={source.complete} · "
+                        f"retrieved_at={source.retrieved_at.isoformat()}"
+                    )
             if result.findings:
                 st.markdown("**Finding 明细**")
                 for finding in result.findings:
@@ -225,6 +254,9 @@ def main() -> None:
         f'<div class="mode-banner"><strong>当前路径：</strong>{runtime.mode_label}</div>',
         unsafe_allow_html=True,
     )
+    st.caption(f"证据路径：{runtime.evidence_label}")
+    if st.session_state.pop("restore_notice", False):
+        st.info("已从该工作区的 SQLite 与本地回执恢复最新任务；历史 AI 文本未重新生成。")
 
     _step(1, "描述验收任务", "自然语言只用于生成可修改候选")
     request = st.text_area(

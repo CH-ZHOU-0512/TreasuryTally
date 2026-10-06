@@ -114,8 +114,10 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 默认本地数据写入 `data/`，私有回执写入 `receipts/private/`，两者均不提交版本库。
 
 首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
-和固定模型名；缺少配置会在页面显示阻塞。每个浏览器会话使用独立本地数据库与运行时生成的无资产签名账户。页面不会执行
-公共上传、ERC-8004 写入或其他 M6 动作，回执 publication 状态保持 `NOT_SUBMITTED`。
+和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面
+显示阻塞。工作区 ID 对应独立本地数据库、私有回执目录和运行时生成的无资产签名账户；进程重启后输入同一 ID 可恢复最新任务
+及两个 attempt，历史 AI 文本不会重新生成。页面不会执行公共上传、ERC-8004 写入或其他 M6 动作，回执 publication 状态保持
+`NOT_SUBMITTED`。
 
 ## 验证
 
@@ -135,10 +137,11 @@ M4 离线门槛与真实模型探针分别运行：
 .\.venv\Scripts\python.exe -m pytest tests\m4
 .\.venv\Scripts\python.exe -m pytest tests\external\test_openai_ai_probe.py -m external -v
 .\.venv\Scripts\python.exe -m pytest tests\external\test_deepseek_ai_probe.py -m external -v
+.\.venv\Scripts\python.exe -m pytest tests\external\test_m5_live_product_probe.py -m external -v
 ```
 
-外部探针缺少 key 或固定模型名时会明确 skip。不要把 mock 通过解释为真实模型已连通。任何曾粘贴到聊天、日志或提交中的
-密钥都必须先撤销并重新生成，再由操作者直接写入本机 `.env`，不得再次通过对话传递。
+外部探针缺少 key、固定模型名或 RPC 配置时会明确 skip。不要把 mock 通过解释为真实模型已连通。项目所有者明确授权继续使用
+对话中提供的测试供应商密钥时，只能放入被 Git 忽略的本机 `.env`；不得写入日志、提交、fixture、回执或模型 prompt。
 
 本地回执可在独立进程中校验和重放：
 

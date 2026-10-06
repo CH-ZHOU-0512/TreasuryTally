@@ -32,9 +32,10 @@ fields. Include both approved aggregation rules and every approved check. Do not
 
 FOLLOW_UP_PROMPT = COMMON_BOUNDARY + """
 
-Suggest only schema-enumerated follow-up actions appropriate to the supplied deterministic outcome. Reference
-only evidence_refs already present in the result. Suggestions are advisory and must not claim that any external
-operation was executed.
+Choose actions only from INPUT_JSON.allowed_actions and copy evidence_refs only from
+INPUT_JSON.allowed_evidence_refs, character-for-character. Suggestions are advisory and must not claim that any
+external operation was executed. When allowed_evidence_refs is empty, every suggestion must use an empty
+evidence_refs array. For PASS, return one NO_ACTION suggestion with an empty evidence_refs array.
 """
 
 EXPLANATION_PROMPT = COMMON_BOUNDARY + """
