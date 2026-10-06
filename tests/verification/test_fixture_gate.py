@@ -49,7 +49,7 @@ def test_fixture_bridge_checks_exact_expected_amount_and_findings() -> None:
         "finding_type": "MISSING_TRANSFER",
         "severity": "error",
         "status": "confirmed",
-        "violated_rule": "complete_event_set",
+        "violated_rule": "service transfer set must include every eligible reference event",
         "event_keys": [list(record.event_key)],
     }])
     missing_case = FixtureCase.model_validate(missing_data)
