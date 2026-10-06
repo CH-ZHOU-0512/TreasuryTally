@@ -15,9 +15,9 @@ last-reviewed: 2026-10-06
 
 ## 当前阶段
 
-M1 主负责人阶段已完成：领域契约、Pydantic 核心模型、fixture 布局和 Schema 命名已冻结并通过本地验证。
-AI 同事 A、B 已按用户确认开始并行工作，交付尚未集成到本分支。
-独立分支 `codex/m2-verification` 已实现纯函数验收核心，草稿 PR #1 等待 M1 样例联调。
+M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
+均已集成到 `codex/m1-integration`。
+独立分支 `codex/m2-verification` 已完成确定性验收核心及 M1/M2 严格样例联调，PR #1 可进入审查。
 
 ## 已完成
 
@@ -46,21 +46,21 @@ AI 同事 A、B 已按用户确认开始并行工作，交付尚未集成到本�
   参考不完整或证据不足强制为 `INCONCLUSIVE`。
 - fixture 布局固定为 `fixtures/m1/manifest.json` 与 `fixtures/m1/cases/`；8 个顶层 Schema 文件固定输出到
   `schemas/v1/`，导出脚本路径固定为 `scripts/export_schemas.py`。
+- A 的 12 份 fixtures 与 B 的 8 份 Schema、导出脚本和契约测试已通过 PR 集成；3 处参考记录与来源描述符
+  不一致已修正，来源标签现在可交叉核验。
 
 ## M2 分支验证进展
 
 - 已实现任务范围过滤、完整事件键去重、整数汇总、分页连续性校验和可定位 Finding。
 - 首条纵向切片得到 `110000`、`FAIL` 和两项 Finding。
 - 对抗性测试复现并修复了完整来源事件集合不一致、同一区块哈希冲突两类误判 PASS；两者现在返回 INCONCLUSIVE。
-- 本分支全量测试 59 项通过，6 项明确跳过（5 项外部配置缺失，1 项 M1 样例尚未集成）；Ruff 与 pip check 通过。
-- 已提供严格联调入口：`python -m pytest tests/verification/test_m1_fixtures.py --m1-fixtures fixtures/m1`。
-  显式指定目录却缺少 manifest 时会失败，已实际验证；尚未声称 12 份样例通过。Schema 校验仍由 B 的契约测试负责。
+- 严格联调入口 `python -m pytest tests/verification/test_m1_fixtures.py --m1-fixtures fixtures/m1`
+  已实际运行，12 份 fixtures 的金额、数量、三态结果、Finding、规则和事件键全部匹配。
+- 全量测试 97 项通过、5 项因外部配置缺失而跳过；fixture Schema 校验、Ruff 与 pip check 均通过。
 
 ## 待集成或尚未开始
 
-- JSON Schema 与契约测试。
-- 12 份人工标注 fixtures。
-- 确定性验收引擎与 12 份样例、真实读取 adapter 的联调。
+- 确定性验收引擎与真实读取 adapter 的产品流程联调。
 - 报表服务 A/B。
 - LangChain 编排。
 - Streamlit 产品页面。
@@ -81,8 +81,7 @@ AI 同事 A、B 已按用户确认开始并行工作，交付尚未集成到本�
 
 ## 下一步
 
-按 [M1_HANDOFF.md](M1_HANDOFF.md) 审查并集成 A/B 的交付，随后运行严格的 M1/M2 样例联调入口，
-确认所有差异后再推进草稿 PR #1。M1/M2 尚未整体验收完成。
+审查并合并 M2 PR #1，随后启动 M3 报表服务 A/B、签名、故障注入和一次补交实现。
 
 ## 状态更新规则
 

@@ -50,15 +50,19 @@ def confirmed_finding(
     )
 
 
-def insufficient_evidence_finding(run_id: str, reason: str) -> Finding:
+def insufficient_evidence_finding(
+    run_id: str,
+    reason: str,
+    records: tuple[TransferRecord, ...] = (),
+) -> Finding:
     return Finding(
         finding_id=f"{run_id}:evidence",
         finding_type=FindingType.INSUFFICIENT_EVIDENCE,
         severity=FindingSeverity.WARNING,
         expected=None,
         actual=None,
-        violated_rule="reference_evidence_complete",
-        evidence_refs=(f"run:{run_id}",),
+        violated_rule="all reference pages must be proven complete",
+        evidence_refs=tuple(event_ref(record) for record in records) or (f"run:{run_id}",),
         explanation=reason,
         status=FindingStatus.HYPOTHESIS,
     )
