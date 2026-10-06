@@ -1,0 +1,16 @@
+.env
+.venv/
+.venv-blockscout/
+references/
+__pycache__/
+*.pyc
+*.egg-info/
+*.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.streamlit/secrets.toml
+data/
+receipts/private/

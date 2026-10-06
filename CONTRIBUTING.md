@@ -1,0 +1,73 @@
+---
+doc-id: contribution-guide
+title: 开发协作规范
+status: active
+authority-for:
+  - coding-workflow
+  - change-review-checklist
+last-reviewed: 2026-10-06
+---
+
+# 开发协作规范
+
+## 开始前
+
+1. 阅读 [README.md](README.md) 和 [STATUS.md](STATUS.md)。
+2. 确认工作是否属于 [PRODUCT.md](PRODUCT.md) 的 MVP。
+3. 找到对应权威文档和现有决定，不从文件名或时间猜测哪个说法有效。
+4. 小步实现，每个提交只解决一个可描述的问题。
+
+## 分支和提交
+
+仓库默认分支为 `main`，开发时建议：
+
+- 分支：`feature/<topic>`、`fix/<topic>`、`docs/<topic>`。
+- 提交：使用动词开头，说明可观察结果，例如 `Add deterministic transfer deduplication`。
+- 不提交虚拟环境、`.env`、数据库、私密回执或生成缓存。
+- 不把 `references/` 的上游历史混入本项目提交；若保留参考副本，应明确采用 submodule、下载脚本或忽略策略。
+
+## 代码标准
+
+- Python 3.12。
+- 对外函数和领域对象使用类型标注。
+- 领域计算优先写纯函数。
+- 金额使用整数，不使用 `float`。
+- 外部服务通过 adapter/port 隔离。
+- 异常必须转换成明确领域状态；不要用宽泛 `except` 静默通过。
+- 日志不得包含密钥和未脱敏报告。
+
+## 测试驱动重点
+
+以下变更必须先有失败测试或最小复现：
+
+- 金额、过滤、去重和分页。
+- PASS/FAIL/INCONCLUSIVE 判定。
+- 回执规范化和哈希。
+- attempt 历史保存。
+- 外部失败映射。
+- 权限、脱敏和发布状态。
+
+## 依赖变更
+
+1. 说明为什么现有依赖不能完成任务。
+2. 修改 `requirements.txt`。
+3. 在主 `.venv` 中安装并运行 `pip check` 和相关测试。
+4. 重新生成 `requirements.lock.txt`。
+5. 检查许可证、维护状态和传递依赖风险。
+6. Blockscout MCP 依赖只在 `.venv-blockscout` 中维护。
+
+## 评审清单
+
+- 行为是否仍在 MVP 范围内？
+- 是否改变数据契约或架构决定？
+- 金额和事件身份是否保持精确？
+- 未知和外部失败是否错误地变成 PASS/FAIL？
+- 是否完整处理分页和记录上限？
+- 是否保留原始交付和所有 attempt？
+- 是否增加密钥、隐私或链上写入风险？
+- 测试是否覆盖成功、失败和证据不足？
+- `STATUS.md` 是否反映实际完成情况？
+
+## 完成定义
+
+一项工作只有在代码、相关测试、必要文档和实际验证均完成后才能标为完成。需要密钥、网络、测试币或人工浏览器观察而尚未执行的部分必须明确列为未验证。

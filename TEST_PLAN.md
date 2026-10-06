@@ -1,0 +1,107 @@
+---
+doc-id: test-plan
+title: 测试与验收计划
+status: active
+authority-for:
+  - test-matrix
+  - quality-gates
+  - acceptance-evidence
+last-reviewed: 2026-10-06
+---
+
+# 测试与验收计划
+
+## 测试目标
+
+证明系统能在限定范围内完整、精确、可重复地核对报表，并能把供应商错误、基础设施故障和证据不足区分开。
+
+## 测试层级
+
+### 单元测试
+
+- 地址和哈希规范化。
+- 区块范围边界。
+- 内部互转排除。
+- `tx_hash + log_index` 去重。
+- 最小单位整数加减与展示格式。
+- 交付集合和参考集合差集。
+- 三态结果判定。
+- canonical JSON 与稳定哈希。
+- attempt 不可覆盖。
+
+### 契约测试
+
+- RPC `eth_getLogs` 请求、返回和错误映射。
+- Blockscout MCP 工具参数和分页终止条件。
+- Agent0 身份读取和服务标识。
+- ERC-8004 提交、receipt 和读回字段。
+- IPFS/文件发布后的内容哈希一致性。
+
+外部契约测试默认可跳过，但必须有明确 marker 和跳过原因，不能悄悄通过。
+
+### 集成测试
+
+- TaskSpec → 服务交付 → 验收 → SQLite 保存。
+- 首次 FAIL → 一次补交 → PASS，两个 attempt 都可读取。
+- 服务 A FAIL → 切换服务 B → 新交付单独记录。
+- 参考节点故障 → `INCONCLUSIVE`，不产生负面反馈。
+- 回执创建 → 发布 → 链上提交 → 确认状态。
+
+### 端到端测试
+
+- 正确报告直接通过。
+- 120000 报告包含 30000 内部互转并漏掉 20000，正确总额为 110000。
+- 全新进程只读取公共回执，校验哈希并复现至少一项确定性检查。
+
+## 人工标注数据集
+
+至少 12 份：
+
+| 类型 | 最少数量 |
+|---|---:|
+| 完全正确 | 2 |
+| 漏项 | 2 |
+| 重复事件 | 2 |
+| 内部互转误计 | 2 |
+| 区块范围错误 | 1 |
+| decimals/单位错误 | 1 |
+| 多错误组合，开发期间隐藏 | 1 |
+| 证据不足 | 1 |
+
+每份 fixture 包含输入、期望结果、期望 Finding 和人工核验说明。故障注入必须与真实供应商数据明确隔离。
+
+## AI 测试
+
+- 对歧义任务必须提出确认，不得自行补全关键地址或区块。
+- 输出必须通过 Pydantic 校验。
+- 未知工具、过滤器或检查类型必须被拒绝。
+- Prompt injection 文本不得取得文件、Shell、数据库或写链权限。
+- 同一确定性输入允许解释措辞不同，但验证结果和金额必须一致。
+
+## 质量门槛
+
+- 核心纯函数单元测试全部通过。
+- 12 份标注样例的确定性期望全部匹配。
+- 对金额、分页和结果状态的测试不得使用宽松断言。
+- Ruff 检查通过。
+- `pip check` 无破损依赖。
+- 涉及外部系统的能力必须报告“已实测”或“未实测”，不能用 mock 结果代替实测声明。
+
+## 标准命令
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pip check
+```
+
+后续引入 marker 后建议：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m "not external"
+.\.venv\Scripts\python.exe -m pytest -m external
+```
+
+## 验收记录
+
+测试执行结果写入 CI 日志或发布检查记录；当前进度摘要写入 [STATUS.md](STATUS.md)。不要在本文复制瞬时通过数量。
