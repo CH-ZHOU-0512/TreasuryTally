@@ -6,7 +6,7 @@ authority-for:
   - local-setup
   - run-commands
   - troubleshooting
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 本地开发与运行手册
@@ -120,6 +120,14 @@ Get-ChildItem -Recurse -File -Include *.py,*.toml,*.json,*.yaml,*.yml | `
   Where-Object { $_.FullName -notmatch '\\(\.venv|\.venv-blockscout|references|\.tmp)\\' } | `
   ForEach-Object { if ((Get-Content -LiteralPath $_.FullName).Count -gt 1000) { $_.FullName } }
 ```
+
+本地回执可在独立进程中校验和重放：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.receipts.cli path\to\receipt.json
+```
+
+命令以 JSON 输出回执哈希、任务哈希、对象链接和三态结果复算状态；任一检查失败时退出码非零。
 
 M0 真实探针使用：
 

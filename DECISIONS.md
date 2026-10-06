@@ -5,7 +5,7 @@ status: active
 authority-for:
   - accepted-decisions
   - decision-rationale
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 架构与产品决定
@@ -62,6 +62,9 @@ last-reviewed: 2026-10-06
 决定：版本化 JSON 回执保存在链下公共存储，ERC-8004 关联服务、结果、URI 和内容哈希。
 
 理由：完整证据体积大且可能需要脱敏；链上适合提供稳定关联和完整性检查，不自动证明内容真实。
+
+后果：M3 起本地 JSON 回执采用只创建、不覆盖的保存语义；独立重放必须验证回执哈希、任务哈希和对象链接，
+并从证据完整性及 confirmed error 重新推导三态结果。公开发布、URI 与链上关联仍属于 M6。
 
 ## ADR-006：Blockscout MCP 使用隔离 Python 环境
 
