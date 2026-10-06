@@ -63,7 +63,8 @@ last-reviewed: 2026-10-06
 - 120000 报告包含 30000 内部互转并漏掉 20000，正确总额为 110000。
 - 全新进程只读取公共回执，校验哈希并复现至少一项确定性检查。
 - Streamlit 页面在任务确认前不提供执行入口，首次 FAIL 后可完成唯一一次补交或换源，并同时保留两个 attempt。
-- 真实 DeepSeek 与 Sepolia RPC 组合探针必须完成候选生成、A `FAIL`、B `PASS`、无 AI 产物校验错误和两个独立回执。
+- 真实 DeepSeek、Sepolia RPC 与 Blockscout 组合探针必须完成候选生成、A `FAIL`、B `PASS`、两个 `SAMPLED` 补充诊断、
+  无 AI 产物校验错误和两个独立回执。
 - 同一工作区 ID 在 Streamlit 进程重启后必须恢复已确认任务及两个 attempt，不重新生成历史 AI 文本。
 - 桌面宽屏可并排显示编辑与指标；760px 及以下强制单列，长地址、Finding、回执 JSON 和主要按钮不产生不可操作的水平溢出。
 

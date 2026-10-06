@@ -17,12 +17,14 @@ from .conftest import require_configuration
 pytestmark = pytest.mark.external
 
 
-def test_real_deepseek_rpc_page_use_case_runs_fail_then_switches_to_pass(
+def test_real_deepseek_rpc_blockscout_use_case_runs_fail_then_switches_to_pass(
     m0_settings, tmp_path
 ) -> None:
     ai_settings = M4AISettings.load()
     missing = [*m0_settings.missing_for_rpc(), *ai_settings.missing_for_deepseek()]
-    require_configuration(missing, "M5 DeepSeek + RPC product flow")
+    if m0_settings.blockscout_pro_api_key is None:
+        missing.append("BLOCKSCOUT_PRO_API_KEY")
+    require_configuration(missing, "M5 DeepSeek + RPC + Blockscout product flow")
 
     probe = EvmRpcProbe(
         m0_settings.rpc_url_value(),
@@ -56,6 +58,8 @@ def test_real_deepseek_rpc_page_use_case_runs_fail_then_switches_to_pass(
         expected_chain_id=m0_settings.chain_id,
         timeout_seconds=m0_settings.rpc_timeout_seconds,
         confirmations=m0_settings.rpc_confirmations,
+        blockscout_mcp_url=m0_settings.blockscout_mcp_url,
+        enable_blockscout_cross_check=True,
     )
 
     def live_records(task):
@@ -98,6 +102,8 @@ def test_real_deepseek_rpc_page_use_case_runs_fail_then_switches_to_pass(
     assert first.follow_up is not None
     assert second.follow_up is not None
     assert first.evidence_diagnostics[0].status == "COMPLETE"
+    assert first.evidence_diagnostics[1].status == "SAMPLED"
     assert second.evidence_diagnostics[0].records >= 1
+    assert second.evidence_diagnostics[1].status == "SAMPLED"
     assert first.receipt_path is not None and first.receipt_path.is_file()
     assert second.receipt_path is not None and second.receipt_path.is_file()

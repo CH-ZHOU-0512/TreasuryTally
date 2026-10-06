@@ -13,5 +13,6 @@ __pycache__/
 .coverage
 htmlcov/
 .streamlit/secrets.toml
+*.pem
 data/
 receipts/private/
