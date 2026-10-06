@@ -19,9 +19,13 @@ from trust_receipt.storage.sqlite import SQLiteRepository
 
 
 @pytest.fixture
-def m5_components(tmp_path):
-    project_root = Path(__file__).parents[2]
-    fixture = load_vertical_demo_fixture(project_root)
+def vertical_case():
+    return load_vertical_demo_fixture(Path(__file__).parents[2])
+
+
+@pytest.fixture
+def m5_components(tmp_path, vertical_case):
+    fixture = vertical_case
     candidate = candidate_from_fixture(fixture)
     repository = SQLiteRepository(tmp_path / "m5.db")
     workflow = M5Workflow(

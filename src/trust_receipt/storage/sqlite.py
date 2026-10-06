@@ -85,6 +85,16 @@ class SQLiteRepository:
             raise KeyError(task_id)
         return StoredTask(task=TaskSpec.model_validate_json(row["task_json"]), state=TaskState(row["state"]))
 
+    def list_tasks(self) -> tuple[StoredTask, ...]:
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                "SELECT task_json, state FROM tasks ORDER BY rowid DESC"
+            ).fetchall()
+        return tuple(
+            StoredTask(task=TaskSpec.model_validate_json(row["task_json"]), state=TaskState(row["state"]))
+            for row in rows
+        )
+
     def _attempt_count(self, connection: sqlite3.Connection, task_id: str) -> int:
         row = connection.execute("SELECT COUNT(*) AS count FROM attempts WHERE task_id = ?", (task_id,)).fetchone()
         return int(row["count"])

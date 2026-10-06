@@ -18,8 +18,8 @@ last-reviewed: 2026-10-07
 M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
 均已集成到 `codex/m1-integration`。M2 PR #1 已合并，远端合并提交为
 `d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
-M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面与
-fixture 驱动纵向串联已完成，桌面和移动端均已做真实浏览器检查。
+M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面、
+fixture 路径与真实 DeepSeek + Sepolia RPC 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 
 ## 已完成
 
@@ -77,7 +77,7 @@ fixture 驱动纵向串联已完成，桌面和移动端均已做真实浏览器
 - 任务 ID、确认时间和 `spec_hash` 只由确定性代码生成；VerificationPlan 必须完整命中白名单并逐项绑定已确认任务。
 - 补查建议仅允许封闭动作枚举；结果解释必须保持确定性 outcome、金额、数量、Finding ID 和证据引用。
 - 离线测试覆盖 prompt injection、未知操作、参数漂移、缺失检查、歧义任务、冲突主张以及金额/结论篡改。
-- `deepseek-flash` 真实 external 探针已返回并通过 schema 校验；一次性凭据已从本机删除，后续运行需新凭据。
+- `deepseek-flash` 真实 external 探针已返回并通过 schema 校验；凭据仅保存在被 Git 忽略的本机 `.env`。
 - OpenAI external 探针因缺少 `OPENAI_API_KEY` 和固定 `OPENAI_MODEL` 明确阻塞，没有用 mock 冒充实测。
 - 删除临时凭据后的全量质量门为 128 项通过、7 项 external 因当前配置缺失而明确跳过；DeepSeek 探针另有此前
   单独执行的 1 项真实通过记录。Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制均通过。
@@ -95,18 +95,23 @@ fixture 驱动纵向串联已完成，桌面和移动端均已做真实浏览器
 - 桌面 1440×1000 浏览器检查确认任务编辑采用双列；移动 390×844 检查确认关键水平容器折叠为单列、页面
   `scrollWidth=innerWidth=390`，长地址、Finding、attempt、回执与按钮均可读可操作。
 - M5 AppTest 实际走通未确认拒绝、attempt 1 `FAIL`、attempt 2 `PASS`，两个结果同时保留；当前全量质量门为
-  134 项通过、7 项 external 因配置缺失明确跳过，Ruff、pip check 和 1000 行限制均通过。
+  142 项通过、5 项 external 因配置缺失明确跳过，Ruff、pip check 和 1000 行限制均通过。
+- 已实现真实 `RpcReferenceEvidenceProvider`：校验 chain ID 与确认数、连续分页读取完整区块范围、保留整数与完整事件键；
+  RPC 失败、缺页或未确认范围返回 `INCONCLUSIVE`。Blockscout 仅作可选补充抽样，未配置时明确显示 RPC-only。
+- 真实组合 external 探针已使用 DeepSeek 与 Sepolia RPC 跑通候选生成、服务 A 漏项 `FAIL`、切换服务 B `PASS`、
+  合法受限 AI 产物和两个独立回执；目标区块读取 1 页、6 条原始事件，确定性范围筛选得到 1 条目标转账。
+- 真实浏览器复跑得到同样的 `FAIL → PASS`，页面展示 RPC `COMPLETE` 与 Blockscout `NOT_CONFIGURED`；重启 Streamlit
+  后输入相同工作区 ID，可从 SQLite 与私有回执恢复已确认任务及两个 attempt，历史 AI 文本不会重新生成。
 
 ## 待集成或尚未开始
 
-- 确定性验收引擎与真实读取 adapter 的产品流程联调。
 - 公共回执发布与 ERC-8004 接入。
 
 ## 后续阶段外部配置待办
 
 - 提供 `OPENAI_API_KEY`。
-- 提供固定 `OPENAI_MODEL`；若继续使用 DeepSeek，重新生成并仅在本机配置 `DEEPSEEK_API_KEY` 与固定
-  `DEEPSEEK_MODEL`。
+- 提供固定 `OPENAI_MODEL`；DeepSeek 已在本机配置并用于 M5 真实联调。
+- 如需启用 M5 的 Blockscout 产品抽样诊断，配置 `BLOCKSCOUT_PRO_API_KEY` 或可用的本地 MCP 服务。
 - 如使用 Pinata，提供 `PINATA_JWT`。
 
 ## 已知问题
@@ -118,8 +123,8 @@ fixture 驱动纵向串联已完成，桌面和移动端均已做真实浏览器
 
 ## 下一步
 
-启动 M6：在保留授权、`SUBMITTED` 与 `CONFIRMED` 状态边界的前提下接入公共回执发布与 ERC-8004 关联；真实读取
-adapter 的产品流程联调仍需单独完成并保留 `INCONCLUSIVE` 降级。
+启动 M6：在保留授权、`SUBMITTED` 与 `CONFIRMED` 状态边界的前提下接入公共回执发布与 ERC-8004 关联。M5 真实读取
+产品闭环已完成；Blockscout 产品抽样的实际运行仍需外部配置。
 
 ## 状态更新规则
 

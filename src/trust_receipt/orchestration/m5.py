@@ -10,9 +10,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from trust_receipt.agents import FollowUpAdvice, RestrictedAIService, ResultExplanation, TaskSpecCandidate
+from trust_receipt.chain import EvidenceDiagnostic
 from trust_receipt.hashing import verify_submission_hash, verify_task_spec_hash
 from trust_receipt.models import FixtureCase, Receipt, ServiceIdentity, TaskSpec, VerificationPlan, VerificationResult
-from trust_receipt.receipts import build_receipt, save_receipt
+from trust_receipt.orchestration.workflow import ReferenceEvidenceProvider
+from trust_receipt.receipts import build_receipt, load_receipt, save_receipt
 from trust_receipt.services import ReportService, verify_submission_signature
 from trust_receipt.storage.ports import TaskRepository
 from trust_receipt.verification import ReferenceEvidence, ReferencePage, ReferenceStream, verify_submission
@@ -37,6 +39,8 @@ class AttemptExecution:
     explanation: ResultExplanation | None
     follow_up: FollowUpAdvice | None
     ai_errors: tuple[str, ...]
+    evidence: ReferenceEvidence | None
+    evidence_diagnostics: tuple[EvidenceDiagnostic, ...]
 
 
 class M5Workflow:
@@ -46,7 +50,7 @@ class M5Workflow:
         self,
         *,
         repository: TaskRepository,
-        evidence_provider: StaticEvidenceProvider,
+        evidence_provider: ReferenceEvidenceProvider,
         ai_service: RestrictedAIService,
         receipt_directory: Path | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -130,10 +134,42 @@ class M5Workflow:
             explanation=explanation,
             follow_up=follow_up,
             ai_errors=errors,
+            evidence=evidence,
+            evidence_diagnostics=tuple(getattr(self._evidence_provider, "diagnostics", ())),
         )
 
     def list_attempts(self, task_id: str):
         return self._repository.list_attempts(task_id)
+
+    def restore_latest(self) -> tuple[TaskSpec, tuple[AttemptExecution, ...]] | None:
+        """Restore the newest completed task after a Streamlit process restart."""
+        tasks = self._repository.list_tasks()
+        if not tasks:
+            return None
+        task = tasks[0].task
+        executions: list[AttemptExecution] = []
+        for attempt in self._repository.list_attempts(task.task_id):
+            if attempt.verification_result is None or self._receipt_directory is None:
+                continue
+            number = attempt.submission.attempt
+            path = self._receipt_directory / task.task_id / f"attempt-{number}.json"
+            if not path.is_file():
+                continue
+            receipt = load_receipt(path)
+            executions.append(
+                AttemptExecution(
+                    plan=receipt.verification_plan,
+                    result=receipt.verification_result,
+                    receipt=receipt,
+                    receipt_path=path,
+                    explanation=None,
+                    follow_up=None,
+                    ai_errors=("Restored locally; AI text was not regenerated.",),
+                    evidence=None,
+                    evidence_diagnostics=(),
+                )
+            )
+        return task, tuple(executions)
 
     @staticmethod
     def _validate_delivery(service: ReportService, submission) -> None:

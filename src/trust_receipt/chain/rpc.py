@@ -53,6 +53,48 @@ class EvmRpcProbe:
             )
         return chain_id
 
+    def latest_block(self) -> int:
+        return int(self._read(lambda: self._web3.eth.block_number))
+
+    def fetch_transfer_pages(
+        self,
+        *,
+        token_address: str,
+        from_block: int,
+        to_block: int,
+        page_size_blocks: int = 2_000,
+    ) -> tuple[tuple[TransferRecord, ...], ...]:
+        """Read every Transfer log in contiguous block pages for one token."""
+        if from_block < 0 or to_block < from_block:
+            raise ValueError("invalid inclusive block range")
+        if page_size_blocks <= 0:
+            raise ValueError("page_size_blocks must be positive")
+        chain_id = self.chain_id()
+        token = Web3.to_checksum_address(token_address)
+        decimals = int(self._read(lambda: self._web3.eth.contract(token, abi=DECIMALS_ABI).functions.decimals().call()))
+        pages: list[tuple[TransferRecord, ...]] = []
+        page_start = from_block
+        while page_start <= to_block:
+            page_end = min(page_start + page_size_blocks - 1, to_block)
+            logs = self._read(
+                lambda start=page_start, end=page_end: self._web3.eth.get_logs(
+                    {
+                        "address": token,
+                        "fromBlock": start,
+                        "toBlock": end,
+                        "topics": [TRANSFER_TOPIC],
+                    }
+                )
+            )
+            pages.append(
+                tuple(
+                    self._parse_transfer(log, chain_id=chain_id, token_address=token, decimals=decimals)
+                    for log in logs
+                )
+            )
+            page_start = page_end + 1
+        return tuple(pages)
+
     def contract_code(self, address: str) -> bytes:
         checksum = Web3.to_checksum_address(address)
         code = bytes(self._read(lambda: self._web3.eth.get_code(checksum)))

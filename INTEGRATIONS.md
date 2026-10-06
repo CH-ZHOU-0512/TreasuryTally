@@ -60,6 +60,9 @@ last-reviewed: 2026-10-06
 
 失败降级：RPC 数据不完整、网络不符、重组风险未知或查询失败时，验收证据标记不完整并进入 `INCONCLUSIVE`；Blockscout 不能单独掩盖参考节点失败。
 
+M5 产品 adapter 使用 `RPC_CONFIRMATIONS`（默认 2）拒绝尚未确认的结束区块，并把范围拆成连续分页；任何页失败都会保留
+来源诊断并返回不完整证据。页面显示 RPC 的权威角色、页数、原始记录数和耗时。
+
 ## Blockscout MCP
 
 用途：补充地址、交易、代币和分页信息，不作为被评价服务，也不单独承担参考真值。
@@ -132,9 +135,9 @@ Finding、三态结论、数据库、发布或写链权限。
 - 外部测试分别位于 `tests/external/test_openai_ai_probe.py` 和 `test_deepseek_ai_probe.py`，统一使用 `external` marker。
 - 缺少 key 或固定模型名时报告阻塞；离线 mock 只能验证 adapter 映射和安全边界，不能宣称供应商已实测。
 
-2026-10-07 已使用固定 `deepseek-flash` 完成一次真实结构化调用，返回的 `TaskSpecCandidate` 通过严格 Pydantic
-校验；该次临时凭据随后已从本地环境删除，不在 Git、日志或文档中保留。OpenAI 真实调用仍因缺少
-`OPENAI_API_KEY` 和 `OPENAI_MODEL` 阻塞。后续再次运行 DeepSeek 探针需要新生成并仅在本机配置的凭据。
+2026-10-07 已使用固定 `deepseek-flash` 完成真实结构化调用，返回的 `TaskSpecCandidate` 通过严格 Pydantic 校验；凭据仅在
+被 Git 忽略的本机 `.env` 中配置，不在 Git、日志或文档中保留。OpenAI 真实调用仍因缺少 `OPENAI_API_KEY` 和
+`OPENAI_MODEL` 阻塞。
 
 失败降级：结构化输出为空、截断、schema 不符、未知操作或与确定性结果冲突时拒绝该候选，保留用户确认或纯确定性流程；
 不得自动采用模型猜测，也不得把模型失败映射成服务负面信誉。
@@ -158,6 +161,9 @@ Finding、三态结论、数据库、发布或写链权限。
   主环境 MCP 客户端固定为 1.26.0，与服务端依赖一致；访问本机端点时禁用系统代理继承。
 - 当前记录只包含公开地址、区块和缩略交易哈希；不包含端点密钥、认证头、钱包私钥或环境变量全集。
 - M0 四项真实外部探针均已通过；密钥只保存在被 Git 忽略的本地 `.env` 中。
+- 2026-10-07 的 M5 产品探针使用真实 DeepSeek 和真实 Sepolia RPC，完成任务候选、服务 A 漏项 `FAIL`、切换服务 B
+  `PASS`、两个独立本地回执及合法受限 AI 产物；浏览器复跑显示 RPC 读取 1 页、6 条原始事件并筛出目标事件。
+  Blockscout 产品抽样路径已实现，但因当前未配置 key/本地服务，页面诚实显示 `NOT_CONFIGURED` 与 RPC-only。
 
 执行结果更新规则：
 

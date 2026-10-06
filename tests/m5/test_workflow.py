@@ -25,6 +25,14 @@ def test_fail_then_resubmit_keeps_two_attempts_and_two_receipts(m5_components) -
     assert second.receipt.publication.chain_status is PublicationChainStatus.NOT_SUBMITTED
     assert first.explanation is not None
     assert first.explanation.outcome is first.result.outcome
+    restored = workflow.restore_latest()
+    assert restored is not None
+    restored_task, restored_executions = restored
+    assert restored_task.task_id == task.task_id
+    assert [item.result.outcome for item in restored_executions] == [
+        VerificationOutcome.FAIL,
+        VerificationOutcome.PASS,
+    ]
 
 
 def test_inconclusive_is_explained_as_evidence_shortfall(tmp_path, m5_components) -> None:
