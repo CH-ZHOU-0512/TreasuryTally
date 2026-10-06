@@ -18,7 +18,8 @@ last-reviewed: 2026-10-07
 M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
 均已集成到 `codex/m1-integration`。M2 PR #1 已合并，远端合并提交为
 `d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
-M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 DeepSeek 结构化调用已完成，满足启动 M5 的前置条件。
+M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面与
+fixture 驱动纵向串联已完成，桌面和移动端均已做真实浏览器检查。
 
 ## 已完成
 
@@ -81,10 +82,24 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 Deep
 - 删除临时凭据后的全量质量门为 128 项通过、7 项 external 因当前配置缺失而明确跳过；DeepSeek 探针另有此前
   单独执行的 1 项真实通过记录。Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制均通过。
 
+## M5 Streamlit 页面进展
+
+- 已实现自然语言任务入口、候选缺失/歧义展示、可修改字段、显式确认与不可变 `spec_hash`；任务未确认前页面不提供执行入口。
+- 页面只调用 `M5Workflow` 与稳定端口，不直接依赖供应商 SDK、SQLite 表或验证内部实现；AI 主张/计划校验失败会撤销请求且
+  不消耗 attempt。
+- 已串联团队控制服务 A/B、确定性三态验证、金额、Finding、受限解释/补查、本地回执预览，以及一次补交或换源；attempt 1/2
+  分别展示和留档，后一次不会覆盖前一次。
+- 缺少模型密钥时默认使用明确标注的离线 fixture 演示，不冒充真实模型调用；OpenAI/DeepSeek 选项会显示缺少 key/固定模型名
+  的配置阻塞。
+- 页面明确区分服务交付 `SUBMITTED` 与公共发布 `NOT_SUBMITTED`；M5 不执行公开上传、ERC-8004 写入或 M6 发布动作。
+- 桌面 1440×1000 浏览器检查确认任务编辑采用双列；移动 390×844 检查确认关键水平容器折叠为单列、页面
+  `scrollWidth=innerWidth=390`，长地址、Finding、attempt、回执与按钮均可读可操作。
+- M5 AppTest 实际走通未确认拒绝、attempt 1 `FAIL`、attempt 2 `PASS`，两个结果同时保留；当前全量质量门为
+  134 项通过、7 项 external 因配置缺失明确跳过，Ruff、pip check 和 1000 行限制均通过。
+
 ## 待集成或尚未开始
 
 - 确定性验收引擎与真实读取 adapter 的产品流程联调。
-- Streamlit 产品页面。
 - 公共回执发布与 ERC-8004 接入。
 
 ## 后续阶段外部配置待办
@@ -103,8 +118,8 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 Deep
 
 ## 下一步
 
-启动 M5：实现 Streamlit 条件确认、执行进度、差异、补交/换源与回执预览，并接通现有确定性流程和 M4 受限 AI
-用例；继续保持领域、验证、存储和供应商 adapter 解耦。
+启动 M6：在保留授权、`SUBMITTED` 与 `CONFIRMED` 状态边界的前提下接入公共回执发布与 ERC-8004 关联；真实读取
+adapter 的产品流程联调仍需单独完成并保留 `INCONCLUSIVE` 降级。
 
 ## 状态更新规则
 

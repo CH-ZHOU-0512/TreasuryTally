@@ -41,21 +41,22 @@ Copy-Item .env.example .env
 .\.venv\Scripts\Activate.ps1
 ```
 
-当前 M3 核心纵向闭环可通过测试直接运行，无需 UI 或外部密钥：
+当前核心纵向闭环可通过测试直接运行，无需外部密钥：
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests\m3
 ```
 
-后续页面入口预定为：
+M5 页面入口为：
 
 ```powershell
 streamlit run app\streamlit_app.py
 ```
 
-Streamlit 页面尚未实现，不要把上述预定命令误认为当前已经存在的功能。领域模型、确定性验证、canonical
-JSON/哈希、团队控制服务 A/B、SQLite attempt 留档、无 UI 编排、本地回执生成/重放，以及受限 AI
-任务/主张提取、白名单计划、补查建议和结果解释已经实现；实际进展请查看 [STATUS.md](STATUS.md)。
+默认选择“离线 fixture 演示”，不需要模型密钥，并在页面中明确标注为非真实模型调用。也可以选择 OpenAI 或
+DeepSeek 真实模型；缺少对应 key 或固定模型名时页面会显示配置阻塞，不会用 mock 冒充。页面支持任务候选修改与确认、
+服务 A/B、一次补交或换源、独立 attempt 历史、三态结果、Finding、受限解释与本地回执预览。M6 公共发布和写链未执行，
+页面固定显示 `NOT_SUBMITTED`。实际进展请查看 [STATUS.md](STATUS.md)。
 
 ## 仓库边界
 

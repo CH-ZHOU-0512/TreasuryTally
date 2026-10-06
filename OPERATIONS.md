@@ -105,15 +105,17 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 中的其他配置。该环境与主应用环境必须保持分离。CLI 启动时可能出现来自 `pydantic_settings`
 的非致命 warning；只有服务无法监听或工具调用失败才视为启动失败。
 
-## 预定应用命令
-
-业务代码实现后：
+## 启动应用
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run app\streamlit_app.py
 ```
 
 默认本地数据写入 `data/`，私有回执写入 `receipts/private/`，两者均不提交版本库。
+
+首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
+和固定模型名；缺少配置会在页面显示阻塞。每个浏览器会话使用独立本地数据库与运行时生成的无资产签名账户。页面不会执行
+公共上传、ERC-8004 写入或其他 M6 动作，回执 publication 状态保持 `NOT_SUBMITTED`。
 
 ## 验证
 
