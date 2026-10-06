@@ -41,13 +41,20 @@ Copy-Item .env.example .env
 .\.venv\Scripts\Activate.ps1
 ```
 
-填写 `.env` 中的必要配置后，后续应用入口预定为：
+当前 M3 核心纵向闭环可通过测试直接运行，无需 UI 或外部密钥：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\m3
+```
+
+后续页面入口预定为：
 
 ```powershell
 streamlit run app\streamlit_app.py
 ```
 
-当前业务代码尚未实现，实际进展请查看 [STATUS.md](STATUS.md)。不要把上述预定命令误认为当前已经存在的功能。
+Streamlit 页面尚未实现，不要把上述预定命令误认为当前已经存在的功能。领域模型、确定性验证、canonical
+JSON/哈希、团队控制服务 A/B、SQLite attempt 留档和无 UI 编排已经实现；实际进展请查看 [STATUS.md](STATUS.md)。
 
 ## 仓库边界
 

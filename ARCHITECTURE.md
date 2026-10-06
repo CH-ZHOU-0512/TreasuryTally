@@ -35,6 +35,10 @@ Streamlit UI
 SQLite Repository stores tasks, attempts, findings and publication state.
 ```
 
+M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名
+`ServiceSubmission`。故障注入状态保存在独立 `ReportDelivery.fault_injection` 元数据中，不写入参考证据，也不伪装为
+第三方生产数据。编排层先校验 canonical report hash 和 EVM 签名，再允许交付进入 repository。
+
 ## 推荐包结构
 
 ```text
@@ -80,6 +84,10 @@ src/trust_receipt/
 8. 用户授权后，发布适配器上传脱敏回执；信誉适配器提交其 URI 和哈希。
 9. 读回程序校验链上引用、文件哈希及确定性检查结果。
 
+canonical JSON 使用 UTF-8、按键名排序、无空白 JSON 表示，明确拒绝 `float`；当前稳定哈希算法为 SHA-256，输出
+`0x` 加 64 位小写十六进制。`TaskSpec`、`ServiceSubmission` 和 `Receipt` 分别排除自身哈希字段；交付哈希还排除
+签名字段，避免循环依赖。
+
 ## 信任边界
 
 - 服务提交是待验证声明，不能成为参考真值。
@@ -106,6 +114,9 @@ terminal result → RECEIPT_CREATED → PUBLISHING → PUBLISHED → ONCHAIN_CON
 ```
 
 失败重试不得覆盖旧 attempt；发布失败也不得改变验收结论。
+
+SQLite 将任务、交付 attempt 和验证结果放在三张独立表中。`(task_id, attempt)` 与 `submission_id` 都是唯一键，
+只允许 INSERT，不提供覆盖更新；第二次交付必须在第一次得到 `FAIL` 或 `INCONCLUSIVE` 后显式请求，第三次请求被拒绝。
 
 ## 外部依赖
 
