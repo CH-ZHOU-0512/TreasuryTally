@@ -118,7 +118,7 @@ class EvmRpcProbe:
             block_hash=_hex_with_prefix(log["blockHash"]) if log.get("blockHash") else None,
             from_address=from_address,
             to_address=to_address,
-            amount_base_units=amount,
+            amount_base_units=str(amount),
             token_decimals=decimals,
             source="rpc",
         )

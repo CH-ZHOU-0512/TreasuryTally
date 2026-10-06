@@ -29,5 +29,5 @@ def test_sepolia_rpc_returns_known_erc20_transfer(m0_settings: M0Settings) -> No
         result.transfer.transaction_hash,
         result.transfer.log_index,
     )
-    assert result.transfer.amount_base_units >= 0
+    assert int(result.transfer.amount_base_units) >= 0
     assert result.transfer.source == "rpc"

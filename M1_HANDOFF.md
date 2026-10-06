@@ -89,6 +89,21 @@ main
 冻结后应把 commit SHA 同时发给 A、B。任何破坏冻结契约的变更必须先更新
 `DATA_CONTRACTS.md`，再由主负责人通知两位 AI 重新同步。
 
+### 本轮冻结公共边界
+
+- 公共导入路径为 `trust_receipt.models`；A、B 不从模型内部模块导入。
+- 冻结模型、枚举和字段以 `DATA_CONTRACTS.md` 与 `trust_receipt.models.__all__` 为准。
+- 冻结的顶层 Schema 模型是 `TaskSpec`、`TransferRecord`、`ServiceSubmission`、`VerificationPlan`、
+  `VerificationResult`、`Receipt`、`FixtureCase` 和 `FixtureManifest`。公共嵌套模型是 `ExclusionRule`、
+  `Claim`、`ApprovedQuery`、`ApprovedFilter`、`ApprovedAggregationRule`、`ApprovedCheck`、`SourceDescriptor`、
+  `Finding`、`ServiceIdentity`、`EvidenceDescriptor`、`Publication`、`FixtureReference`、`ExpectedFinding`、
+  `FixtureExpectedResult`、`HumanReview` 和 `FixtureManifestEntry`。
+- fixture 固定使用 `fixtures/m1/manifest.json` 与 `fixtures/m1/cases/<fixture_id>.json`，详细顶层字段见
+  `DATA_CONTRACTS.md` 的“M1 fixture 契约”。
+- Schema 固定输出到 `schemas/v1/`，共 8 个 `*.schema.json` 文件；唯一获准的导出脚本路径为
+  `scripts/export_schemas.py`。
+- Schema version 固定为 `1.0`，`$id` 固定使用 `urn:xinjv:schema:1.0:<kebab-name>`。
+
 ## AI 同事 A：标注样例负责人
 
 ### 启动输入

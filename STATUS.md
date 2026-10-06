@@ -15,7 +15,8 @@ last-reviewed: 2026-10-06
 
 ## 当前阶段
 
-M0 外部连通性验证已完成：RPC、Blockscout MCP、Agent0 和 ERC-8004 均已通过真实外部读取验证。
+M1 主负责人阶段已完成：领域契约、Pydantic 核心模型、fixture 布局和 Schema 命名已冻结并通过本地验证。
+AI 同事 A、B 尚未启动，12 份 fixtures 与 JSON Schema/契约测试仍待并行实现。
 
 ## 已完成
 
@@ -36,10 +37,18 @@ M0 外部连通性验证已完成：RPC、Blockscout MCP、Agent0 和 ERC-8004 �
 - Blockscout MCP 已完成 initialize、16 项工具发现及同一笔 Sepolia 交易查询；客户端与服务端统一使用 MCP 1.26.0。
 - 已创建团队控制的 Agent0 身份 `11155111:10691`，Agent0 SDK 1.7.1 可重复读取名称、owner 和 active 状态。
 - 三个 ERC-8004 Registry 的链上 bytecode 与相互关联已核验；中性反馈交易已确认并从链上读回一致内容。
+- 已建立 `codex/m1-integration` 与 `codex/m1-core-models` 分支，并从远端 `main` 合并提交
+  `b44945b48bef8b77b9fe4633fd714de75a66d636` 开始 M1。
+- 已冻结 `trust_receipt.models` 公共边界，覆盖任务、转账、服务交付、白名单计划、三态验证结果、回执及
+  M1 fixture/manifest 模型。
+- 核心金额在领域边界使用无符号十进制整数字符串；事件键保留 `chain_id + transaction_hash + log_index`；
+  参考不完整或证据不足强制为 `INCONCLUSIVE`。
+- fixture 布局固定为 `fixtures/m1/manifest.json` 与 `fixtures/m1/cases/`；8 个顶层 Schema 文件固定输出到
+  `schemas/v1/`，导出脚本路径固定为 `scripts/export_schemas.py`。
 
 ## 尚未开始
 
-- Pydantic 领域模型和 JSON Schema。
+- JSON Schema 与契约测试。
 - 12 份人工标注 fixtures。
 - 确定性验收引擎。
 - 报表服务 A/B。
@@ -62,8 +71,9 @@ M0 外部连通性验证已完成：RPC、Blockscout MCP、Agent0 和 ERC-8004 �
 
 ## 下一步
 
-M1 尚未开始。启动时先由主负责人按 [M1_HANDOFF.md](M1_HANDOFF.md) 建立集成分支并冻结领域契约，
-再让 AI 同事 A、B 分别并行处理 fixtures 与 Schema/契约测试；同时保持 M0 外部探针可重复运行。
+AI 同事 A、B 从主负责人验证后的契约冻结提交分别创建 `codex/m1-fixtures` 与
+`codex/m1-schema-tests`，按 [M1_HANDOFF.md](M1_HANDOFF.md) 并行处理 fixtures 与 Schema/契约测试；
+两者均以 `codex/m1-integration` 为 PR 目标，且不得自行合并。
 
 ## 状态更新规则
 
