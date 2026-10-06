@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -80,7 +81,17 @@ class TeamControlledReportService:
             claimed_total_base_units=str(total),
             claimed_count=len(service_records),
             transfers=service_records,
-            report_text="Team-controlled synthetic report; no production or personal data.",
+            report_text=json.dumps(
+                {
+                    "claimed_total_base_units": str(total),
+                    "claimed_count": len(service_records),
+                    "transfers": [record.model_dump(mode="json") for record in service_records],
+                    "notice": "Team-controlled synthetic report; no production or personal data.",
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
             created_at=now,
             report_hash="0x" + "0" * 64,
             signature=None,

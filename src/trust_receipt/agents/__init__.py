@@ -13,6 +13,7 @@ from trust_receipt.agents.models import (
     TaskField,
     TaskSpecCandidate,
 )
+from trust_receipt.agents.offline_demo import OfflineDemoStructuredOutputAdapter
 from trust_receipt.agents.openai import DeepSeekStructuredOutputAdapter, OpenAIStructuredOutputAdapter
 from trust_receipt.agents.ports import StructuredOutputPort
 from trust_receipt.agents.service import RestrictedAIService
@@ -29,6 +30,7 @@ __all__ = [
     "FollowUpAdvice",
     "FollowUpSuggestion",
     "M4AISettings",
+    "OfflineDemoStructuredOutputAdapter",
     "OpenAIStructuredOutputAdapter",
     "RestrictedAIService",
     "ResultExplanation",
