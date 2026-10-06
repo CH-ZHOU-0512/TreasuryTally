@@ -5,9 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /tmp/blockscout-mcp
-RUN python -m pip install --no-cache-dir blockscout-mcp-server==0.19.0
+RUN python -m pip install --no-cache-dir \
+    https://github.com/blockscout/mcp-server/archive/095ef2c03f1aa3325da0baa41c8bf29aa1bbb6e6.zip
 
 EXPOSE 8000
 CMD ["python", "-m", "blockscout_mcp_server", "--http", \
      "--http-host", "0.0.0.0", "--http-port", "8000"]
-
