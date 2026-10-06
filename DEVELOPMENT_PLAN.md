@@ -30,6 +30,9 @@ last-reviewed: 2026-10-06
 
 总预算：40 小时。
 
+M1 采用主负责人统一契约、两位 AI 分别负责 fixtures 与 Schema/测试的并行方式；启动条件、分支和
+文件所有权见 [M1_HANDOFF.md](M1_HANDOFF.md)。该文档只规定协作，不改变本计划的范围或退出条件。
+
 ## M0 连通性验证
 
 M0 只证明关键外部能力真实可用，不实现产品页面或验收业务。详细端点、资产、探针和降级约定以 [INTEGRATIONS.md](INTEGRATIONS.md) 为准。

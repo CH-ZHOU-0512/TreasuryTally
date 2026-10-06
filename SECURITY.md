@@ -20,6 +20,8 @@ last-reviewed: 2026-10-06
 - 只使用 `.env` 或运行环境注入密钥；`.env` 已被 `.gitignore` 排除。
 - `.env.example` 只能包含变量名和无敏感示例。
 - `SERVICE_A_PRIVATE_KEY`、`SERVICE_B_PRIVATE_KEY`、`REVIEWER_PRIVATE_KEY` 必须是测试网专用钱包。
+- ERC-8004 写探针还必须显式设置 `M0_ENABLE_WRITES=true`；默认值为 `false`，未知提交状态禁止自动重发。
+- `AGENT0_SERVICE_ID` 必须配合公开的 `AGENT0_EXPECTED_OWNER` 校验，避免向非团队控制身份写入测试反馈。
 - 禁止使用持有主网资产的钱包、个人常用钱包或复用助记词。
 - 不在日志、异常、截图、回执、测试 fixture 或模型 prompt 中输出密钥。
 - 如果任何密钥出现在提交、日志或对话中，按已泄露处理并立即轮换。

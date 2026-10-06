@@ -28,16 +28,20 @@ last-reviewed: 2026-10-06
 
 | 项目 | 预期值 | 状态 | 核实证据 |
 |---|---|---|---|
-| 网络 | Sepolia | 待实测 | RPC `eth_chainId` |
-| Chain ID | `11155111` | 待实测 | RPC 返回 |
-| RPC 端点 | 来自 `ETH_RPC_URL` | 待配置 | 不记录完整 URL 中的密钥 |
+| 网络 | Sepolia | 已验证 | RPC `eth_chainId` |
+| Chain ID | `11155111` | 已验证 | RPC 返回 `11155111` |
+| RPC 端点 | 公共 Sepolia RPC，来自 `ETH_RPC_URL` | 已验证 | 无密钥公共端点；请求超时 30 秒 |
 | Blockscout MCP | `http://127.0.0.1:8000` | 本地 CLI 已验证，HTTP 工具调用待实测 | M0 探针 |
-| 测试 ERC-20 | `TEST_TOKEN_ADDRESS` | 待选择 | 官方或可信来源与已知交易 |
-| Identity Registry | `ERC8004_IDENTITY_REGISTRY_ADDRESS` | 待核实 | 官方部署记录和链上 bytecode |
-| Reputation Registry | `ERC8004_REPUTATION_REGISTRY_ADDRESS` | 待核实 | 官方部署记录和链上 bytecode |
-| Validation Registry | `ERC8004_VALIDATION_REGISTRY_ADDRESS` | 待核实 | 官方部署记录和链上 bytecode |
+| 测试 ERC-20 | Sepolia WETH `0x7b79…7f9` | 已验证 | block `11855664` 的真实 Transfer |
+| Identity Registry | `0x8004A818…4BD9e` | 已验证 | 上游部署记录、链上 proxy bytecode、owner/tokenURI 读回 |
+| Reputation Registry | `0x8004B663…88713` | 已验证 | 上游部署记录、链上 proxy bytecode、Identity Registry 关联 |
+| Validation Registry | `0x8004Cb1B…B4272` | 已验证 | 上游部署记录、链上 proxy bytecode、Identity Registry 关联 |
 
 合约地址不得凭记忆填写。核实时至少比对官方部署来源、chain ID 和链上 bytecode；来源不一致时保持待定。
+
+本地上游参考 `agent0-py` 1.7.1、`erc-8004-contracts/scripts/addresses.ts` 与官方仓库部署记录一致。
+2026-10-06 已通过 Sepolia RPC 读取三个地址的 proxy bytecode，并验证 Reputation/Validation Registry
+均关联上述 Identity Registry。公开地址保存在本地 `.env`，`.env.example` 仍只保留变量名。
 
 ## EVM RPC
 
@@ -111,10 +115,30 @@ last-reviewed: 2026-10-06
 
 | 探针 | 真实调用 | 成功证据 | 必测失败 | 当前状态 |
 |---|---|---|---|---|
-| RPC | chain ID、区块、Transfer logs | 区块号、交易哈希、log index | 错误网络、超时、空结果 | 待执行 |
-| Blockscout MCP | initialize、tools、交易或地址查询 | 工具名、脱敏结果摘要、分页状态 | 缺少密钥、限流、服务不可达 | 待执行 |
-| Agent0 | 读取或创建受控身份 | 服务 ID、所有者、公网交易或读结果 | 网络或 Registry 错配 | 待执行 |
-| ERC-8004 | 写入、receipt、读回 | 交易哈希、区块、读回摘要 | 余额不足、revert、未知提交状态 | 待执行 |
+| RPC | chain ID、区块、Transfer logs | 区块号、交易哈希、log index | 错误网络、超时、空结果 | 已实测通过 |
+| Blockscout MCP | initialize、tools、交易或地址查询 | 工具名、脱敏结果摘要、分页状态 | 缺少密钥、限流、服务不可达 | 已实测通过；发现 16 项工具并读回同一交易 |
+| Agent0 | 读取或创建受控身份 | 服务 ID、所有者、公网交易或读结果 | 网络或 Registry 错配 | 已实测通过；受控 ID `11155111:10691` |
+| ERC-8004 | 写入、receipt、读回 | 交易哈希、区块、读回摘要 | 余额不足、revert、未知提交状态 | 已实测通过；中性反馈已确认并读回 |
+
+## 2026-10-06 脱敏执行记录
+
+- 创建 `pyproject.toml`、`src/trust_receipt/` adapter 和 `tests/external/` 探针骨架。
+- 离线测试验证配置阻塞、区块范围校验、只读请求最多重试两次、RPC 超时/错链、Blockscout
+  认证/限流/分页未知，以及写入失败状态分类；
+  这些测试不计作外部连通证据。
+- 首次执行 `pytest -m external -v` 时因没有 `.env`，5 项均明确报告配置阻塞；未计作连通成功。
+- 随后通过公共 RPC 固定 Sepolia WETH 的 block `11855664`、交易
+  `0x0442…4b6f`、log index `128`，RPC 真实 Transfer 探针通过。过程中发现并修正 Web3.py 7
+  十六进制值缺少 `0x` 前缀的兼容问题。
+- 创建团队控制的 Agent0 身份 `11155111:10691`；注册交易 `0xb9ed…3384`，最终资料更新交易
+  `0x22fb…b460`。Agent0 SDK 1.7.1 已从链上读回名称、active 状态和 owner。
+- 第二个团队控制测试钱包对该身份提交值为 `0` 的中性反馈，交易 `0xd84f…9f53` 在 block
+  `11855595` 确认；SDK 读回 feedback index `1`、Reviewer、值和两个测试标签一致，且未撤销。
+- 三个 Registry 的链上 bytecode 与 Identity Registry 关联已核验。
+- Blockscout MCP 0.19.0 已通过本地认证 HTTP Server 完成 initialize、16 项工具发现和同一笔交易查询。
+  主环境 MCP 客户端固定为 1.26.0，与服务端依赖一致；访问本机端点时禁用系统代理继承。
+- 当前记录只包含公开地址、区块和缩略交易哈希；不包含端点密钥、认证头、钱包私钥或环境变量全集。
+- M0 四项真实外部探针均已通过；密钥只保存在被 Git 忽略的本地 `.env` 中。
 
 执行结果更新规则：
 

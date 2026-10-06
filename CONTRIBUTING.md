@@ -21,10 +21,14 @@ last-reviewed: 2026-10-06
 
 仓库默认分支为 `main`，开发时建议：
 
-- 分支：`feature/<topic>`、`fix/<topic>`、`docs/<topic>`。
+- 分支统一使用 `codex/<topic>` 前缀。
 - 提交：使用动词开头，说明可观察结果，例如 `Add deterministic transfer deduplication`。
 - 不提交虚拟环境、`.env`、数据库、私密回执或生成缓存。
 - 不把 `references/` 的上游历史混入本项目提交；若保留参考副本，应明确采用 submodule、下载脚本或忽略策略。
+
+M1 使用受控集成分支和文件所有权；主负责人、AI 同事 A、AI 同事 B 的固定分支、禁止修改范围、
+PR 目标和交接模板以 [M1_HANDOFF.md](M1_HANDOFF.md) 为准。协作者不得直接推送 `main` 或
+`codex/m1-integration`，也不得自行合并 PR。
 
 ## 代码标准
 

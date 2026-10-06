@@ -23,6 +23,7 @@ last-reviewed: 2026-10-06
 | RPC、Blockscout、Agent0、ERC-8004 集成约定 | [INTEGRATIONS.md](INTEGRATIONS.md) |
 | 核心对象、字段与计算不变量 | [DATA_CONTRACTS.md](DATA_CONTRACTS.md) |
 | 开发顺序、里程碑和降级策略 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) |
+| M1 并行岗位、分支边界和 AI 交接 | [M1_HANDOFF.md](M1_HANDOFF.md) |
 | 测试矩阵与质量门槛 | [TEST_PLAN.md](TEST_PLAN.md) |
 | 密钥、隐私和威胁边界 | [SECURITY.md](SECURITY.md) |
 | 安装、启动、故障恢复 | [OPERATIONS.md](OPERATIONS.md) |

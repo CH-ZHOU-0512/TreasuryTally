@@ -23,7 +23,7 @@ last-reviewed: 2026-10-06
 - 产品：`PRODUCT.md`
 - 架构：`ARCHITECTURE.md`、`DECISIONS.md`、`INTEGRATIONS.md`
 - 契约：`DATA_CONTRACTS.md`，以及未来的 `schemas/`
-- 交付：`DEVELOPMENT_PLAN.md`、`TEST_PLAN.md`、`STATUS.md`
+- 交付：`DEVELOPMENT_PLAN.md`、`M1_HANDOFF.md`、`TEST_PLAN.md`、`STATUS.md`
 - 运维与安全：`OPERATIONS.md`、`SECURITY.md`
 - 来源：`立项.md`
 - 外部参考：`references/`
@@ -42,6 +42,7 @@ last-reviewed: 2026-10-06
 | 核心对象语义和计算不变量 | `DATA_CONTRACTS.md` |
 | 字段结构和必填规则 | 未来的 `schemas/` 文件 |
 | 开发顺序和里程碑退出条件 | `DEVELOPMENT_PLAN.md` |
+| M1 并行岗位、分支所有权和 AI 交接协议 | `M1_HANDOFF.md` |
 | 测试矩阵和质量门槛 | `TEST_PLAN.md` |
 | 密钥、隐私和安全边界 | `SECURITY.md` |
 | 本地安装、启动和恢复 | `OPERATIONS.md` |
@@ -75,6 +76,7 @@ last-reviewed: 2026-10-06
 - 产品任务：再读 `PRODUCT.md`。
 - 代码或架构任务：再读 `ARCHITECTURE.md` 和相关 ADR。
 - 数据任务：再读 `DATA_CONTRACTS.md` 和目标 schema。
+- M1 并行任务：再读 `M1_HANDOFF.md`，并确认唯一岗位和契约冻结 commit。
 - 外部服务、链、合约或探针任务：再读 `INTEGRATIONS.md`。
 - 发布、密钥或外部服务：再读 `SECURITY.md`、`OPERATIONS.md`。
 - 只有需要来源依据时才读 `立项.md`；只有核实上游实现时才定向读 `references/`。
