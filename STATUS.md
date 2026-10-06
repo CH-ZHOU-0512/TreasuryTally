@@ -17,8 +17,8 @@ last-reviewed: 2026-10-07
 
 M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
 均已集成到 `codex/m1-integration`。M2 PR #1 已合并，远端合并提交为
-`d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证，
-已满足启动 M4 的前置条件。
+`d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
+M4 受限 AI 编排、供应商 adapter、离线对抗测试及一次真实 DeepSeek 结构化调用已完成，满足启动 M5 的前置条件。
 
 ## 已完成
 
@@ -67,16 +67,31 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 - 已增加最小 GitHub Actions 配置：普通 CI 执行非 external pytest、Ruff、pip check；外部探针不伪装成功。
 - 当前全量本地测试为 107 项通过、5 项因外部配置缺失而明确跳过；Ruff 与 pip check 通过。
 
+## M4 AI 编排进展
+
+- 已实现 `TaskSpecCandidate`、`ClaimExtraction`、`FollowUpAdvice` 和 `ResultExplanation` 严格 Pydantic 契约，
+  并新增 4 份可重复生成的 JSON Schema；缺失字段、歧义、重复主张类型和非规范金额在候选边界拒绝。
+- 已实现无工具 `StructuredOutputPort`、`RestrictedAIService`、LangChain OpenAI adapter 与 DeepSeek
+  OpenAI-compatible Responses adapter；核心 models、verification、storage 和 receipts 不依赖供应商 SDK。
+- 任务 ID、确认时间和 `spec_hash` 只由确定性代码生成；VerificationPlan 必须完整命中白名单并逐项绑定已确认任务。
+- 补查建议仅允许封闭动作枚举；结果解释必须保持确定性 outcome、金额、数量、Finding ID 和证据引用。
+- 离线测试覆盖 prompt injection、未知操作、参数漂移、缺失检查、歧义任务、冲突主张以及金额/结论篡改。
+- `deepseek-flash` 真实 external 探针已返回并通过 schema 校验；一次性凭据已从本机删除，后续运行需新凭据。
+- OpenAI external 探针因缺少 `OPENAI_API_KEY` 和固定 `OPENAI_MODEL` 明确阻塞，没有用 mock 冒充实测。
+- 删除临时凭据后的全量质量门为 128 项通过、7 项 external 因当前配置缺失而明确跳过；DeepSeek 探针另有此前
+  单独执行的 1 项真实通过记录。Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制均通过。
+
 ## 待集成或尚未开始
 
 - 确定性验收引擎与真实读取 adapter 的产品流程联调。
-- LangChain 编排。
 - Streamlit 产品页面。
 - 公共回执发布与 ERC-8004 接入。
 
 ## 后续阶段外部配置待办
 
 - 提供 `OPENAI_API_KEY`。
+- 提供固定 `OPENAI_MODEL`；若继续使用 DeepSeek，重新生成并仅在本机配置 `DEEPSEEK_API_KEY` 与固定
+  `DEEPSEEK_MODEL`。
 - 如使用 Pinata，提供 `PINATA_JWT`。
 
 ## 已知问题
@@ -88,8 +103,8 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 
 ## 下一步
 
-启动 M4：接入受限 AI 主张提取、计划生成、白名单校验和补查建议；Streamlit 页面留到 M5，继续保持领域、
-验证、存储和供应商 adapter 解耦。
+启动 M5：实现 Streamlit 条件确认、执行进度、差异、补交/换源与回执预览，并接通现有确定性流程和 M4 受限 AI
+用例；继续保持领域、验证、存储和供应商 adapter 解耦。
 
 ## 状态更新规则
 

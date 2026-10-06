@@ -32,6 +32,11 @@ notepad .env
 
 ```dotenv
 OPENAI_API_KEY=
+OPENAI_MODEL=
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=
+AI_TIMEOUT_SECONDS=30
+AI_MAX_RETRIES=2
 BLOCKSCOUT_PRO_API_KEY=
 BLOCKSCOUT_MCP_URL=http://127.0.0.1:8000
 ETH_RPC_URL=
@@ -66,7 +71,8 @@ DATABASE_URL=sqlite:///data/trust_receipt.db
 ERC-8004 写探针默认关闭；只有完成地址、身份、余额和测试钱包核对后，才临时设置
 `M0_ENABLE_WRITES=true`。该探针只提交值为 0、带有 `trust-receipt-m0` 标签的中性测试反馈。
 
-公开合约地址和测试代币地址需与 [INTEGRATIONS.md](INTEGRATIONS.md) 的已核实记录一致；不要从未知来源复制地址。`OPENAI_API_KEY` 在 M4 前、`PINATA_JWT` 在 M6 前可以留空。
+公开合约地址和测试代币地址需与 [INTEGRATIONS.md](INTEGRATIONS.md) 的已核实记录一致；不要从未知来源复制地址。
+OpenAI 或 DeepSeek 真实 M4 探针分别要求对应 API key 与固定模型名；只跑离线测试时可以留空。`PINATA_JWT` 在 M6 前可以留空。
 
 ## 激活主环境
 
@@ -120,6 +126,17 @@ Get-ChildItem -Recurse -File -Include *.py,*.toml,*.json,*.yaml,*.yml | `
   Where-Object { $_.FullName -notmatch '\\(\.venv|\.venv-blockscout|references|\.tmp)\\' } | `
   ForEach-Object { if ((Get-Content -LiteralPath $_.FullName).Count -gt 1000) { $_.FullName } }
 ```
+
+M4 离线门槛与真实模型探针分别运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\m4
+.\.venv\Scripts\python.exe -m pytest tests\external\test_openai_ai_probe.py -m external -v
+.\.venv\Scripts\python.exe -m pytest tests\external\test_deepseek_ai_probe.py -m external -v
+```
+
+外部探针缺少 key 或固定模型名时会明确 skip。不要把 mock 通过解释为真实模型已连通。任何曾粘贴到聊天、日志或提交中的
+密钥都必须先撤销并重新生成，再由操作者直接写入本机 `.env`，不得再次通过对话传递。
 
 本地回执可在独立进程中校验和重放：
 

@@ -62,6 +62,11 @@ src/trust_receipt/
 - `agents` 只能产生经过校验的结构化候选，不直接写数据库或发布反馈。
 - `orchestration` 组合各端口，`app` 只调用用例并展示状态。
 
+M4 的 `agents` 包分成三层：供应商无关的严格 Pydantic 中间产物、只暴露“按指定 schema 生成结构”的
+`StructuredOutputPort`，以及 LangChain/OpenAI-compatible adapter。`RestrictedAIService` 不持有 repository、Shell、
+文件、发布或写链端口。TaskSpec 的身份、确认时间和哈希由确定性代码注入；VerificationPlan 的操作集合和参数必须逐项
+绑定已确认任务；建议与解释必须复用 `VerificationResult` 的三态、金额、数量、Finding ID 和证据引用。
+
 ## 模块与文件约束
 
 - 模块按领域能力组织，一个模块只拥有一个主要变化原因。
@@ -128,7 +133,7 @@ SQLite 将任务、交付 attempt 和验证结果放在三张独立表中。`(ta
 - 独立 Python 环境：Blockscout MCP Server，避免 MCP 版本约束污染主环境。
 - EVM JSON-RPC：参考事件读取。
 - Blockscout MCP：补充地址、交易和代币信息。
-- OpenAI 兼容工具调用模型：主张和计划组织。
+- OpenAI 或 DeepSeek 的兼容结构化输出模型：主张和计划组织；应用不向模型开放可执行工具。
 - Agent0/ERC-8004：服务身份和公开反馈关联。
 - 公共文件存储/IPFS：完整回执链下保存。
 

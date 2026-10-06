@@ -18,6 +18,8 @@ last-reviewed: 2026-10-06
 ## 密钥规则
 
 - 只使用 `.env` 或运行环境注入密钥；`.env` 已被 `.gitignore` 排除。
+- `OPENAI_API_KEY` 与 `DEEPSEEK_API_KEY` 必须分别配合固定的 `OPENAI_MODEL`、`DEEPSEEK_MODEL`；不得把供应商密钥
+  放入 prompt、fixture、回执或测试快照。
 - `.env.example` 只能包含变量名和无敏感示例。
 - `SERVICE_A_PRIVATE_KEY`、`SERVICE_B_PRIVATE_KEY`、`REVIEWER_PRIVATE_KEY` 必须是测试网专用钱包。
 - 团队控制报表服务使用测试钱包对 canonical `report_hash` 签名；repository 接收前必须恢复并比对预配置签名者地址。
@@ -47,7 +49,8 @@ last-reviewed: 2026-10-06
 
 ### Prompt injection
 
-控制：报告文本不能扩展工具权限；模型只返回受限 schema；无任意 Shell、文件、SQL 或 Python 执行工具。
+控制：报告文本不能扩展工具权限；模型只返回受限 schema；模型端口不持有任意 Shell、文件、SQL、repository、发布、
+Python 或写链工具。未知操作、额外字段、任务参数漂移以及结果金额/状态漂移在确定性边界拒绝。
 
 ### 伪造或重复事件
 

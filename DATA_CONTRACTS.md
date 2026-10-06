@@ -143,6 +143,57 @@ M1 冻结的白名单枚举为：
 每项计划操作包含稳定字符串 ID、枚举类型和 JSON 参数对象；未知类型或额外字段必须被拒绝。
 `claims`、`queries`、`filters`、`aggregation_rules` 和 `checks` 在已形成的计划中都至少包含一项。
 
+## M4 受限 AI 中间产物
+
+M4 的模型输出是待校验候选，不是已确认任务、参考证据或验收结论。所有模型使用严格输入、`extra=forbid`
+和冻结实例；供应商原始响应不得跨过 adapter 进入核心编排。
+
+### TaskSpecCandidate
+
+```yaml
+schema_version: "1.0"
+candidate_id: string
+chain_id: integer | null
+token_address: address | null
+treasury_addresses: [address] | null
+recipient_addresses: [address] | null
+start_block: integer | null
+end_block: integer | null
+exclusion_rules: [rule] | null
+max_records: 200
+ambiguities: [clarification_issue]
+missing_fields: [task_field]
+clarification_questions: [string]
+```
+
+`missing_fields` 必须与值为 `null` 的必填任务字段精确一致；地址数量、范围顺序和排除规则仍受 `TaskSpec`
+同等约束。存在缺失或歧义时必须给出确认问题，且不得生成 `TaskSpec`。只有无缺失、无歧义的候选才能由确定性代码
+注入 `task_id`、`confirmed_at`，计算 `spec_hash` 并形成已确认任务；模型不得提供或覆盖这些字段。
+
+### ClaimExtraction
+
+```yaml
+schema_version: "1.0"
+report_id: string
+claims: [claim]
+ambiguities: [clarification_issue]
+clarification_questions: [string]
+source_summary: string
+```
+
+主张类型仍只允许 `CLAIMED_TOTAL`、`CLAIMED_COUNT` 和 `TRANSFER_SET`。总额必须是规范十进制整数字符串，
+数量必须是非负整数，转账集合必须是 JSON 数组；重复 `claim_id`、重复主张类型或未知类型直接拒绝，冲突主张必须转为
+歧义。存在歧义时不得生成执行计划。
+
+### FollowUpAdvice 与 ResultExplanation
+
+补查动作只允许 `NO_ACTION`、`REFRESH_REFERENCE_EVIDENCE`、`CROSS_CHECK_REFERENCE_SOURCE`、
+`CONFIRM_TASK_SCOPE`、`REQUEST_RESUBMISSION`、`SWITCH_SERVICE` 和 `MANUAL_REVIEW`。建议只表达下一步，不包含
+Shell、文件、SQL、Python、数据库写入、发布或写链调用。
+
+结果解释必须逐字绑定确定性 `VerificationResult` 的 `outcome`、`calculated_total_base_units`、
+`calculated_count` 和 Finding ID；模型只能解释，不能改写金额、数量、Finding 或三态结论。
+
 ## Finding
 
 允许的首版类型：
@@ -294,10 +345,14 @@ schemas/v1/verification_result.schema.json
 schemas/v1/receipt.schema.json
 schemas/v1/fixture_case.schema.json
 schemas/v1/fixture_manifest.schema.json
+schemas/v1/task_spec_candidate.schema.json
+schemas/v1/claim_extraction.schema.json
+schemas/v1/follow_up_advice.schema.json
+schemas/v1/result_explanation.schema.json
 ```
 
 每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口预留为
-`scripts/export_schemas.py`；M1 Schema 岗位拥有该单一脚本路径。重复生成不得产生差异。
+`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，后四份为 M4 受限 AI 中间产物。重复生成不得产生差异。
 
 ## 精确计算规则
 
