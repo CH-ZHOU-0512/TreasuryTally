@@ -113,6 +113,23 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 
 默认本地数据写入 `data/`，私有回执写入 `receipts/private/`，两者均不提交版本库。
 
+### Linux 容器部署
+
+生产服务器使用 `deploy/docker-compose.prod.yml` 构建两个相互隔离的容器：Streamlit 主应用与
+Blockscout MCP。两者只加入既有反向代理网络，不直接向公网发布容器端口；`data/` 和
+`receipts/private/` 通过宿主机目录持久化。
+
+```bash
+cd /opt/trust-receipt
+chmod 600 .env
+docker compose -f deploy/docker-compose.prod.yml up -d --build
+docker compose -f deploy/docker-compose.prod.yml ps
+```
+
+反向代理使用 `deploy/nginx-location.conf` 中的路径规则，入口为 `/trust-receipt/`。规则包含 WebSocket、
+长连接和 HTTP Basic Auth；认证文件必须位于反向代理容器可读取、但不可公开下载的位置。部署后分别检查
+容器内健康端点、经认证的公网入口以及一次页面 WebSocket 会话。`.env`、访问口令和 PEM 私钥不得进入镜像。
+
 首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面
 显示阻塞。工作区 ID 对应独立本地数据库、私有回执目录和运行时生成的无资产签名账户；进程重启后输入同一 ID 可恢复最新任务
