@@ -20,6 +20,7 @@ last-reviewed: 2026-10-06
 |---|---|
 | 产品目标、范围、非目标和验收标准 | [PRODUCT.md](PRODUCT.md) |
 | 系统组成、边界和数据流 | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| RPC、Blockscout、Agent0、ERC-8004 集成约定 | [INTEGRATIONS.md](INTEGRATIONS.md) |
 | 核心对象、字段与计算不变量 | [DATA_CONTRACTS.md](DATA_CONTRACTS.md) |
 | 开发顺序、里程碑和降级策略 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) |
 | 测试矩阵与质量门槛 | [TEST_PLAN.md](TEST_PLAN.md) |

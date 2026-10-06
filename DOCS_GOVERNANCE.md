@@ -21,7 +21,7 @@ last-reviewed: 2026-10-06
 
 - 路由：`README.md`、`AGENTS.md`
 - 产品：`PRODUCT.md`
-- 架构：`ARCHITECTURE.md`、`DECISIONS.md`
+- 架构：`ARCHITECTURE.md`、`DECISIONS.md`、`INTEGRATIONS.md`
 - 契约：`DATA_CONTRACTS.md`，以及未来的 `schemas/`
 - 交付：`DEVELOPMENT_PLAN.md`、`TEST_PLAN.md`、`STATUS.md`
 - 运维与安全：`OPERATIONS.md`、`SECURITY.md`
@@ -38,6 +38,7 @@ last-reviewed: 2026-10-06
 | AI 读取和修改约束 | `AGENTS.md` |
 | 产品范围、非目标、完成标准 | `PRODUCT.md` |
 | 组件、依赖方向、数据流 | `ARCHITECTURE.md` |
+| 外部端点、网络、合约、探针和降级 | `INTEGRATIONS.md` |
 | 核心对象语义和计算不变量 | `DATA_CONTRACTS.md` |
 | 字段结构和必填规则 | 未来的 `schemas/` 文件 |
 | 开发顺序和里程碑退出条件 | `DEVELOPMENT_PLAN.md` |
@@ -74,6 +75,7 @@ last-reviewed: 2026-10-06
 - 产品任务：再读 `PRODUCT.md`。
 - 代码或架构任务：再读 `ARCHITECTURE.md` 和相关 ADR。
 - 数据任务：再读 `DATA_CONTRACTS.md` 和目标 schema。
+- 外部服务、链、合约或探针任务：再读 `INTEGRATIONS.md`。
 - 发布、密钥或外部服务：再读 `SECURITY.md`、`OPERATIONS.md`。
 - 只有需要来源依据时才读 `立项.md`；只有核实上游实现时才定向读 `references/`。
 

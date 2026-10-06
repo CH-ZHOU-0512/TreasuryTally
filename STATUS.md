@@ -27,6 +27,7 @@ last-reviewed: 2026-10-06
 - ERC-8004 参考合约编译成功，79 项上游测试通过。
 - 根目录、环境变量模板、依赖清单和锁定快照已建立。
 - 开发前产品、架构、数据、测试、安全、运维和协作文档已建立。
+- M0 外部集成规格、分阶段依赖门槛和代码文件规模约束已建立。
 - Git 仓库已连接到 `https://github.com/CH-ZHOU-0512/xinjv`，默认分支为 `main`。
 
 ## 尚未开始
@@ -46,6 +47,8 @@ last-reviewed: 2026-10-06
 - 提供 `OPENAI_API_KEY`。
 - 提供 `BLOCKSCOUT_PRO_API_KEY`。
 - 提供可用的 `ETH_RPC_URL`。
+- 核实 Sepolia 上的 Agent0/ERC-8004 Registry 合约地址和 ABI 来源。
+- 确认测试 ERC-20、已知 Transfer 交易与小区块范围。
 - 创建三个只用于测试网的钱包并准备少量测试币。
 - 确认用于演示的 ERC-20 代币及历史/自造交易数据。
 - 如使用 Pinata，提供 `PINATA_JWT`。
@@ -59,7 +62,7 @@ last-reviewed: 2026-10-06
 
 ## 下一步
 
-执行 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) 的 M0/M1，并优先完成第一条 fixture 驱动的确定性纵向切片。
+先执行 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) 的 M0 外部连通性验证；详细检查项见 [INTEGRATIONS.md](INTEGRATIONS.md)。M0 受外部配置阻塞时，可并行进入 M1 和第一条 fixture 驱动的确定性纵向切片，但不得把 mock 结果记为 M0 完成。
 
 ## 状态更新规则
 

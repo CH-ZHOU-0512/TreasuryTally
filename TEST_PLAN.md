@@ -39,6 +39,15 @@ last-reviewed: 2026-10-06
 
 外部契约测试默认可跳过，但必须有明确 marker 和跳过原因，不能悄悄通过。
 
+外部测试执行规则：
+
+- 统一使用 `external` marker，文件放在 `tests/external/`。
+- 普通本地测试可以排除 `external`；M0 验收命令必须执行它，缺少配置时明确失败或报告阻塞，不得自动伪装成通过。
+- 单次外部请求默认超时 30 秒，单个探针总时限 120 秒；供应商明确要求更长时间时需在集成记录中说明。
+- 只读幂等请求最多自动重试两次，并采用退避；交易广播响应不确定时不得自动重发。
+- 外部测试输出只保留脱敏摘要、公开地址、交易哈希、区块和错误分类，不打印密钥、认证头或环境变量全集。
+- Mock 测试只能验证 adapter 行为，不能作为“外部能力已实测”的证据。
+
 ### 集成测试
 
 - TaskSpec → 服务交付 → 验收 → SQLite 保存。
@@ -100,6 +109,12 @@ last-reviewed: 2026-10-06
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -m "not external"
 .\.venv\Scripts\python.exe -m pytest -m external
+```
+
+M0 验收使用：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m external -v
 ```
 
 ## 验收记录

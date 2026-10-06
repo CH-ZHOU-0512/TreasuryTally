@@ -1,6 +1,7 @@
 .env
 .venv/
 .venv-blockscout/
+.tmp/
 references/
 __pycache__/
 *.pyc

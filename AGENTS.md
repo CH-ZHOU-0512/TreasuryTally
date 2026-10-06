@@ -17,8 +17,9 @@ last-reviewed: 2026-10-06
 1. 先读 [README.md](README.md) 和 [STATUS.md](STATUS.md)。
 2. 产品行为变更再读 [PRODUCT.md](PRODUCT.md)；架构或跨模块变更再读 [ARCHITECTURE.md](ARCHITECTURE.md) 和 [DECISIONS.md](DECISIONS.md)。
 3. 数据字段、金额、事件身份或回执变更必须读 [DATA_CONTRACTS.md](DATA_CONTRACTS.md)。
-4. 测试、安全或运行相关变更分别按需读取 [TEST_PLAN.md](TEST_PLAN.md)、[SECURITY.md](SECURITY.md)、[OPERATIONS.md](OPERATIONS.md)。
-5. 不要默认递归读取 `.venv/`、`.venv-blockscout/` 或 `references/`。只有需要核实上游行为时才定向读取参考仓库。
+4. 外部服务、链上合约或网络探针相关变更必须读 [INTEGRATIONS.md](INTEGRATIONS.md)。
+5. 测试、安全或运行相关变更分别按需读取 [TEST_PLAN.md](TEST_PLAN.md)、[SECURITY.md](SECURITY.md)、[OPERATIONS.md](OPERATIONS.md)。
+6. 不要默认递归读取 `.venv/`、`.venv-blockscout/` 或 `references/`。只有需要核实上游行为时才定向读取参考仓库。
 
 ## 实现约束
 
@@ -30,6 +31,8 @@ last-reviewed: 2026-10-06
 - AI 只能生成结构化主张、受限计划和解释；不得执行任意生成代码或决定最终金额。
 - 外部失败、缺页、RPC 不一致或证据不足应得到 `INCONCLUSIVE`，不是负面信誉。
 - 所有写链、上传公开文件和使用真实密钥的动作必须显式区分模拟、已提交与已确认状态。
+- 除 Markdown 和 `.tmp/` 下明确不提交的临时测试文件外，任何单个代码、脚本、配置或永久测试文件不得超过 1000 个物理行；接近限制时按职责拆分，不得压缩格式规避限制。
+- 模块必须高内聚、低耦合：一个模块只拥有一个明确领域职责，跨模块通过稳定模型、端口或 adapter 协作，禁止用循环导入、全局可变状态或 UI/供应商细节穿透领域层。
 
 ## 变更同步
 
@@ -39,6 +42,7 @@ last-reviewed: 2026-10-06
 - 当前进展变化：只更新 `STATUS.md`；不要把状态复制到其他文档。
 - 开发计划完成项只在 `STATUS.md` 记录，不逐日改写 `DEVELOPMENT_PLAN.md`。
 - 凭据名称变化：同步 `.env.example`、`OPERATIONS.md` 和 `SECURITY.md`。
+- 外部端点、网络、合约地址、探针和降级策略变化：更新 `INTEGRATIONS.md`。
 
 ## 验证命令
 
