@@ -6,18 +6,19 @@ authority-for:
   - current-status
   - active-work
   - known-blockers
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 当前项目状态
 
-更新时间：2026-10-06
+更新时间：2026-10-07
 
 ## 当前阶段
 
 M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试和 12 份人工标注 fixtures
 均已集成到 `codex/m1-integration`。M2 PR #1 已合并，远端合并提交为
-`d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环已在本地实现并验证。
+`d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证，
+已满足启动 M4 的前置条件。
 
 ## 已完成
 
@@ -61,8 +62,10 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 - 已实现团队控制服务 A/B 端口、EVM 签名恢复校验和独立故障注入元数据，模拟故障不混入参考来源。
 - 已实现 SQLite task/attempt/verification 分表留档与状态机；attempt 只追加，最多一次补交，签名失败不消耗 attempt。
 - 无 UI 编排已跑通首次遗漏导致 `FAIL`、同服务补交或切换服务后 `PASS`，两个 attempt 均可分别读取。
+- 已实现 ReceiptBuilder、本地只创建不覆盖的 JSON 存储和独立进程重放；FAIL/PASS attempt 分别生成不同哈希，
+  重放会校验回执哈希、任务哈希、对象链接并重新推导三态结果。
 - 已增加最小 GitHub Actions 配置：普通 CI 执行非 external pytest、Ruff、pip check；外部探针不伪装成功。
-- 当前全量本地测试为 106 项通过、5 项因外部配置缺失而明确跳过；Ruff 与 pip check 通过。
+- 当前全量本地测试为 107 项通过、5 项因外部配置缺失而明确跳过；Ruff 与 pip check 通过。
 
 ## 待集成或尚未开始
 
@@ -85,7 +88,8 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 
 ## 下一步
 
-启动 M4：接入受限 AI 主张/计划编排与 Streamlit 页面，同时保持领域、验证、存储和供应商 adapter 解耦。
+启动 M4：接入受限 AI 主张提取、计划生成、白名单校验和补查建议；Streamlit 页面留到 M5，继续保持领域、
+验证、存储和供应商 adapter 解耦。
 
 ## 状态更新规则
 

@@ -6,7 +6,7 @@ authority-for:
   - component-boundaries
   - system-data-flow
   - dependency-direction
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 系统架构
@@ -83,6 +83,10 @@ src/trust_receipt/
 7. 回执构建器绑定任务、交付、计划、验证器版本和证据哈希。
 8. 用户授权后，发布适配器上传脱敏回执；信誉适配器提交其 URI 和哈希。
 9. 读回程序校验链上引用、文件哈希及确定性检查结果。
+
+本地回执存储使用只创建、不覆盖的 JSON 文件。独立重放入口重新校验 `receipt_hash`、嵌套 `spec_hash`、任务链接，
+并仅根据参考完整性、证据充分性和 confirmed error 重新推导 PASS/FAIL/INCONCLUSIVE；它不依赖原聊天历史、UI、
+数据库连接或模型服务。
 
 canonical JSON 使用 UTF-8、按键名排序、无空白 JSON 表示，明确拒绝 `float`；当前稳定哈希算法为 SHA-256，输出
 `0x` 加 64 位小写十六进制。`TaskSpec`、`ServiceSubmission` 和 `Receipt` 分别排除自身哈希字段；交付哈希还排除

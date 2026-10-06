@@ -5,7 +5,7 @@ status: active
 authority-for:
   - documentation-routing
   - repository-entrypoint
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 信据 Agent
@@ -54,7 +54,8 @@ streamlit run app\streamlit_app.py
 ```
 
 Streamlit 页面尚未实现，不要把上述预定命令误认为当前已经存在的功能。领域模型、确定性验证、canonical
-JSON/哈希、团队控制服务 A/B、SQLite attempt 留档和无 UI 编排已经实现；实际进展请查看 [STATUS.md](STATUS.md)。
+JSON/哈希、团队控制服务 A/B、SQLite attempt 留档、无 UI 编排以及本地回执生成/重放已经实现；实际进展请查看
+[STATUS.md](STATUS.md)。
 
 ## 仓库边界
 
