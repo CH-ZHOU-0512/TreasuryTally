@@ -1,6 +1,6 @@
 ---
 doc-id: project-readme
-title: 信据 Agent 项目入口
+title: TreasuryTally 项目入口
 status: active
 authority-for:
   - documentation-routing
@@ -8,9 +8,9 @@ authority-for:
 last-reviewed: 2026-10-07
 ---
 
-# 信据 Agent
+# TreasuryTally
 
-信据 Agent 是链上报表验收工具：上传服务商报表后，系统把报表声明与真实链上资金流放在同一张对账图中，定位漏报、
+TreasuryTally 是链上报表验收工具：上传服务商报表后，系统把报表声明与真实链上资金流放在同一张对账图中，定位漏报、
 重复和内部互转，并生成能够说明“哪里不符合约定、如何复现”的验收回执。
 
 首版是约 40 小时开发窗口内的可运行原型，不是完整交易市场或通用会计系统。

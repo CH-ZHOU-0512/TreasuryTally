@@ -48,7 +48,9 @@ def main() -> None:
     if len(page.exception):
         raise RuntimeError(f"Real app entrypoint raised {len(page.exception)} exception(s)")
     html_bodies = [item.proto.body for item in page.get("html")]
-    header = any("核对服务商报表与链上资金流" in body for body in html_bodies)
+    header = any(
+        "核对服务商报表与链上资金流" in body and "TreasuryTally" in body for body in html_bodies
+    )
     if not header:
         raise RuntimeError("Real app entrypoint did not render its product header")
     origin = Path(sys.modules["trust_receipt"].__file__).resolve()

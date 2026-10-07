@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "trust-receipt"
 version = "0.1.0"
-description = "Deterministic verification receipts for on-chain service reports"
+description = "TreasuryTally: deterministic verification receipts for on-chain service reports"
 requires-python = ">=3.12"
 dependencies = [
   "agent0-sdk==1.7.1",

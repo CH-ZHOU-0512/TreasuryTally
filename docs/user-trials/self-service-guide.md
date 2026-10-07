@@ -1,13 +1,13 @@
 ---
 doc-id: m14-self-service-guide
-title: 信据 Agent 用户自助操作说明
+title: TreasuryTally 用户自助操作说明
 status: active
 authority-for:
   - m14-self-service-instructions
 last-reviewed: 2026-10-07
 ---
 
-# 信据 Agent 用户自助操作说明
+# TreasuryTally 用户自助操作说明
 
 本说明面向需要验收外部服务商链上拨款报表的财务或运营人员。它描述支持范围内的通用操作，不要求使用仓库固定样例。
 
