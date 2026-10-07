@@ -154,9 +154,9 @@ Python 文件（仅归一化 Git 换行），并用真实 `/app/app/streamlit_ap
 `docker compose ... up -d --no-deps --no-build app` 切换已构建应用镜像，不重建其他容器。
 
 页面 Logo 保持用户原始 PNG，存放于 `app/static/logo.png`；`.streamlit/config.toml` 启用
-`server.enableStaticServing`，页面使用兼容 `server.baseUrlPath` 的同源 URL，使浏览器复用静态资源，避免每次重跑
+`server.enableStaticServing` 保留原始静态访问；品牌展示使用兼容 `server.baseUrlPath` 的同源 288px 媒体预览 URL，使浏览器复用资源，避免每次重跑
 重复发送大段 base64。OpenAI/Agent0 SDK 仅在对应 adapter 实际使用时加载。生产接入这些改动须经授权重建镜像，
-随后检查 `/trust-receipt/app/static/logo.png`、页面 Logo 与 WebSocket；本地优化不代表生产已经更新。
+随后检查 `/trust-receipt/app/static/logo.png`、页面实际 `/trust-receipt/media/` 资源、Logo 透明底和 DPR 清晰度及 WebSocket；本地优化不代表生产已经更新。
 
 生产服务器使用 `deploy/docker-compose.prod.yml` 构建两个相互隔离的容器：Streamlit 主应用与
 Blockscout MCP。两者只加入既有反向代理网络，不直接向公网发布容器端口；`data/` 和
