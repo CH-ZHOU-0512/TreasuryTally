@@ -23,6 +23,12 @@ from trust_receipt.agents.models import (  # noqa: E402
     ResultExplanation,
     TaskSpecCandidate,
 )
+from trust_receipt.m9 import (  # noqa: E402
+    PublicVerificationResult,
+    ReceiptRevision,
+    RepairComparison,
+    ReworkPackage,
+)
 from trust_receipt.models import (  # noqa: E402
     FixtureCase,
     FixtureManifest,
@@ -52,6 +58,10 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("claim_extraction.schema.json", "claim-extraction", ClaimExtraction),
     ("follow_up_advice.schema.json", "follow-up-advice", FollowUpAdvice),
     ("result_explanation.schema.json", "result-explanation", ResultExplanation),
+    ("rework_package.schema.json", "rework-package", ReworkPackage),
+    ("receipt_revision.schema.json", "receipt-revision", ReceiptRevision),
+    ("repair_comparison.schema.json", "repair-comparison", RepairComparison),
+    ("public_verification_result.schema.json", "public-verification-result", PublicVerificationResult),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
@@ -87,6 +97,16 @@ MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
     ),
     "FollowUpAdvice": ("follow-up actions are restricted by deterministic outcome",),
     "ResultExplanation": ("application validation binds values and finding references to VerificationResult",),
+    "ReworkPackage": ("items contain only actionable confirmed error findings from one FAIL receipt",),
+    "ReceiptRevision": (
+        "attempt 1 is ORIGINAL without parent links",
+        "attempt 2 links and supersedes attempt 1 without changing either Receipt 1.0 object",
+    ),
+    "RepairComparison": ("before is attempt 1 and after is attempt 2 for the same immutable task",),
+    "PublicVerificationResult": (
+        "missing necessary public evidence is INCONCLUSIVE and conflicting evidence is INVALID",
+        "missing optional M8 commitment evidence remains explicitly UNVERIFIED",
+    ),
 }
 
 

@@ -203,6 +203,21 @@ M4 离线门槛与真实模型探针分别运行：
 
 命令以 JSON 输出回执哈希、任务哈希、对象链接和三态结果复算状态；任一检查失败时退出码非零。
 
+M9 公开回执验证不读取 SQLite 或私有工作区。可对本地下载的公开 JSON 或 HTTP(S) URI 执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli `
+  path\to\public-receipt.json `
+  --kind RECEIPT_HASH `
+  --value 0x<receipt-hash> `
+  --attempt 1 `
+  --expected-content-hash 0x<published-byte-sha256>
+```
+
+`--kind` 还支持 `URI`、`TASK_HASH` 和 `FEEDBACK_TRANSACTION`。attempt 2 必须使用 `--revision` 和
+`--parent-revision` 提供可验证的 parent/supersedes 关系；反馈交易入口还必须提供独立读回的内容哈希，
+否则返回 `INCONCLUSIVE`。未接入 M8 承诺 adapter 时输出 `commitment_status=UNVERIFIED`。
+
 M0 真实探针使用：
 
 ```powershell

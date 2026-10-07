@@ -22,8 +22,8 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek �
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
-`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8–M10 产品方向已经完成文档设计，
-尚未实现或部署。
+`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8–M10 产品方向已经完成文档设计。
+M9 已在独立交付分支完成实现与本地验证，待集成进入主线；M8、M10 的实际进展以各自并行交付为准。
 
 ## 已完成
 
@@ -209,6 +209,21 @@ TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry �
   LangChain，并使用现有锁定快照约束 CI 解析，避免无界回溯。
 - 修复提交对应的 GitHub Actions 主线 CI 已通过，依赖安装、非 external 测试、Ruff、`pip check`、Schema、
   文件规模检查和无凭据演示均为绿色。
+
+## M9 修复与回执验证进展
+
+- 新增确定性 `ReworkPackage`：仅把 `FAIL` 回执中 `confirmed + error` Finding 映射为闭合返工动作，
+  不把 hypothesis 或证据不足改写为确定指令；返工包使用 canonical SHA-256 自哈希。
+- 新增外置 `ReceiptRevision` 和只创建不覆盖的 `LocalRevisionStore`；两次 attempt 以 parent/supersedes 形成自哈希链，
+  不修改 `Receipt 1.0` 或旧回执哈希。`RepairComparison` 保留 task/service/attempt/receipt hash/outcome/resolution、
+  整数金额与证据引用，并复用既有 v1 交付哈希和 EVM 签名校验。
+- 新增只读 `PublicReceiptResolver` / `ReceiptCommitmentVerifier` 稳定端口及独立 CLI，支持 URI、receipt hash、
+  task hash 和 feedback transaction 入口；必要公开证据缺失返回 `INCONCLUSIVE`，冲突返回 `INVALID`。
+  M8 承诺端口缺失时显式记为 `UNVERIFIED`，不伪造承诺已核验。
+- 新增 `app/m9_components.py` 独立展示组件，未修改 M8 所有的 `app/streamlit_app.py` 和 `app/runtime.py`。
+  四份 M9 Pydantic 顶层契约已生成 JSON Schema，总计 16 份 schema 可重复生成。
+- 全量本地测试为 166 项通过、8 项 external 因当前隔离 worktree 缺少配置而明确跳过；Ruff、`pip check`、
+  Schema 漂移和 1000 物理行限制均通过。本次未执行外部网络、真实模型、公开上传或写链验证。
 
 ## 状态更新规则
 

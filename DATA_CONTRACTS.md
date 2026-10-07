@@ -306,10 +306,12 @@ publication:
 - attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
 - 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
-## M8–M10 计划契约
+## M8–M10 扩展契约
 
-以下对象描述已接受的后续语义，但尚未进入 `schemas/v1/`，也不代表已经实现。实现前必须确定 schema 版本、链上承载方式和
-迁移策略，再生成 Pydantic 模型与 JSON Schema。
+M9 的 `ReworkPackage`、`ReceiptRevision`、`RepairComparison` 和 `PublicVerificationResult` 使用独立
+`1.0` 契约并进入 `schemas/v1/`。它们只引用既有 `Receipt 1.0`，不向旧回执内增加字段，因此不会改变
+已生成回执的 canonical JSON 或 `receipt_hash`。M8 承诺的链上承载方式仍由其独立探针决定；M9 只通过可选稳定端口
+消费承诺核验结果，缺少时必须标记为 `UNVERIFIED`。
 
 ### TaskCommitment
 
@@ -380,6 +382,90 @@ resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED
 
 替代关系只能追加，不能撤销或覆盖旧回执。`FIXED` 必须引用同一任务的早期 FAIL/INCONCLUSIVE 回执以及后续 PASS 回执；
 服务切换时仍保留两个不同的 service identity。
+
+M9 实现使用完整的 `ReceiptRevision`：
+
+```yaml
+revision_version: "1.0"
+task_id: string
+service_id: string
+attempt: 1 | 2
+receipt_hash: hash
+outcome: PASS | FAIL | INCONCLUSIVE
+resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED
+parent_receipt_hash: hash | null
+supersedes_receipt_hash: hash | null
+evidence_refs: [string]
+created_at: datetime
+revision_hash: hash
+```
+
+attempt 1 必须为 `ORIGINAL` 且不带父关系。attempt 2 必须同时把 attempt 1 记为 parent 和 superseded；后续
+`PASS` 记为 `FIXED`，否则记为 `UNRESOLVED`。每条记录必须与其引用回执的 task、service、outcome 一致。
+`revision_hash` 覆盖除自身外的完整 canonical 对象，用于检测关系记录被改写。
+
+### ReworkPackage
+
+```yaml
+package_version: "1.0"
+package_id: string
+task_id: string
+source_submission_id: string
+source_receipt_hash: hash
+created_at: datetime
+items:
+  - finding_id: string
+    finding_type: enum
+    violated_rule: string
+    expected: object | null
+    actual: object | null
+    evidence_refs: [string]
+    required_action: ADD_MISSING_TRANSFER | REMOVE_EXTRA_TRANSFER | REMOVE_DUPLICATE_TRANSFER |
+                     REMOVE_EXCLUDED_INTERNAL_TRANSFER | CORRECT_SCOPE | CORRECT_TOKEN |
+                     CORRECT_DIRECTION | CORRECT_AMOUNT | CORRECT_DECIMALS
+package_hash: hash
+```
+
+只有 `FAIL` 回执中 `confirmed + error` 的 Finding 能进入返工包。`hypothesis`、warning 和
+`INSUFFICIENT_EVIDENCE` 不能变成确定返工指令。`package_hash` 覆盖除自身外的完整 canonical 对象。
+
+### RepairComparison
+
+```yaml
+comparison_version: "1.0"
+task_id: string
+before: attempt_snapshot
+after: attempt_snapshot
+resolved_finding_ids: [string]
+remaining_finding_ids: [string]
+resolution: FIXED | UNRESOLVED
+```
+
+`before.attempt=1`、`after.attempt=2`，两者必须引用同一 task 的不同回执，并与追加版本关系一致。快照保留
+task/service/attempt/receipt hash/outcome/resolution、整数金额字符串和证据引用；对比不重新决定验收结论。
+
+### PublicVerificationResult
+
+```yaml
+verification_version: "1.0"
+reference_kind: URI | RECEIPT_HASH | TASK_HASH | FEEDBACK_TRANSACTION
+reference_value: string
+status: VERIFIED | INCONCLUSIVE | INVALID
+task_id: string | null
+service_id: string | null
+attempt: 1 | 2 | null
+receipt_hash: hash | null
+outcome: PASS | FAIL | INCONCLUSIVE | null
+resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED | null
+evidence_refs: [string]
+commitment_status: VERIFIED | UNVERIFIED | INVALID
+checks: [verification_check]
+reason: string | null
+```
+
+独立验证从解析端口取得公开字节和版本记录，重新校验内容哈希、`receipt_hash`、`spec_hash`、对象链接和三态重放。
+必要公开证据缺失返回 `INCONCLUSIVE`，内容或关系冲突返回 `INVALID`。旧 v1 单回执仍可独立重放；未提供 M8 承诺
+核验端口时仅将 `commitment_status` 记为 `UNVERIFIED`，不伪造已验证承诺。
 
 ### ServiceHistoryProjection
 
@@ -459,10 +545,15 @@ schemas/v1/task_spec_candidate.schema.json
 schemas/v1/claim_extraction.schema.json
 schemas/v1/follow_up_advice.schema.json
 schemas/v1/result_explanation.schema.json
+schemas/v1/rework_package.schema.json
+schemas/v1/receipt_revision.schema.json
+schemas/v1/repair_comparison.schema.json
+schemas/v1/public_verification_result.schema.json
 ```
 
-每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口预留为
-`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，后四份为 M4 受限 AI 中间产物。重复生成不得产生差异。
+每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口为
+`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，随后四份为 M4 受限 AI 中间产物，最后四份为 M9 追加契约。
+重复生成不得产生差异。
 
 ## 精确计算规则
 

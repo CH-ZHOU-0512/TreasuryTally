@@ -47,6 +47,11 @@ Service History Projection    ── verified receipts → traceable facts
 资金流投影只负责把已有领域事实转换为节点、边和颜色状态，不重新计算金额或结论。服务历史投影同样只聚合已验证回执，
 不能成为新的信誉真值或覆盖原始回执。
 
+M9 不修改冻结的 `Receipt 1.0`：`ReceiptRevision` 以外置自哈希记录追加 parent/supersedes 关系，
+`LocalRevisionStore` 一个 attempt 只创建一个文件。`ReceiptCommitmentVerifier` 是可选稳定端口；M8 未提供实现时，
+对比与公开验证保留 `UNVERIFIED` 状态而不阻塞 v1 回执重放。`PublicReceiptResolver` 只能返回公开字节、
+内容哈希和公开关系，不允许回查 SQLite 私有工作区。
+
 M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名
 `ServiceSubmission`。故障注入状态保存在独立 `ReportDelivery.fault_injection` 元数据中，不写入参考证据，也不伪装为
 第三方生产数据。编排层先校验 canonical report hash 和 EVM 签名，再允许交付进入 repository。
@@ -62,6 +67,7 @@ src/trust_receipt/
 ├─ agents/          # LangChain 提取和计划适配器
 ├─ receipts/        # 回执构建、哈希、重放
 ├─ reputation/      # Agent0/ERC-8004 适配器
+├─ m9/              # 确定性返工、外置版本链、对比与公开重放
 ├─ storage/         # SQLite repository
 └─ orchestration/   # 用例编排，不包含 UI 逻辑
 ```
