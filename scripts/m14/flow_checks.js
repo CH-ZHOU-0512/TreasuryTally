@@ -1,5 +1,11 @@
   // Included inside the driver function; all actions use the actual page.
   await check("UR-02", async () => {
+    if (!await page.getByRole("textbox", { name: "工作区 ID", exact: true }).isVisible()) {
+      await page.getByText("运行配置", { exact: true }).click();
+    }
+    await page.getByRole("textbox", { name: "工作区 ID", exact: true }).fill(config.workspace);
+    await page.getByRole("textbox", { name: "工作区 ID", exact: true }).press("Enter");
+    await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).waitFor();
     const uploader = page.locator('input[type="file"]').first();
     await uploader.setInputFiles(config.report);
     await page.getByText(/已读取/).waitFor();
@@ -12,13 +18,18 @@
     await page.getByRole("spinbutton", { name: "结束区块（含）", exact: true }).fill(String(config.task.end_block));
     await page.getByRole("textbox", { name: "资金账户（每行一个，最多两个）", exact: true }).fill(config.task.treasury_addresses.join("\n"));
     await page.getByRole("textbox", { name: "资助对象（每行一个）", exact: true }).fill(config.task.recipient_addresses.join("\n"));
-    await page.getByRole("checkbox", { name: "排除资金账户之间的内部互转", exact: true }).setChecked(config.task.exclusion_rules.length > 0);
+    const exclusion = page.getByRole("checkbox", { name: "排除资金账户之间的内部互转", exact: true });
+    if (await exclusion.isChecked() !== (config.task.exclusion_rules.length > 0)) {
+      await page.getByText("排除资金账户之间的内部互转", { exact: true }).click();
+    }
     await page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true }).click();
     await page.getByText("任务未确认：请先勾选任务边界确认框。", { exact: true }).waitFor();
     ensure(!await page.getByRole("button", { name: /开始验收/ }).count(), "unconfirmed task executed");
     const prior = results.find(item => item.id === "UR-06");
     prior.evidence.uncheckedConfirmationRejected = true;
-    await page.getByRole("checkbox", { name: "我已核对链、资产、账户与区块边界，并确认冻结此任务", exact: true }).check();
+    const confirmation = page.getByRole("checkbox", { name: "我已核对链、资产、账户与区块边界，并确认冻结此任务", exact: true });
+    await page.getByText("我已核对链、资产、账户与区块边界，并确认冻结此任务", { exact: true }).click();
+    ensure(await confirmation.isChecked(), "keyboard confirmation failed");
     await page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true }).click();
     await page.getByRole("button", { name: "开始验收 · Attempt 1", exact: true }).waitFor();
     await page.getByRole("button", { name: "开始验收 · Attempt 1", exact: true }).click();
@@ -28,13 +39,24 @@
     ensure((await page.locator("body").innerText()).includes("COMPLETE"), "real RPC completeness absent");
     await page.getByText("查看不可变任务指纹与完整边界", { exact: true }).click();
     const hash = await page.locator('code').filter({ hasText: /^0x[a-f0-9]{64}$/ }).first().innerText();
-    return { expectedTotal: config.expectedTotal, taskHash: hash, realRpcComplete: true, screenshot: await screen("independent-pass") };
+    return { workspace: config.workspace, expectedTotal: config.expectedTotal, taskHash: hash, realRpcComplete: true, screenshot: await screen("independent-pass") };
   });
   const independent = results.find(item => item.id === "UR-02");
   const cold = results.find(item => item.id === "UR-03");
   if (independent.status === "PASS" && cold.status === "PASS") cold.evidence.independentInputCompleted = true;
   else if (cold.status === "PASS") { cold.status = "BLOCKED"; cold.reason = "cold screen verified but independent path incomplete"; }
   if (independent.status === "PASS") {
+    const responsive = results.find(item => item.id === "UR-12");
+    const resultViews = [];
+    for (const [width, height] of [[1440,1000],[390,844],[759,900],[761,900]]) {
+      await page.setViewportSize({ width, height });
+      const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: innerWidth }));
+      resultViews.push({ width, height, ...dimensions, screenshot: await screen(`result-${width}`) });
+      if (dimensions.scroll > dimensions.inner) responsive.status = "FAIL";
+    }
+    responsive.evidence.resultViews = resultViews;
+    responsive.reason = "actual 200% browser zoom requires separate completion";
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await check("UR-11", async () => {
       await page.getByText("公共回执与 ERC-8004", { exact: true }).first().click();
       const body = await page.locator("body").innerText();

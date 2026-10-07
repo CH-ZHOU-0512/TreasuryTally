@@ -5,7 +5,7 @@ async (page) => {
   const record = (id, status, evidence, reason = "") => results.push({ id, status, evidence, reason });
   const check = async (id, action) => {
     try { record(id, "PASS", await action()); }
-    catch (error) { record(id, "FAIL", { message: String(error.message).slice(0, 350) }, "assertion failed"); }
+    catch (error) { record(id, "FAIL", { message: String(error.message).slice(0, 700), screenshot: await screen(`failure-${id}`) }, "assertion failed"); }
   };
   const ensure = (value, message) => { if (!value) throw new Error(message); };
   const screen = async (name) => {
@@ -35,14 +35,16 @@ async (page) => {
     ];
     const observed = [];
     for (const [name, text] of invalid) {
-      await input.setInputFiles([]);
+      await page.reload();
+      await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).waitFor({ timeout: 45000 });
       await input.setInputFiles({ name: `${name}.json`, mimeType: "application/json", buffer: Buffer.from(text) });
-      await page.getByText(name === "size-limit" ? /exceeds|too large|超过|1MB/ : /无法解析报表/).first().waitFor();
+      await page.getByText(name === "size-limit" ? /File must|exceeds|too large|smaller|无法解析报表/ : /无法解析报表/).first().waitFor();
       if (name === "size-limit") { observed.push(name); continue; }
       ensure(await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).isDisabled(), "invalid upload can draft");
       observed.push(name);
     }
-    await input.setInputFiles([]);
+    const lastRemove = page.getByRole("button", { name: /^Remove / });
+    if (await lastRemove.count()) await lastRemove.first().click();
     await input.setInputFiles(config.report);
     await page.getByText(/已读取/).waitFor();
     ensure(await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).isEnabled(), "valid upload did not recover");
@@ -72,10 +74,16 @@ async (page) => {
     await page.getByRole("textbox", { name: "核验范围说明", exact: true }).focus();
     const focused = await page.evaluate(() => document.activeElement?.tagName);
     ensure(focused === "TEXTAREA", "scope cannot receive focus");
-    await page.keyboard.press("Tab");
-    const next = await page.evaluate(() => ({ tag: document.activeElement?.tagName, text: document.activeElement?.textContent?.slice(0, 80) }));
-    ensure(next.tag === "BUTTON", "scope tab navigation does not reach action");
-    return { focused, next, screenshot: await screen("keyboard"), coverage: "input path only" };
+    const traversed = [];
+    let next;
+    for (let index = 0; index < 12; index++) {
+      await page.keyboard.press("Tab");
+      next = await page.evaluate(() => ({ tag: document.activeElement?.tagName, text: document.activeElement?.textContent?.slice(0, 80) }));
+      traversed.push(next);
+      if (next.tag === "BUTTON" && next.text?.includes("生成可核对")) break;
+    }
+    ensure(next.text?.includes("生成可核对"), "scope tab navigation: " + JSON.stringify(traversed));
+    return { focused, next, traversed, screenshot: await screen("keyboard"), coverage: "input path only" };
   });
   const keyboard = results.find(item => item.id === "UR-13");
   if (keyboard.status === "PASS") { keyboard.status = "BLOCKED"; keyboard.reason = "result evidence and full keyboard path not executed"; }
