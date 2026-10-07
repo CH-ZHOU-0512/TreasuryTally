@@ -23,7 +23,7 @@ fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已�
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
 `codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8 资金流投影、EIP-712 承诺、前端主流程
-重构与 Validation Registry 只读探针已在独立开发分支实现，尚未合并或部署；M9–M10 仍在并行开发。
+重构与 Validation Registry 只读探针已合并并部署到广州应用；专用锚仍只是未部署候选，M9–M10 独立分支仍在并行开发。
 
 ## 已完成
 
@@ -237,6 +237,22 @@ M8 分支完成本地功能补齐与质量门后提交交接，主负责人审�
 - M9：确认 Finding 生成返工包、修复前后并排对比、只追加回执版本链和独立公开验证入口。
 - M10：按任务类型聚合可追溯的服务历史事实，并用于下一次人工选择服务；不生成永久综合评分。
 - 黑客松阶段明确不建设多租户、复杂账号/RBAC、计费、开放市场、自动付款或主网资金控制。
+
+## M8 发布与部署
+
+- 2026-10-07：M8 代码提交 `484f941` 已推送；[PR #6](https://github.com/CH-ZHOU-0512/xinjv/pull/6)
+  合并为 `821bbc228e68beccbd1c761e15cfc631b6225d37`，分支与主线 CI 均通过。未合并或修改 M9/M10 独立分支。
+- 广州 `/opt/trust-receipt` 应用已切换为 `trust-receipt:m8-821bbc2`，镜像 revision label 与合并提交一致。
+  仅重建应用容器；Blockscout、Nginx 与其他应用不重建。原 `.env`、数据与私有/公共回执挂载保持不变。
+- 全量构建下载过慢且会重新选择依赖，已停止该构建容器。最终镜像使用已备份运行层、本次 M8 纯 Python wheel 和静态页面源码，
+  离线强制安装 M8 包，并把 langchain-core/openai/types-requests 对齐到已测试锁定版本；未修改依赖锁文件。
+  发布源码 tar 与 M8 wheel 的 SHA-256 已校验；镜像 `pip check`、M8 主题/模型 smoke、无网络 FAIL→PASS 与回执重放通过。
+- 公网 [应用入口](https://creatoros.top/trust-receipt/) 与健康端点均为 200；WebSocket 握手通过。
+  生产配置隔离启动通过，页面只提供真实 DeepSeek 与 Sepolia RPC。线上桌面与 390px 手机输入页截图已检查，
+  手机可见文字计算字号均在五级集合内，无页面水平溢出。结果页、760px 两侧与 200% 放大仍未完成完整视觉复验。
+- 回滚保留 `trust-receipt:m8-rollback-484f941` 镜像及
+  `/opt/trust-receipt-backups/m8-before-484f941/source.tar.gz`；备份目录仅 root 可访问。
+  本次没有真实链锚部署、写链或公开回执上传；网页部署不等于全量链上闭环完成。
 
 ## M7 工作区收尾
 
