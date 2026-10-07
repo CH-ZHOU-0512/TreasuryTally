@@ -1,1 +1,1 @@
-"""Streamlit presentation adapter for the trust-receipt prototype."""
+"""Streamlit presentation adapter for the TreasuryTally prototype."""
