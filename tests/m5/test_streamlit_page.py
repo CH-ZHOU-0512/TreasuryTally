@@ -5,6 +5,15 @@ from streamlit.testing.v1 import AppTest
 from app.styles import APP_CSS
 
 
+def practice(page):
+    next(item for item in page.selectbox if item.label == "先选一份报表").set_value("加载契约测试示例").run()
+    return page
+
+
+def button(page, label):
+    return next(item for item in page.button if item.label == label)
+
+
 def test_responsive_css_forces_narrow_layout_to_single_column() -> None:
     assert "@media (max-width:760px)" in APP_CSS
     assert 'div[data-testid="stHorizontalBlock"] { flex-direction:column !important' in APP_CSS
@@ -20,7 +29,7 @@ def test_page_starts_without_execution_controls_before_confirmation() -> None:
     page = AppTest.from_file(str(app_path), default_timeout=20).run()
 
     assert not page.exception
-    assert any(button.label == "生成可核对的任务候选" for button in page.button)
+    assert button(page, "整理核对范围").disabled
     assert not any("Attempt" in button.label for button in page.button)
     assert not any('class="signal-grid"' in markdown.value for markdown in page.markdown)
 
@@ -28,26 +37,29 @@ def test_page_starts_without_execution_controls_before_confirmation() -> None:
 def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
     app_path = Path(__file__).parents[2] / "app" / "streamlit_app.py"
     page = AppTest.from_file(str(app_path), default_timeout=20).run()
-    page.button[0].click().run(timeout=20)
+    practice(page)
+    button(page, "整理核对范围").click().run(timeout=20)
 
-    page.button[1].click().run(timeout=20)
+    button(page, "确认范围，继续").click().run(timeout=20)  # noqa: RUF001
     assert not any("Attempt" in button.label for button in page.button)
 
     page.checkbox[1].check()
-    page.button[1].click().run(timeout=20)
+    button(page, "确认范围，继续").click().run(timeout=20)  # noqa: RUF001
     assert not page.exception
-    assert any(button.label == "开始验收 · Attempt 1" for button in page.button)
+    assert any(item.label == "开始核对" for item in page.button)
 
-    page.button[0].click().run(timeout=20)
-    assert [metric.value for metric in page.metric] == ["90000", "110000", "-20000", "1"]
+    button(page, "开始核对").click().run(timeout=20)
+    assert [metric.value for metric in page.metric] == ["120000", "110000", "10000", "2"]
 
-    next(radio for radio in page.radio if radio.label == "报表服务").set_value("服务 B · 完整交付")
-    page.button[0].click().run(timeout=20)
+    # AppTest cannot set file uploads; inject the corrected delivery adapter.
+    page.session_state["uploaded_service"] = page.session_state["runtime"].services["服务 B · 完整交付"]
+    page.run()
+    button(page, "核对修正版（最后一次）").click().run(timeout=20)  # noqa: RUF001
     assert [metric.value for metric in page.metric] == [
-        "90000",
+        "120000",
         "110000",
-        "-20000",
-        "1",
+        "10000",
+        "2",
         "110000",
         "110000",
         "0",
@@ -61,14 +73,15 @@ def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
 def test_page_renders_inconclusive_as_evidence_shortfall() -> None:
     app_path = Path(__file__).parents[2] / "app" / "streamlit_app.py"
     page = AppTest.from_file(str(app_path), default_timeout=20).run()
+    practice(page)
     next(radio for radio in page.radio if radio.label == "独立证据").set_value("模拟证据不可用").run(timeout=20)
-    page.button[0].click().run(timeout=20)
+    button(page, "整理核对范围").click().run(timeout=20)
     page.checkbox[1].check()
-    page.button[1].click().run(timeout=20)
-    page.button[0].click().run(timeout=20)
+    button(page, "确认范围，继续").click().run(timeout=20)  # noqa: RUF001
+    button(page, "开始核对").click().run(timeout=20)
 
     assert any("不能形成服务负面结论" in warning.value for warning in page.warning)
-    assert [metric.value for metric in page.metric] == ["90000", "无法确定", "无法确定", "1"]
+    assert [metric.value for metric in page.metric] == ["120000", "无法确定", "无法确定", "1"]
 
 
 def test_live_mode_is_selectable_with_configured_rpc(monkeypatch) -> None:

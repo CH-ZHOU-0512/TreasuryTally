@@ -38,6 +38,7 @@ from app.report_experience import (
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.service_history import render_workspace_history
 from app.styles import APP_CSS
+from app.user_guidance import chain_state_copy, explanation_preview, next_step, outcome_copy
 from trust_receipt.agents import TaskSpecCandidate
 from trust_receipt.hashing import content_hash
 from trust_receipt.m9 import PublicReceiptReference, PublicReferenceKind, verify_public_reference
@@ -93,19 +94,22 @@ def _runtime() -> AppRuntime | None:
     live_only = _live_only()
     providers = ("DeepSeek 真实模型",) if live_only else PROVIDERS
     evidence_modes = ("真实 Sepolia RPC",) if live_only else EVIDENCE_MODES
-    with st.expander("运行配置", expanded=False):
+    with st.expander("高级设置 · 模型、证据来源与历史恢复", expanded=False):
         provider_col, evidence_col, workspace_col = st.columns((1, 1.25, 1))
         with provider_col:
-            provider = st.selectbox("AI 路径", providers, key="provider")
+            provider = st.selectbox("AI 路径", providers, key="provider", disabled=len(providers) == 1)
         if "workspace_id" not in st.session_state:
             st.session_state.workspace_id = f"workspace-{uuid4().hex[:8]}"
         with evidence_col:
-            evidence_label = st.radio("独立证据", evidence_modes, key="evidence_label", horizontal=True)
+            evidence_label = st.radio(
+                "独立证据", evidence_modes, key="evidence_label", horizontal=True,
+                disabled=len(evidence_modes) == 1,
+            )
         with workspace_col:
             workspace_id = st.text_input(
                 "工作区 ID",
                 key="workspace_id",
-                help="保存此 ID 可在页面或进程重启后恢复最新任务和 attempt。",
+                help="保存此编号，下次填入即可恢复已保存的核对记录。更换编号会切换工作区。",
             )
         if live_only:
             st.caption("生产环境已锁定真实 DeepSeek 与真实 Sepolia RPC；不会回退为离线 fixture。")
@@ -161,13 +165,16 @@ def _candidate_editor(runtime: AppRuntime) -> None:
         st.caption(f"待确认：{question}")
 
     with st.container(border=True, key="panel-scope"):
-        st.caption("候选内容可以修改。只有勾选确认并通过契约校验后，TaskSpec 才会冻结。")
+        st.info("待你确认：下面是整理后的核对条件，可直接修改。确认后才会锁定，不会自动开始核对。")
         with st.form("task_editor"):
             left, right = st.columns(2)
             with left:
                 st.markdown("**链与资产**")
-                chain_id = st.number_input("Chain ID", min_value=1, value=candidate.chain_id or 11_155_111)
-                token = st.text_input("代币地址", value=candidate.token_address or "")
+                chain_id = st.number_input(
+                    "核对哪条链（链编号）", min_value=1, value=candidate.chain_id or 11_155_111,
+                    help="Sepolia 测试链编号是 11155111；请确认与报表使用的链一致。",
+                )
+                token = st.text_input("核对哪种代币（合约地址）", value=candidate.token_address or "")
                 start_block = st.number_input("起始区块（含）", min_value=0, value=candidate.start_block or 0)
                 end_block = st.number_input("结束区块（含）", min_value=0, value=candidate.end_block or 0)
             with right:
@@ -181,10 +188,10 @@ def _candidate_editor(runtime: AppRuntime) -> None:
                 exclude_internal = st.checkbox(
                     "排除资金账户之间的内部互转", value=bool(candidate.exclusion_rules)
                 )
-                st.text_input("记录上限", value="200", disabled=True)
+                st.caption("本次最多核对 200 条相关记录；不会截断超限报表后当作完整结果。")
             st.divider()
-            confirmed = st.checkbox("我已核对链、资产、账户与区块边界，并确认冻结此任务")
-            submitted = st.form_submit_button("确认并冻结 TaskSpec", type="primary", use_container_width=True)
+            confirmed = st.checkbox("我已核对以上链、代币、账户、区块与排除规则，确认锁定此范围")
+            submitted = st.form_submit_button("确认范围，继续", type="primary", use_container_width=True)
 
     if not submitted:
         return
@@ -224,7 +231,7 @@ def _candidate_editor(runtime: AppRuntime) -> None:
         st.rerun()
     except (ValidationError, ValueError) as error:
         st.error(f"任务未确认：{error}")
-        st.info("字段仍可修改；只有通过 Pydantic 与确定性边界后才会冻结任务。")
+        st.info("请检查以上字段。范围通过校验后才会锁定；现在仍可修改。")
 
 
 def _lines(value: str) -> list[str]:
@@ -235,9 +242,9 @@ def _task_summary() -> None:
     task = st.session_state.task
     st.markdown(
         '<div class="task-summary">'
-        f'<div class="summary-cell"><small>Task ID</small><strong>{escape(str(task.task_id))}</strong></div>'
-        f'<div class="summary-cell"><small>Network</small><strong>Sepolia · {task.chain_id}</strong></div>'
-        '<div class="summary-cell"><small>Block range</small>'
+        f'<div class="summary-cell"><small>任务编号</small><strong>{escape(str(task.task_id))}</strong></div>'
+        f'<div class="summary-cell"><small>核对的链</small><strong>链编号 {task.chain_id}</strong></div>'
+        '<div class="summary-cell"><small>区块范围（含边界）</small>'
         f'<strong>{task.start_block} — {task.end_block}</strong></div>'
         '</div>',
         unsafe_allow_html=True,
@@ -255,7 +262,7 @@ def _run_attempt(runtime: AppRuntime) -> None:
         and executions[-1].result.outcome in {VerificationOutcome.FAIL, VerificationOutcome.INCONCLUSIVE}
     )
     if not can_run:
-        st.caption("当前任务已通过，或两个 attempt 已用完。历史记录保持只追加，不会被覆盖。")
+        st.caption("本任务已结束。核对记录已保留，不会被后续操作覆盖。")
         return
     with st.container(border=True, key="panel-execution"):
         left, right = st.columns((1.25, 1))
@@ -274,10 +281,14 @@ def _run_attempt(runtime: AppRuntime) -> None:
                     st.session_state["report-service"] = selected_label
             if st.session_state.get("report-service") not in choices:
                 st.session_state.pop("report-service", None)
-            service_label = st.radio("报表服务", choices, horizontal=True, key="report-service")
+            if uploaded_service is not None or restoring_upload:
+                service_label = choices[0]
+                st.caption("将核对你已上传的报表。作者身份未经外部签名验证。")
+            else:
+                service_label = st.radio("选择要核对的报表", choices, horizontal=True, key="report-service")
             if executions:
                 repaired = st.file_uploader(
-                    "上传修复后的 JSON 报表（最后一次）", type=("json",), max_upload_size=1, key="repair-upload",
+                    "上传修正版报表（JSON，最后一次）", type=("json",), max_upload_size=1, key="repair-upload",
                 )
                 if repaired is not None:
                     try:
@@ -291,12 +302,19 @@ def _run_attempt(runtime: AppRuntime) -> None:
                 if restoring_upload and uploaded_service is None:
                     st.info("原上传任务已恢复。请上传修复报表后再提交；不会替换成演示服务报表。")
                     can_run = False
+                if (
+                    restoring_upload and repaired is None
+                    and executions[-1].result.outcome is VerificationOutcome.FAIL
+                    and getattr(uploaded_service, "service_id", None) == "uploaded-report-intake"
+                ):
+                    st.caption("请先上传修正版；不会直接拿原报表消耗最后一次补交机会。")
+                    can_run = False
             st.caption("服务提交的是待验报告；最终金额与结论仍由独立证据和确定性引擎产生。")
         with right:
-            button_label = "开始验收 · Attempt 1" if not executions else "补交或换源 · Attempt 2（最后一次）"
+            button_label = "开始核对" if not executions else "核对修正版（最后一次）"
             if st.button(button_label, type="primary", disabled=not can_run, use_container_width=True):
                 try:
-                    with st.spinner("正在完成签名交付、证据读取、确定性核对与本地回执…"):
+                    with st.spinner("正在读取独立链上证据并核对报表，随后生成回执与差异说明…"):
                         service = uploaded_service or runtime.services[service_label]
                         execution, snapshot = runtime.m8_workflow.run_attempt(task, service)
                     st.session_state.executions = [*executions, execution]
@@ -440,7 +458,7 @@ def _render_attempts(runtime: AppRuntime) -> None:
     except ValueError as error:
         st.error(f"M9 版本链校验失败：{error}")
         return
-    _section("验收结果", "每次交付独立留档；后一次成功不会覆盖前一次失败。")
+    _section("查看核对结果", "先看金额、差异与下一步；交易和技术依据按需展开。每次核对分别保留。")
     for index, execution in enumerate(executions, start=1):
         result = execution.result
         meaning = {
@@ -448,14 +466,17 @@ def _render_attempts(runtime: AppRuntime) -> None:
             VerificationOutcome.FAIL: "未通过验收 · 查看问题与补交依据",
             VerificationOutcome.INCONCLUSIVE: "证据不足 · 暂不判断服务对错",
         }[result.outcome]
-        with st.container(border=True):
+        panel = st.container(border=True) if index == len(executions) else st.expander("查看首次核对记录（已保留）")
+        with panel:
             st.markdown(
-                f'<div class="attempt-card outcome-{result.outcome.value}"><div><small>Attempt {index}</small>'
-                f'<div class="attempt-title">{result.outcome.value}</div>'
+                f'<div class="attempt-card outcome-{result.outcome.value}"><div><small>第 {index} 次核对</small>'
+                f'<div class="attempt-title">{outcome_copy(result.outcome)}</div>'
                 f'<div class="attempt-meaning">{escape(meaning)}</div></div><div>'
-                '<span class="badge badge-submitted">服务交付 · SUBMITTED</span>'
-                f'<span class="badge badge-not-submitted">公共发布 · '
-                f'{execution.receipt.publication.chain_status.value}</span></div></div>',
+                f'<span class="badge badge-submitted">核对状态 · {result.outcome.value}</span>'
+                f'<span class="badge badge-not-submitted">公开回执 · '
+                f'{"已公开" if execution.receipt.publication.uri else "未公开"}</span>'
+                f'<span class="badge badge-not-submitted">写链反馈 · '
+                f'{chain_state_copy(execution.receipt.publication.chain_status)}</span></div></div>',
                 unsafe_allow_html=True,
             )
             token_decimals = reference_decimals(execution.evidence, st.session_state.task.token_address)
@@ -482,19 +503,24 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 unsafe_allow_html=True,
             )
             claimed, actual, difference, findings = st.columns(4)
-            claimed.metric("服务声称 · 最小单位", execution.submission.claimed_total_base_units)
+            claimed.metric("报表金额（最小单位）", execution.submission.claimed_total_base_units)
             with actual, st.container(key=f"metric-actual-{index}"):
-                st.metric("链上有效 · 最小单位", result.calculated_total_base_units or "无法确定")
-            difference.metric("精确差额 · 报表 − 链上", summary.difference)
+                st.metric("链上有效金额（最小单位）", result.calculated_total_base_units or "无法确定")
+            difference.metric("差额（报表 − 链上）", summary.difference)
             findings.metric("问题数量", len(result.findings))
+            if index == len(executions):
+                st.info(next_step(result.outcome, len(executions)))
             if result.outcome is VerificationOutcome.INCONCLUSIVE:
                 st.warning(f"证据不足，不能形成服务负面结论：{result.inconclusive_reason}")
-            render_fund_flow(
-                execution.fund_flow,
-                allow_explorer_links=runtime.evidence_label.startswith("真实 Sepolia RPC"),
-            )
             if execution.explanation:
-                st.info("受限解释：" + execution.explanation.summary)
+                label = (
+                    "差异说明（离线模拟）：" if runtime.mode_label.startswith("离线")
+                    else "AI 帮你解释已算出的差异："
+                )
+                st.info(label + explanation_preview(execution.explanation.summary))
+                st.caption("AI 说明不改变程序核对的金额与结论，也不证明报表作者身份。")
+                with st.expander("查看完整 AI 说明"):
+                    st.write(execution.explanation.summary)
             for error in execution.ai_errors:
                 st.warning(error)
             if execution.evidence_diagnostics:
@@ -533,6 +559,11 @@ def _render_attempts(runtime: AppRuntime) -> None:
                         st.write("证据引用：", list(finding.evidence_refs))
                         st.json({"链上预期": finding.expected, "报表实际": finding.actual})
                         st.caption(f"完整证据索引：{refs}")
+            with st.expander("查看资金流、完整事件与证据", expanded=False):
+                render_fund_flow(
+                    execution.fund_flow,
+                    allow_explorer_links=runtime.evidence_label.startswith("真实 Sepolia RPC"),
+                )
             pairs = st.session_state.get("commitment_pairs", [])
             task_commitment = delivery_commitment = expected_signer = None
             if index <= len(pairs) and pairs[index - 1] is not None:
@@ -546,15 +577,16 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 runtime.commitment_anchor_status,
             )
             if index == 1 and m9_artifacts.rework_package is not None:
-                render_rework_package(st, m9_artifacts.rework_package)
-            with st.expander("M9 外置回执版本记录", expanded=False):
+                with st.expander("查看详细返工要求", expanded=False):
+                    render_rework_package(st, m9_artifacts.rework_package)
+            with st.expander("技术详情 · 回执版本记录", expanded=False):
                 st.json(m9_artifacts.revisions[index - 1].model_dump(mode="json"))
             if (
                 index == len(executions)
                 and result.outcome is VerificationOutcome.PASS
                 and execution.receipt.publication.uri is None
                 and st.button(
-                    "预览并发布脱敏回执",
+                    "预览回执与分享选项",
                     type="primary",
                     key=f"preview-publication-{index}",
                     use_container_width=True,
@@ -583,17 +615,28 @@ def _render_attempts(runtime: AppRuntime) -> None:
             ):
                 _render_publication(runtime, execution, index - 1, m9_artifacts)
     if m9_artifacts.comparison is not None:
-        _section("返工闭环", "保留首次失败与补交结果，并核验两次 M8 EIP-712 承诺。")
-        render_repair_comparison(st, m9_artifacts.comparison)
-    render_public_history(st, runtime, m9_artifacts.receipts)
+        with st.expander("查看修正前后对比", expanded=False):
+            render_repair_comparison(st, m9_artifacts.comparison)
+    with st.expander("公开历史与独立验证", expanded=False):
+        render_public_history(st, runtime, m9_artifacts.receipts)
 
 
 def _draft_task(runtime: AppRuntime) -> bool:
-    _section("上传报表", "上传约定格式的 JSON 报表；演示模式也可直接使用固定样例。")
-    with st.container(border=True, key="panel-input"):
+    _section("上传报表", "准备服务商交付的 JSON 报表。没有报表？可先用案例了解流程。")
+    panel = (
+        st.expander("已读取的报表与原范围说明", expanded=False)
+        if "candidate" in st.session_state else st.container(border=True, key="panel-input")
+    )
+    with panel:
         input_mode = st.selectbox(
-            "报表输入方式",
+            "先选一份报表",
             ("上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"),
+            key="intake-mode",
+            format_func=lambda mode: {
+                "上传自己的 JSON": "上传我的报表",
+                "加载真实 Sepolia 案例": "用真实交易案例试一遍",
+                "加载契约测试示例": "离线练习（模拟数据）",
+            }[mode],
             help="真实案例使用团队构造报表与公开 Sepolia 交易；契约测试示例为合成数据。",
         )
         real_case = load_real_case(PROJECT_ROOT)
@@ -620,8 +663,8 @@ def _draft_task(runtime: AppRuntime) -> bool:
             disabled=input_mode != "上传自己的 JSON",
         )
         upload_valid = True
-        st.caption("报表格式：schema_version、claimed_total_base_units、claimed_count、transfers。")
         with st.expander("查看上传格式与身份说明"):
+            st.caption("必填字段：schema_version、claimed_total_base_units、claimed_count、transfers。")
             st.json(UploadedReport.model_json_schema())
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
         payload = None
@@ -632,7 +675,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
             st.caption("下一步预填案例范围供你修改和确认；实时参考证据只从 Sepolia RPC 获取。")
             if not runtime.evidence_label.startswith("真实 Sepolia RPC"):
                 upload_valid = False
-                st.info("请在运行配置中把独立证据切换为“真实 Sepolia RPC”，再核验此案例。")
+                st.info("此案例需要真实链上证据。请展开高级设置，将独立证据切换为“真实 Sepolia RPC”。")
         elif input_mode == "加载契约测试示例":
             payload = contract_example_bytes(PROJECT_ROOT)
             report_name = "契约测试示例（人工标注合成数据，非 M11 真实案例）"
@@ -654,7 +697,9 @@ def _draft_task(runtime: AppRuntime) -> bool:
                         payload, private_directory=runtime.upload_directory,
                     )
                     st.session_state.uploaded_report_hash = digest
-                st.success(f"已读取 {report_name} · SHA-256 {digest}")
+                st.success(f"已读取：{report_name}")
+                with st.expander("查看报表留档指纹"):
+                    st.code(digest, language=None)
                 st.caption("原始字节已私有留档；接下来核验这份报表的原始金额和记录声明。")
             except ValueError:
                 upload_valid = False
@@ -664,32 +709,41 @@ def _draft_task(runtime: AppRuntime) -> bool:
         else:
             st.session_state.pop("uploaded_service", None)
             st.session_state.pop("uploaded_report_hash", None)
+            if input_mode == "上传自己的 JSON":
+                upload_valid = False
+                st.caption("请先上传报表；不会在缺少文件时替你生成一份演示报表。")
         request = st.text_area(
-            "核验范围说明",
-            value="核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。",
+            "说明要核对的范围",
+            value=(
+                "" if input_mode == "上传自己的 JSON" else (
+                f"核对 Sepolia 案例在区块 {real_case.candidate.start_block} 的转账；下一步可修改所有范围字段。"
+                if input_mode == "加载真实 Sepolia 案例" else
+                "核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。"
+                )
+            ),
+            placeholder="说明链、代币、付款与收款账户、起止区块，以及是否排除内部互转。",
             height=130,
+            disabled=input_mode == "加载真实 Sepolia 案例",
             help="这里不会直接触发链上操作；系统先生成一份可修改候选。",
         )
         st.caption("下一步会展示结构化字段供你逐项确认，不会自动冻结或执行。")
         if st.button(
-            "生成可核对的任务候选",
+            "整理核对范围",
             type="secondary" if "candidate" in st.session_state else "primary",
-            disabled=not upload_valid,
+            disabled=not upload_valid or (input_mode == "上传自己的 JSON" and not request.strip()),
             use_container_width=True,
         ):
             try:
-                st.session_state.candidate = (
-                    real_case.candidate
-                    if input_mode == "加载真实 Sepolia 案例"
-                    else runtime.workflow.draft_task(request)
-                )
+                with st.spinner("正在整理你要核对的条件…"):
+                    st.session_state.candidate = (
+                        real_case.candidate
+                        if input_mode == "加载真实 Sepolia 案例"
+                        else runtime.workflow.draft_task(request)
+                    )
                 st.session_state.pop("draft_error", None)
             except Exception as error:
-                if _live_only():
-                    st.session_state.pop("candidate", None)
-                else:
-                    st.session_state.candidate = runtime.editable_seed
                 st.session_state.draft_error = str(error)
+                st.session_state.pop("candidate", None)
             st.rerun()
     if "draft_error" in st.session_state:
         st.error("模型输出被拒绝：" + st.session_state.draft_error)
@@ -711,27 +765,33 @@ def main() -> None:
     if st.query_params.get("verify") == "1":
         render_public_explorer(st, PROJECT_ROOT)
         return
-    st.link_button("打开独立公开验证页", "?verify=1")
     runtime = _runtime()
     if runtime is None:
         return
     if st.session_state.pop("restore_notice", False):
-        st.info("已从该工作区恢复最新任务与 attempt；历史 AI 文本没有重新生成。")
-    render_workspace_history(st, runtime)
+        st.info("已恢复上次的范围与核对记录；历史 AI 说明没有重新生成。")
+    with st.expander("历史记录与独立验证", expanded=False):
+        st.link_button("打开独立公开验证页", "?verify=1")
+        render_workspace_history(st, runtime)
 
     if "task" not in st.session_state:
         input_valid = _draft_task(runtime)
         if input_valid and "candidate" in st.session_state:
-            _section("确认核验范围", "核对链、资产、账户与区块范围后，再开始验收。")
+            _section("确认要核对的范围", "请逐项检查下面的条件。确认后才进入核对步骤。")
             _candidate_editor(runtime)
         return
 
     _section("核验范围已确认", "链、资产、账户与区块范围已经锁定。")
     _task_summary()
-    _section("链上核验", "选择服务交付；最多两次验收，签名或计划校验失败不消耗次数。")
-    _run_attempt(runtime)
-    _render_attempts(runtime)
     executions = st.session_state.get("executions", [])
+    if not executions:
+        _section("开始核对", "范围已锁定。点击后才会读取证据、核对报表并生成回执。")
+        _run_attempt(runtime)
+    else:
+        _render_attempts(runtime)
+        if len(executions) == 1 and executions[-1].result.outcome is not VerificationOutcome.PASS:
+            _section("核对修正版", "请先看清差异或证据问题，再使用唯一一次补交机会。")
+            _run_attempt(runtime)
     if (
         executions
         and (len(executions) == 2 or executions[-1].result.outcome is VerificationOutcome.PASS)

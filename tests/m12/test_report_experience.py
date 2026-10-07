@@ -93,12 +93,12 @@ def test_summary_precision_comes_from_reference_not_service():
 def test_real_case_does_not_execute_with_fixture_and_prefills_editable_scope(monkeypatch):
     monkeypatch.setenv("ETH_RPC_URL", "https://unused.invalid")
     page = AppTest.from_file(str(PROJECT_ROOT / "app" / "streamlit_app.py"), default_timeout=20).run()
-    next(widget for widget in page.selectbox if widget.label == "报表输入方式").set_value(
+    next(widget for widget in page.selectbox if widget.label == "先选一份报表").set_value(
         "加载真实 Sepolia 案例"
     ).run()
-    assert next(button for button in page.button if button.label == "生成可核对的任务候选").disabled
+    assert next(button for button in page.button if button.label == "整理核对范围").disabled
     next(widget for widget in page.radio if widget.label == "独立证据").set_value("真实 Sepolia RPC").run()
-    next(button for button in page.button if button.label == "生成可核对的任务候选").click().run()
+    next(button for button in page.button if button.label == "整理核对范围").click().run()
     assert not page.exception
     assert next(widget for widget in page.number_input if widget.label.startswith("起始区块")).value == 11855664
     assert "task" not in page.session_state
