@@ -67,22 +67,26 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
     }
     claimed_decimals = {record.token_decimals for record in submission.transfers}
     verified_decimals = next(iter(reference_decimals)) if len(reference_decimals) == 1 else None
-    declared_decimals = next(iter(claimed_decimals)) if len(claimed_decimals) == 1 else None
     declared_tokens = {record.token_address.lower() for record in submission.transfers}
-    claimed = amount(
-        submission.claimed_total_base_units,
-        declared_decimals,
-        token=next(iter(declared_tokens)) if len(declared_tokens) == 1 else None,
+    wrong_asset = bool(declared_tokens - {receipt.task_spec.token_address.lower()})
+    wrong_precision = any(f.finding_type.value == "DECIMAL_ERROR" for f in result.findings if f.is_confirmed_error)
+    precision_confirmed = (
+        verified_decimals is not None and claimed_decimals <= {verified_decimals} and not wrong_precision
     )
-    if len(declared_tokens) > 1:
+    claimed = amount(submission.claimed_total_base_units, verified_decimals if precision_confirmed else None)
+    if wrong_asset:
         claimed = format_amount(submission.claimed_total_base_units, None).model_copy(
-            update={"unit": "混合代币声明 不可合并换算"}
+            update={
+                "unit": "报表声明最小单位 资产未确认" + (" 混合代币" if len(declared_tokens) > 1 else " 含其他代币")
+            }
         )
+    elif not precision_confirmed:
+        claimed = claimed.model_copy(update={"unit": "报表声明最小单位 精度未确认"})
     comparable = (
         result.reference_complete
         and result.evidence_sufficient
         and result.calculated_total_base_units is not None
-        and not (declared_tokens - {receipt.task_spec.token_address.lower()})
+        and not wrong_asset
         and len(claimed_decimals) <= 1
         and len(reference_decimals) <= 1
         and (not claimed_decimals or not reference_decimals or claimed_decimals == reference_decimals)
