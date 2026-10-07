@@ -15,6 +15,31 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
+### 本地网页集成验证（2026-10-07，未推送、未合并 main、未部署）
+
+- 新独立工作树 `m14-local-ui-integration/HACKTHON`、分支 `codex/m14-local-ui-integration` 从已安全 fetch 核实的
+  `origin/main=675728a` 创建；原 M14 工作树干净且保留。按顺序合入 M9 `795dddd` 和 M12
+  `6f41026 / 5660f99 / ea4b82f / 8642b5c / a9c6523`，代码集成提交 `287770b`；没有合入 `8f8a311` 或 M15/M16。
+  文档冲突保留 ADR-025 取消真人要求、ADR-026/029 UI 决定及已部署 Logo 记录，027/028 仍留给后续扩展。
+- 合流后完整非 external pytest 再跑为 367 passed / 14 deselected（1 条既有第三方弃用 warning）；Ruff、主环境
+  pip check、21 份 Schema、1000 行限制、diff check 通过。无凭据 FAIL→PASS→重放→恢复演示 valid=true。
+- 本轮本地 Docker Desktop 可用。隔离 Linux 验证镜像 `trust-receipt:local-ui-287770b` 从同源归档/wheel、锁定依赖构建，
+  没有 `.env`、真实密钥或生产挂载；构建期和独立 `docker run --rm --network none` 均通过真实 `/app` 入口门：
+  98 个源码文件与 wheel 一致、实际导入 `/app/src`、首页异常 0、品牌区存在。该镜像只是本地验证，不是生产发布镜像。
+- 本地浏览器 1440×1000 与 390×844、DPR 2：完整刷新从引导第 1 步开始；关闭后切换报表输入触发实际后端重跑，
+  引导不重开；只读状态刷新同样不重开。Escape、Tab/Shift+Tab 焦点环实测通过。纯 JS 生命周期测试另覆盖打开时步骤保持。
+  浏览器弹窗打开时按 `r` 未观察到后端重跑，不能将此时仍在第 2 步计为“打开弹窗下重跑”的浏览器实测。
+- 新建本地 fixture 中断工作区恢复为 REQUESTED，仅显示中文阻塞与只读刷新，没有首次或补交按钮。
+  两视口刷新后 task ID 不变、仍 REQUESTED / 0 交付 / 0 结果 / in-flight=1 / next_attempt=None；没有解锁、重跑或删除。
+  截图 `output/playwright/integrated-pending-1440.png`、`integrated-pending-390.png`，只属于本地测试工作区。
+- 两视口实际走通离线合成报表首次 FAIL → 缺修正版禁用最后一次 → 上传修正版 → PASS；首次记录保留，
+  不再提供首次/补交按钮，不出现第三次请求，引导不重开，页面无横向溢出或 exception。
+  截图分别为 `output/playwright/integrated-fail-{1440,390}.png`、`integrated-pass-{1440,390}.png`。
+- 原 `branding.py/styles.py` 与主线首屏修复无差异；本地待处理页可见字号全部属于五级集合、导航 gap=16px、CSS 就绪、异常 0，
+  两处 Logo 复用自然宽 288px 媒体资源；桌面 52/144px、手机 44px/大图隐藏。原 PNG 未修改。
+- 未完成：真实 RPC/模型、线上用户任务原因确认或中断请求恢复、公开上传、写链、线上首屏冷时序、760px 两侧及 200% 完整视觉矩阵。
+  本轮不推送、不合并 main、不部署；新的业务/UI 发布须另行统一协调。测试脚本/本地 fixture 留在忽略的 `.tmp/`，截图不提交。
+
 M12 新手引导独立补丁（2026-10-07，本地未部署）：工作台五步原生弹窗已接入，完整刷新从第一步显示；
 Streamlit rerun 保留步骤与关闭状态，公开验证入口不弹上传引导。纯 JS 生命周期与 Python 接入测试 4 项通过，
 非外部全量测试 311 passed / 13 deselected，Ruff 与 pip check 通过。本地浏览器实测下一步、Escape、
