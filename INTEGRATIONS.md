@@ -144,6 +144,11 @@ M8 计划验证“任务承诺、服务接单和报告交付”与 ERC-8004 Iden
 M9 的回执修复关系继续以公共文件和内容哈希为主体，ERC-8004 只追加新反馈或可核实的替代引用，不删除旧反馈。M10 只读取
 已确认事件和可下载回执生成服务历史投影，不把 Blockscout 抽样或模型解释当成信誉事实。
 
+2026-10-07 M8 新增 `ValidationRegistryReadProbe`，真实读取 Sepolia chain ID、Validation Registry bytecode、
+`getIdentityRegistry()` 与受控 service `11155111:10691` 的 `getAgentValidations()`。实测返回 chain `11155111`、Identity Registry
+关联一致、已有请求数 `0`。结合官方接口权限语义，结论为该 Registry 不支持 requester 通用任务承诺锚；本次未广播交易，
+任务与交付 anchor 保持 `NOT_SUBMITTED`。
+
 ## Pinata / IPFS 公共文件
 
 Pinata adapter 使用 `POST https://uploads.pinata.cloud/v3/files`，multipart 明确设置 `network=public`，JWT 只放在 Bearer header。

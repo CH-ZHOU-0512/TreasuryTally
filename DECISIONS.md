@@ -259,6 +259,20 @@ Agent、adapter、RPC、哈希与 Registry 等技术证据默认折叠；资金�
 
 后果：历史投影是可重建的读模型，不反向修改 ERC-8004 或本地回执；`INCONCLUSIVE` 单独展示且不计为失败。
 
+## ADR-021：M8 先使用离线 EIP-712 承诺，不把 Validation Registry 冒充任务锚
+
+- 状态：Accepted
+- 日期：2026-10-07
+
+决定：任务、服务接单与报告交付使用绑定应用名、版本和 chain ID 的 EIP-712 签名；M8 页面与模型中的链上锚保持
+`NOT_SUBMITTED`。当前不使用 ERC-8004 Validation Registry 写入任务承诺，也不部署临时专用合约。
+
+理由：官方接口和 Sepolia 真实只读探针表明，Validation Registry 的 `validationRequest` 由 agent owner/operator 发起并指定
+validator，面向交付验证请求，不是任意 requester 的通用任务承诺存证。把任务哈希塞入 request hash 会混淆权限和协议语义。
+
+后果：M8 可以证明 task/spec、service/attempt 与 report hash 的签名绑定，但不能宣称承诺已上链。后续若实现专用最小锚定
+adapter，必须单独完成合约审查、部署地址/bytecode 记录、写入授权、提交/确认状态机和真实读回探针，再追加 ADR。
+
 ## 新增决定模板
 
 ```markdown

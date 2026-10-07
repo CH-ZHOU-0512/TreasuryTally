@@ -306,10 +306,12 @@ publication:
 - attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
 - 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
-## M8–M10 计划契约
+## M8 已实现契约与 M9–M10 计划契约
 
-以下对象描述已接受的后续语义，但尚未进入 `schemas/v1/`，也不代表已经实现。实现前必须确定 schema 版本、链上承载方式和
-迁移策略，再生成 Pydantic 模型与 JSON Schema。
+`TaskCommitment`、`DeliveryCommitment` 与 `FundFlowProjection` 已以 `1.0` 进入 Pydantic 与 `schemas/v1/`。
+链上承载尚未实现：真实 Sepolia 只读探针确认当前 Validation Registry 是服务 owner/operator 发起、指定 validator
+响应的验证接口，不是 requester 通用任务锚；因此 M8 承诺保持 EIP-712 可验证且 anchor=`NOT_SUBMITTED`。M9–M10 对象
+仍是计划契约。
 
 ### TaskCommitment
 
@@ -332,7 +334,8 @@ anchor:
 ```
 
 任务承诺只绑定已确认 `TaskSpec.spec_hash`，不得把 restricted 组织标签、私有报告正文或凭据直接写链。`CONFIRMED` 必须读回
-与 `spec_hash`、requester 和 service 一致的链上记录；链上承载 adapter 尚待 M8 接口探针确定。
+与 `spec_hash`、requester 和 service 一致的链上记录。当前只读探针已确定现有 Validation Registry 不适合作为该锚，
+因此状态保持 `NOT_SUBMITTED`。
 
 ### DeliveryCommitment
 
@@ -347,11 +350,13 @@ accepted_at: datetime
 submitted_at: datetime
 signer_address: address
 signature_scheme: EIP712
+acceptance_signature: string
 signature: string
 ```
 
-接单与交付可以是同一对象的两个签名阶段，也可以由两个对象实现，但必须分别证明服务接受了哪个任务以及提交了哪个报告。
-签名者必须解析到已确认的 ERC-8004 服务 owner 或明确授权者；`report_hash` 继续绑定原始交付而不是解析后的展示模型。
+接单与交付使用同一对象中的两个 EIP-712 签名阶段，分别证明服务接受了哪个任务以及提交了哪个报告。签名者必须解析到
+预配置服务签名者；接入 ERC-8004 服务时还必须核对 owner 或明确授权者。`report_hash` 继续绑定原始交付而不是解析后的
+展示模型。EIP-712 domain 固定应用名、版本与 chain ID，防止跨链和跨用途重放。
 
 ### FundFlowProjection
 
@@ -459,10 +464,14 @@ schemas/v1/task_spec_candidate.schema.json
 schemas/v1/claim_extraction.schema.json
 schemas/v1/follow_up_advice.schema.json
 schemas/v1/result_explanation.schema.json
+schemas/v1/task_commitment.schema.json
+schemas/v1/delivery_commitment.schema.json
+schemas/v1/fund_flow_projection.schema.json
 ```
 
 每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口预留为
-`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，后四份为 M4 受限 AI 中间产物。重复生成不得产生差异。
+`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，后四份为 M4 受限 AI 中间产物，最后三份为 M8 承诺与资金流投影。
+重复生成不得产生差异。
 
 ## 精确计算规则
 

@@ -21,6 +21,7 @@ from trust_receipt.integrations.config import M0Settings
 from trust_receipt.orchestration import (
     M5Workflow,
     M6Workflow,
+    M8CommitmentWorkflow,
     StaticEvidenceProvider,
     candidate_from_fixture,
     eligible_records,
@@ -50,6 +51,8 @@ class AppRuntime:
     feedback_adapter: ERC8004ReceiptFeedback | None
     publication_status: str
     feedback_status: str
+    commitment_workflow: M8CommitmentWorkflow
+    commitment_anchor_status: str
 
 
 def create_runtime(
@@ -157,6 +160,10 @@ def create_runtime(
         feedback_adapter=feedback_adapter,
         publication_status=publication_status,
         feedback_status=feedback_status,
+        commitment_workflow=M8CommitmentWorkflow(),
+        commitment_anchor_status=(
+            "EIP-712 本地承诺可验证；链上锚定未提交（Validation Registry 仅启用只读接口探针）"
+        ),
     )
 
 

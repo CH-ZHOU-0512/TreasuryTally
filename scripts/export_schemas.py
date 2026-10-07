@@ -24,10 +24,13 @@ from trust_receipt.agents.models import (  # noqa: E402
     TaskSpecCandidate,
 )
 from trust_receipt.models import (  # noqa: E402
+    DeliveryCommitment,
     FixtureCase,
     FixtureManifest,
+    FundFlowProjection,
     Receipt,
     ServiceSubmission,
+    TaskCommitment,
     TaskSpec,
     TransferRecord,
     VerificationPlan,
@@ -52,6 +55,9 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("claim_extraction.schema.json", "claim-extraction", ClaimExtraction),
     ("follow_up_advice.schema.json", "follow-up-advice", FollowUpAdvice),
     ("result_explanation.schema.json", "result-explanation", ResultExplanation),
+    ("task_commitment.schema.json", "task-commitment", TaskCommitment),
+    ("delivery_commitment.schema.json", "delivery-commitment", DeliveryCommitment),
+    ("fund_flow_projection.schema.json", "fund-flow-projection", FundFlowProjection),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
@@ -87,6 +93,9 @@ MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
     ),
     "FollowUpAdvice": ("follow-up actions are restricted by deterministic outcome",),
     "ResultExplanation": ("application validation binds values and finding references to VerificationResult",),
+    "TaskCommitment": ("signature binds the immutable task hash and explicit application domain",),
+    "DeliveryCommitment": ("acceptance and delivery signatures bind task, service, attempt, and report hash",),
+    "FundFlowProjection": ("visual state derives from existing findings and never changes the outcome",),
 }
 
 

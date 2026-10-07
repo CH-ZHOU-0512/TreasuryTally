@@ -12,8 +12,18 @@ from uuid import uuid4
 from trust_receipt.agents import FollowUpAdvice, RestrictedAIService, ResultExplanation, TaskSpecCandidate
 from trust_receipt.chain import EvidenceDiagnostic
 from trust_receipt.hashing import verify_submission_hash, verify_task_spec_hash
-from trust_receipt.models import FixtureCase, Receipt, ServiceIdentity, TaskSpec, VerificationPlan, VerificationResult
+from trust_receipt.models import (
+    FixtureCase,
+    FundFlowProjection,
+    Receipt,
+    ServiceIdentity,
+    ServiceSubmission,
+    TaskSpec,
+    VerificationPlan,
+    VerificationResult,
+)
 from trust_receipt.orchestration.workflow import ReferenceEvidenceProvider
+from trust_receipt.projections import project_fund_flow
 from trust_receipt.receipts import build_receipt, load_receipt, save_receipt
 from trust_receipt.services import ReportService, verify_submission_signature
 from trust_receipt.storage.ports import TaskRepository
@@ -32,6 +42,7 @@ class StaticEvidenceProvider:
 
 @dataclass(frozen=True)
 class AttemptExecution:
+    submission: ServiceSubmission
     plan: VerificationPlan
     result: VerificationResult
     receipt: Receipt
@@ -41,6 +52,7 @@ class AttemptExecution:
     ai_errors: tuple[str, ...]
     evidence: ReferenceEvidence | None
     evidence_diagnostics: tuple[EvidenceDiagnostic, ...]
+    fund_flow: FundFlowProjection | None
 
 
 class M5Workflow:
@@ -79,13 +91,21 @@ class M5Workflow:
         self._repository.add_task(task)
         return task
 
-    def run_attempt(self, task_id: str, service: ReportService) -> AttemptExecution:
+    def run_attempt(
+        self,
+        task_id: str,
+        service: ReportService,
+        *,
+        pre_persist_validator: Callable[[ServiceSubmission], None] | None = None,
+    ) -> AttemptExecution:
         stored = self._repository.get_task(task_id)
         attempt = self._repository.request_attempt(task_id)
         try:
             delivery = service.submit(stored.task, attempt=attempt)
             submission = delivery.submission
             self._validate_delivery(service, submission)
+            if pre_persist_validator is not None:
+                pre_persist_validator(submission)
             extraction = self._ai_service.extract_claims(
                 report_id=submission.submission_id,
                 report_text=submission.report_text,
@@ -127,6 +147,7 @@ class M5Workflow:
         )
         receipt_path = self._save_receipt(receipt, attempt)
         return AttemptExecution(
+            submission=submission,
             plan=plan,
             result=result,
             receipt=receipt,
@@ -136,6 +157,7 @@ class M5Workflow:
             ai_errors=errors,
             evidence=evidence,
             evidence_diagnostics=tuple(getattr(self._evidence_provider, "diagnostics", ())),
+            fund_flow=project_fund_flow(stored.task, submission, result, evidence),
         )
 
     def list_attempts(self, task_id: str):
@@ -163,6 +185,7 @@ class M5Workflow:
                     receipt = events[-1].receipt
             executions.append(
                 AttemptExecution(
+                    submission=attempt.submission,
                     plan=receipt.verification_plan,
                     result=receipt.verification_result,
                     receipt=receipt,
@@ -172,6 +195,7 @@ class M5Workflow:
                     ai_errors=("Restored locally; AI text was not regenerated.",),
                     evidence=None,
                     evidence_diagnostics=(),
+                    fund_flow=None,
                 )
             )
         return task, tuple(executions)

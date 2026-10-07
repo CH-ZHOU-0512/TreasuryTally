@@ -75,6 +75,8 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
 - 任务承诺只包含任务哈希、公开身份、时间和必要公共引用；受限组织标签、原始报告、模型输入和凭据不得进入签名明文或链上事件。
 - EIP-712 domain 必须绑定 chain ID、验证合约或明确的应用域和版本，防止跨链、跨环境与跨用途重放。
 - 服务接单和交付签名必须分别校验 task hash、report hash、attempt、service ID 与签名者授权关系。
+- 当前 M8 EIP-712 domain 固定 `TrustReceipt`、版本 `1` 与 chain ID；Validation Registry 只读探针不授予写权限，且其接口
+  不被当作 requester 通用锚。只有专用 adapter 完成合约审查、授权与真实读回后，anchor 才能从 `NOT_SUBMITTED` 变化。
 - 匿名演示入口只能发起只读验收和准备待授权对象；不得调用服务器 Reviewer 钱包替匿名用户自动确认任务、发布或写链。
 - 公开验证页只读取公开回执和公共链上数据，不得通过 task hash 枚举私有报告、SQLite 工作区或未授权返工内容。
 - M10 历史投影只显示可追溯事实，不输出永久黑名单；`INCONCLUSIVE` 不计入负面信誉。

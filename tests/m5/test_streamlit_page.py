@@ -10,7 +10,9 @@ def test_responsive_css_forces_narrow_layout_to_single_column() -> None:
     assert 'div[data-testid="stHorizontalBlock"] { flex-direction:column !important' in APP_CSS
     assert 'div[data-testid="column"] { width:100% !important' in APP_CSS
     assert "overflow-wrap:anywhere" in APP_CSS
-    assert "padding:.7rem .85rem 4rem" in APP_CSS
+    assert "padding:.7rem 24px 4rem" in APP_CSS
+    assert "--tr-gold-primary:#D4AF37" in APP_CSS
+    assert "border-radius:12px" in APP_CSS
 
 
 def test_page_starts_without_execution_controls_before_confirmation() -> None:
@@ -36,11 +38,20 @@ def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
     assert any(button.label == "开始验收 · Attempt 1" for button in page.button)
 
     page.button[0].click().run(timeout=20)
-    assert [metric.value for metric in page.metric] == ["110000", "2", "1"]
+    assert [metric.value for metric in page.metric] == ["90000", "110000", "-20000", "1"]
 
     next(radio for radio in page.radio if radio.label == "报表服务").set_value("服务 B · 完整交付")
     page.button[0].click().run(timeout=20)
-    assert [metric.value for metric in page.metric] == ["110000", "2", "1", "110000", "2", "0"]
+    assert [metric.value for metric in page.metric] == [
+        "90000",
+        "110000",
+        "-20000",
+        "1",
+        "110000",
+        "110000",
+        "0",
+        "0",
+    ]
     assert not page.exception
 
 
@@ -54,7 +65,7 @@ def test_page_renders_inconclusive_as_evidence_shortfall() -> None:
     page.button[0].click().run(timeout=20)
 
     assert any("不能形成服务负面结论" in warning.value for warning in page.warning)
-    assert [metric.value for metric in page.metric] == ["—", "—", "1"]
+    assert [metric.value for metric in page.metric] == ["90000", "无法确定", "无法确定", "1"]
 
 
 def test_live_mode_is_selectable_with_configured_rpc(monkeypatch) -> None:

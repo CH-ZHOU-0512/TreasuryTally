@@ -16,9 +16,12 @@ from pydantic import ValidationError
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from app.commitments import render_commitments
+from app.fund_flow import render_fund_flow
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
+from trust_receipt.hashing import content_hash
 from trust_receipt.models import (
     ExclusionRule,
     ExclusionRuleType,
@@ -44,21 +47,16 @@ def _section(number: str, title: str, subtitle: str) -> None:
 
 
 def _product_header() -> None:
-    environment = "LIVE · DeepSeek + Sepolia" if _live_only() else "M5 · Evidence workspace"
+    environment = "LIVE · DeepSeek + Sepolia" if _live_only() else "M8 · Report verification"
     st.markdown(
         '<div class="product-bar"><div class="brand"><span class="brand-mark">TR</span>'
         f'<span>信据 Agent</span></div><span class="env-chip"><i class="env-dot"></i>{escape(environment)}</span></div>'
-        '<div class="hero-grid"><section class="hero-main">'
-        '<div class="eyebrow">Deterministic on-chain acceptance</div>'
-        '<h1>让每一笔链上交付，<br>都有可复核的答案。</h1>'
-        '<p>从自然语言委托到独立证据、确定性核对与可下载回执。AI 负责理解和解释，程序负责金额与结论。</p>'
-        '</section><aside class="hero-side"><div class="hero-side-label">验收原则</div>'
-        '<div class="promise"><b class="promise-index">01</b><div><strong>先冻结边界</strong>'
-        '<span>确认链、账户和区块范围后才执行</span></div></div>'
-        '<div class="promise"><b class="promise-index">02</b><div><strong>再读取证据</strong>'
-        '<span>服务交付与独立来源分开呈现</span></div></div>'
-        '<div class="promise"><b class="promise-index">03</b><div><strong>最后给结论</strong>'
-        '<span>PASS / FAIL / INCONCLUSIVE 可复算</span></div></div></aside></div>',
+        '<section class="hero-main"><div class="eyebrow">链上报表验收工具</div>'
+        '<h1>核对服务商报表与链上资金流</h1>'
+        '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></section>'
+        '<nav class="workflow-steps" aria-label="验收流程">'
+        '<span><b>1</b> 上传报表</span><i>→</i><span><b>2</b> 确认范围</span><i>→</i>'
+        '<span><b>3</b> 链上核验</span></nav>',
         unsafe_allow_html=True,
     )
 
@@ -85,7 +83,14 @@ def _runtime() -> AppRuntime | None:
             st.caption("生产环境已锁定真实 DeepSeek 与真实 Sepolia RPC；不会回退为离线 fixture。")
     config = (provider, evidence_label, workspace_id)
     if st.session_state.get("runtime_config") != config:
-        for key in ("runtime", "candidate", "task", "executions", "draft_error"):
+        for key in (
+            "runtime",
+            "candidate",
+            "task",
+            "executions",
+            "draft_error",
+            "commitment_pairs",
+        ):
             st.session_state.pop(key, None)
         st.session_state.runtime_config = config
     if "runtime" not in st.session_state:
@@ -99,6 +104,7 @@ def _runtime() -> AppRuntime | None:
             restored = st.session_state.runtime.workflow.restore_latest()
             if restored is not None:
                 st.session_state.task, st.session_state.executions = restored
+                st.session_state.commitment_pairs = []
                 st.session_state.restore_notice = True
         except ConfigurationBlocked as error:
             st.error(str(error))
@@ -225,6 +231,9 @@ def _run_attempt(runtime: AppRuntime) -> None:
         len(executions) == 1
         and executions[-1].result.outcome in {VerificationOutcome.FAIL, VerificationOutcome.INCONCLUSIVE}
     )
+    if not can_run:
+        st.caption("当前任务已通过，或两个 attempt 已用完。历史记录保持只追加，不会被覆盖。")
+        return
     with st.container(border=True):
         left, right = st.columns((1.25, 1))
         with left:
@@ -235,14 +244,33 @@ def _run_attempt(runtime: AppRuntime) -> None:
             if st.button(button_label, type="primary", disabled=not can_run, use_container_width=True):
                 try:
                     with st.spinner("正在完成签名交付、证据读取、确定性核对与本地回执…"):
-                        execution = runtime.workflow.run_attempt(task.task_id, runtime.services[service_label])
+                        service = runtime.services[service_label]
+                        task_commitment = runtime.commitment_workflow.commit_task(task, service.service_id)
+                        commitment_holder = {}
+
+                        def validate_commitment(submission):
+                            commitment_holder["delivery"] = runtime.commitment_workflow.commit_delivery(
+                                task_commitment,
+                                submission,
+                                service,
+                            )
+
+                        execution = runtime.workflow.run_attempt(
+                            task.task_id,
+                            service,
+                            pre_persist_validator=validate_commitment,
+                        )
+                        delivery_commitment = commitment_holder["delivery"]
                     st.session_state.executions = [*executions, execution]
+                    pairs = st.session_state.get("commitment_pairs", [])
+                    st.session_state.commitment_pairs = [
+                        *pairs,
+                        (task_commitment, delivery_commitment, service.signer_address),
+                    ]
                     st.rerun()
                 except Exception as error:
                     st.error(f"执行被安全边界拒绝：{error}")
                     st.info("未通过 AI、Pydantic 或白名单校验的交付不会进入验收，也不会消耗 attempt。")
-    if executions and not can_run:
-        st.caption("当前任务已通过，或两个 attempt 已用完。历史记录保持只追加，不会被覆盖。")
 
 
 def _replace_execution_receipt(index: int, receipt) -> None:
@@ -360,18 +388,25 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 f'{execution.receipt.publication.chain_status.value}</span></div></div>',
                 unsafe_allow_html=True,
             )
-            total, count, findings = st.columns(3)
-            total.metric("确定性金额 · 最小单位", result.calculated_total_base_units or "—")
-            count.metric("确定性事件数", result.calculated_count if result.calculated_count is not None else "—")
-            findings.metric("Finding 数量", len(result.findings))
+            claimed, actual, difference, findings = st.columns(4)
+            claimed.metric("服务声称 · 最小单位", execution.submission.claimed_total_base_units)
+            actual.metric("链上有效 · 最小单位", result.calculated_total_base_units or "无法确定")
+            delta = (
+                str(int(execution.submission.claimed_total_base_units) - int(result.calculated_total_base_units))
+                if result.calculated_total_base_units is not None
+                else "无法确定"
+            )
+            difference.metric("差异 · 声称 − 链上", delta)
+            findings.metric("问题数量", len(result.findings))
             if result.outcome is VerificationOutcome.INCONCLUSIVE:
                 st.warning(f"证据不足，不能形成服务负面结论：{result.inconclusive_reason}")
+            render_fund_flow(execution.fund_flow)
             if execution.explanation:
                 st.info("受限解释：" + execution.explanation.summary)
             for error in execution.ai_errors:
                 st.warning(error)
             if execution.evidence_diagnostics:
-                with st.expander("证据来源与采样诊断", expanded=True):
+                with st.expander("证据来源与采样诊断", expanded=False):
                     for diagnostic in execution.evidence_diagnostics:
                         st.markdown(
                             f'<div class="status-card"><strong>{escape(diagnostic.source)}</strong> · '
@@ -398,11 +433,36 @@ def _render_attempts(runtime: AppRuntime) -> None:
                         f'{escape(finding.explanation)}<br><span class="mono">证据：{refs}</span></div>',
                         unsafe_allow_html=True,
                     )
+            pairs = st.session_state.get("commitment_pairs", [])
+            task_commitment = delivery_commitment = expected_signer = None
+            if index <= len(pairs):
+                task_commitment, delivery_commitment, expected_signer = pairs[index - 1]
+            render_commitments(
+                st.session_state.task,
+                task_commitment,
+                delivery_commitment,
+                execution.submission,
+                expected_signer,
+                runtime.commitment_anchor_status,
+            )
+            if (
+                index == len(executions)
+                and result.outcome is VerificationOutcome.PASS
+                and execution.receipt.publication.uri is None
+                and st.button(
+                    "预览并发布脱敏回执",
+                    type="primary",
+                    key=f"preview-publication-{index}",
+                    use_container_width=True,
+                )
+            ):
+                st.session_state[f"show-publication-{index}"] = True
+                st.rerun()
             if execution.follow_up:
                 with st.expander("补查与后续建议"):
                     for suggestion in execution.follow_up.suggestions:
                         st.write(f"{suggestion.action.value} — {suggestion.rationale}")
-            with st.expander("本地回执与下载", expanded=index == len(executions)):
+            with st.expander("本地回执与下载", expanded=False):
                 receipt_json = execution.receipt.model_dump(mode="json")
                 st.caption("本地回执保留完整发布状态；公开文件只包含脱敏、可重放字段。")
                 st.json(receipt_json)
@@ -413,15 +473,33 @@ def _render_attempts(runtime: AppRuntime) -> None:
                     mime="application/json",
                     key=f"download-{index}",
                 )
-            with st.expander("公共回执与 ERC-8004", expanded=index == len(executions)):
+            with st.expander(
+                "公共回执与 ERC-8004",
+                expanded=st.session_state.get(f"show-publication-{index}", False),
+            ):
                 _render_publication(runtime, execution, index - 1)
 
 
 def _draft_task(runtime: AppRuntime) -> None:
-    _section("01 · SCOPE", "描述验收任务", "用自然语言给出链、资产、账户、区块范围与排除规则。")
+    _section("01 · UPLOAD", "上传报表", "上传 JSON/TXT 报表，或直接加载固定演示样例。")
     with st.container(border=True):
+        uploaded = st.file_uploader(
+            "服务商报表",
+            type=("json", "txt"),
+            accept_multiple_files=False,
+            max_upload_size=1,
+        )
+        report_context = ""
+        if uploaded is not None:
+            payload = uploaded.getvalue()
+            if len(payload) > 1_000_000:
+                st.error("报表超过 1 MB 上限，请先分段。")
+            else:
+                report_context = payload.decode("utf-8", errors="replace")
+                st.success(f"已读取 {uploaded.name} · SHA-256 {content_hash(payload)}")
+                st.caption("原始字节只用于本次范围提取；确认后取得的签名交付仍会独立留档。")
         request = st.text_area(
-            "任务描述",
+            "核验范围说明",
             value="核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。",
             height=130,
             help="这里不会直接触发链上操作；系统先生成一份可修改候选。",
@@ -429,7 +507,8 @@ def _draft_task(runtime: AppRuntime) -> None:
         st.caption("下一步会展示结构化字段供你逐项确认，不会自动冻结或执行。")
         if st.button("生成可核对的任务候选", type="primary", use_container_width=True):
             try:
-                st.session_state.candidate = runtime.workflow.draft_task(request)
+                prompt = request if not report_context else f"{request}\n\n服务商报表内容：\n{report_context}"
+                st.session_state.candidate = runtime.workflow.draft_task(prompt)
                 st.session_state.pop("draft_error", None)
             except Exception as error:
                 st.session_state.candidate = runtime.editable_seed
@@ -463,9 +542,9 @@ def main() -> None:
             _candidate_editor(runtime)
         return
 
-    _section("02 · FROZEN", "TaskSpec 已冻结", "以下边界将贯穿服务交付、独立取证、确定性核对和回执。")
+    _section("02 · CONFIRMED", "核验范围已确认", "链、资产、账户与区块范围已经锁定。")
     _task_summary()
-    _section("03 · VERIFY", "选择交付并执行", "最多两个 attempt；签名或计划校验失败不会消耗次数。")
+    _section("03 · VERIFY", "链上核验", "选择服务交付；最多两个 attempt，签名或计划校验失败不消耗次数。")
     _run_attempt(runtime)
     _render_attempts(runtime)
 

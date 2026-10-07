@@ -22,8 +22,8 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek �
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
-`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8–M10 产品方向已经完成文档设计，
-尚未实现或部署。
+`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8 资金流投影、EIP-712 承诺、前端主流程
+重构与 Validation Registry 只读探针已在独立开发分支实现，尚未合并或部署；M9–M10 仍在并行开发。
 
 ## 已完成
 
@@ -185,11 +185,21 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-M8–M10 前端规范已建立于 [FRONTEND_SPEC.md](FRONTEND_SPEC.md)，黑金视觉与 12px 卡片圆角已由用户确认；页面代码尚未按该规范改版。
+完成 M8 分支全量质量门与浏览器检查后提交交接；主负责人再与 M9/M10 独立页面组件和领域端口集成。专用最小锚定合约不在
+本次未经额外审查和写链授权的范围内。
 
-启动 M8：先重构首屏为“上传报表 → 确认范围 → 链上核验”的单一主流程，实现由现有 Finding 驱动的资金流投影；随后冻结
-TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry 或专用最小锚定 adapter 做 Sepolia 接口探针。
-在探针与 schema 完成前，不把任务承诺表述为已上链。
+## M8 开发分支进展
+
+- 页面已重构为黑金 12px 卡片主题和“上传报表 → 确认范围 → 链上核验”主流程，结果优先展示服务声称、链上有效金额、
+  精确差异、资金流与 Finding；RPC、签名、Registry 和原始 JSON 默认折叠。
+- `FundFlowProjection` 从已有 submission、reference evidence 与 Finding 投影匹配、漏报、链上未找到、内部互转、重复和
+  证据不足；每条边保留完整事件键、双方来源引用与 Finding ID，不反向计算 outcome。
+- `TaskCommitment` 与 `DeliveryCommitment` 使用 EIP-712；服务接单和交付分别签名，篡改 task/service/attempt/report hash
+  或错误签名者会被拒绝。三个 M8 Schema 已加入稳定导出。
+- Sepolia 只读探针已真实读取 Validation Registry 的 bytecode、Identity Registry 关联与 service `11155111:10691` 请求列表。
+  当前接口不适合作为 requester 通用任务锚，因此未广播交易，页面明确显示 `NOT_SUBMITTED`。
+- 非 external 全量门为 158 项通过、9 项排除；M8 Sepolia 只读 external 探针单独 1 项通过。Ruff、pip check、15 份 Schema
+  漂移、1000 行限制与无凭据 MVP 演示均通过。真实浏览器走通首次 FAIL 资金流，390×844 下无页面水平溢出。
 
 ## M8–M10 计划范围
 
