@@ -22,7 +22,7 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek �
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
-`codex/m1-integration` 已同步远端 M2 合并历史，等待本次收尾提交推送，尚未合并到 `main`。
+`codex/m1-integration` 已同步远端 M2 合并历史，并通过非快进合并进入 `main`，本状态提交随 `main` 推送。
 
 ## 已完成
 
@@ -184,7 +184,7 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-将 `codex/m1-integration` 创建或更新为面向 `main` 的合并请求并完成代码审查；合并属于独立发布决策。
+观察 `main` 推送后的 GitHub Actions；后续仅剩可选的 OpenAI、Pinata/IPFS 扩展验证，不阻塞当前 MVP。
 
 ## M7 工作区收尾
 
