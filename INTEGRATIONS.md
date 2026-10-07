@@ -127,6 +127,23 @@ M6 产品 adapter 直接调用 Reputation Registry 的 `giveFeedback`，将公�
 写前必须核对 Sepolia、团队控制 service owner、Reviewer、余额和 pending nonce。广播超时仍保存已签名交易哈希与 nonce 为
 `SUBMITTED`，禁止自动重发；确认后从 `NewFeedback` 事件读回服务、Reviewer、URI、哈希和标签。
 
+### M8–M10 计划扩展
+
+M8 计划验证“任务承诺、服务接单和报告交付”与 ERC-8004 Identity/Validation/Reputation 三类能力的可组合方式。当前只确认
+三个 Registry 地址和既有 Identity/Reputation 读写路径，不声称 Validation Registry 已适合承载任意任务承诺。
+
+实现前必须新增独立 Sepolia 探针，至少确认：
+
+1. 承载对象能否稳定绑定 `spec_hash`、service ID、requester、report hash 与 attempt。
+2. 发起者、服务 owner/授权者和 Reviewer 的权限语义。
+3. 事件能否从交易 receipt 中无歧义读回，且支持公开验证页按任务或回执定位。
+4. 超时、revert、未知交易、链重组和重复提交的状态映射。
+5. 若现有 Registry 语义不匹配，则通过 `TaskCommitmentPort` 使用专用最小锚定 adapter；选择结果必须追加 ADR、地址来源、
+   bytecode 和真实探针证据后才能标记为已实现。
+
+M9 的回执修复关系继续以公共文件和内容哈希为主体，ERC-8004 只追加新反馈或可核实的替代引用，不删除旧反馈。M10 只读取
+已确认事件和可下载回执生成服务历史投影，不把 Blockscout 抽样或模型解释当成信誉事实。
+
 ## Pinata / IPFS 公共文件
 
 Pinata adapter 使用 `POST https://uploads.pinata.cloud/v3/files`，multipart 明确设置 `network=public`，JWT 只放在 Bearer header。
