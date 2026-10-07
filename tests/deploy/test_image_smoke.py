@@ -48,6 +48,8 @@ def test_stale_source_or_wheel_fails(tmp_path, failure):
 def test_release_dockerfile_checks_real_entrypoint_after_source_copy():
     dockerfile = (ROOT / "deploy/Dockerfile.release").read_text()
     assert "COPY --chown=app:app src /app/src" in dockerfile
-    assert dockerfile.index("COPY --chown=app:app src") < dockerfile.index("RUN python /opt/trust-receipt-smoke")
+    assert dockerfile.index("COPY --chown=app:app src") < dockerfile.index("RUN python -c")
     assert "WORKDIR /app" in dockerfile
-    assert "USER app\nRUN python /opt/trust-receipt-smoke/check_image.py" in dockerfile
+    assert "runpy.run_path('/opt/trust-receipt-smoke/check_image.py', run_name='__main__')" in dockerfile
+    assert "RUN python /opt/" not in dockerfile
+    assert "PYTHONPATH=" not in dockerfile

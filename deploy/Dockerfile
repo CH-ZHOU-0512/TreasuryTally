@@ -19,7 +19,7 @@ COPY scripts/deploy/check_image.py /opt/trust-receipt-smoke/check_image.py
 RUN mkdir -p /app/data /app/receipts/private && chown -R app:app /app
 
 USER app
-RUN python /opt/trust-receipt-smoke/check_image.py
+RUN python -c "import runpy; runpy.run_path('/opt/trust-receipt-smoke/check_image.py', run_name='__main__')"
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

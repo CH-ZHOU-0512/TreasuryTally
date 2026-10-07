@@ -144,6 +144,8 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 Python 文件（仅归一化 Git 换行），并用真实 `/app/app/streamlit_app.py` 执行 AppTest，要求零 exception、实际产品标题
 及正确源码导入路径。隔离检查不挂生产目录、不注入 `.env`、不提供真实密钥，构建时使用 `--network=none`。
 缺外部配置可显示明确阻塞，不可有导入异常。健康端点、HTTP 200、WebSocket 和 `/release` 下演示不能替代真实入口检查。
+检查通过 `python -c` 的 runpy 调用从 `/app` 启动，保留生产 `python -m streamlit` 的工作目录导入语义；
+不要直接运行位于 `/opt` 的脚本导致脚本目录取代应用根目录，也不另外设置 PYTHONPATH。
 切换后只用新独立浏览器会话检查首页渲染及无异常；这不补记业务矩阵或真实用户验收。
 切换前保留旧镜像及源码备份，保留 `.env`、data 与私有/公开回执挂载；仅使用
 `docker compose ... up -d --no-deps --no-build app` 切换已构建应用镜像，不重建其他容器。
