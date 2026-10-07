@@ -88,6 +88,22 @@ def test_wrong_or_mixed_token_never_labels_claim_as_confirmed_asset(mixed):
     assert view.scope.token.short not in view.current.claimed.unit
 
 
+def test_unverified_event_precision_uses_raw_units():
+    wrong = "0x" + "f" * 40
+
+    def transform(fixture):
+        records = tuple(record.model_copy(update={"token_address": wrong, "transaction_hash": "0x" + "d" * 64})
+                        for record in fixture.submission.transfers)
+        return fixture.model_copy(update={"submission": fixture.submission.model_copy(update={"transfers": records})})
+
+    item = report_input("correct-basic", transform=transform)
+    view = build_business_report(item.receipt, item.submission, fund_flow=item.fund_flow)
+    rows = tuple(row for row in view.current.flow_rows if row.source_label == "仅报表声明")
+    assert rows
+    assert all(row.amount.decimals is None and "精度未确认" in row.amount.unit for row in rows)
+    assert all(row.amount.unit.startswith(wrong[:8]) for row in rows)
+
+
 def test_unknown_precision_is_explicit_and_preserves_raw_integer(failing_input):
     view = build_business_report(failing_input.receipt, failing_input.submission)
     assert view.current.claimed.decimals is None

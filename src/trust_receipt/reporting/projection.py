@@ -152,18 +152,24 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
         label, _ = FLOW_TEXT[edge.status.value]
         if edge.from_node_id not in nodes or edge.to_node_id not in nodes:
             raise ValueError("fund flow contains an unresolved account")
+        records = edge.reference_records or edge.service_records
+        record = records[0] if records else None
+        row_token = record.token_address if record else receipt.task_spec.token_address
+        row_precision = (
+            verified_decimals
+            if row_token.lower() == receipt.task_spec.token_address.lower()
+            and edge.token_decimals == verified_decimals
+            else None
+        )
+        row_amount = amount(edge.amount_base_units, row_precision, token=row_token)
+        if row_precision is None:
+            row_amount = row_amount.model_copy(update={"unit": row_amount.unit + " 精度未确认"})
         rows.append(
             FlowRow(
                 edge_id=edge.edge_id,
                 sender=address_view(nodes[edge.from_node_id].address),
                 recipient=address_view(nodes[edge.to_node_id].address),
-                amount=amount(
-                    edge.amount_base_units,
-                    edge.token_decimals,
-                    token=(edge.reference_records or edge.service_records)[0].token_address
-                    if edge.reference_records or edge.service_records
-                    else None,
-                ),
+                amount=row_amount,
                 status=edge.status.value,
                 status_label=label,
                 event_ref=f"{edge.event_key[0]}:{edge.event_key[1]}:{edge.event_key[2]}",
