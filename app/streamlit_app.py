@@ -663,23 +663,29 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
 
 
 def _draft_task(runtime: AppRuntime) -> bool:
-    _section("上传报表", "上传 JSON，或把 CSV / 单工作表 XLSX 转换成可检查的 JSON。没有报表？可先用案例。")
+    _section("上传报表", "上传 CSV、Excel .xlsx 或 JSON，系统自动读取并识别报表。")
     panel = (
         st.expander("已读取的报表与原范围说明", expanded=False)
         if "candidate" in st.session_state else st.container(border=True, key="panel-input")
     )
     with panel:
-        input_mode = st.selectbox(
-            "先选一份报表",
-            ("上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"),
-            key="intake-mode",
-            format_func=lambda mode: {
-                "上传自己的 JSON": "上传我的报表",
-                "加载真实 Sepolia 案例": "用真实交易案例试一遍",
-                "加载契约测试示例": "离线练习（模拟数据）",
-            }[mode],
-            help="真实案例使用团队构造报表与公开 Sepolia 交易；契约测试示例为合成数据。",
-        )
+        with st.expander("没有报表？使用案例或模板", expanded=False):
+            input_mode = st.selectbox(
+                "先选一份报表",
+                ("上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"),
+                key="intake-mode",
+                format_func=lambda mode: {
+                    "上传自己的 JSON": "使用我上传的报表",
+                    "加载真实 Sepolia 案例": "用真实交易案例试一遍",
+                    "加载契约测试示例": "离线练习（模拟数据）",
+                }[mode],
+                help="这里选择案例来源，不是文件格式。上传文件无需选择此项。",
+            )
+            st.download_button(
+                "下载严格 JSON 空白模板", data=strict_template_bytes(),
+                file_name="uploaded-report-template.json", mime="application/json",
+                use_container_width=True,
+            )
         real_case = load_real_case(PROJECT_ROOT)
         with st.expander("下载示例报表与核验范围"):
             st.caption("团队为演示构造报表，引用真实公开 Sepolia 交易；账户角色为演示设定。")
@@ -689,13 +695,6 @@ def _draft_task(runtime: AppRuntime) -> bool:
             ):
                 st.download_button(report_label, report_data, filename, "application/json")
             st.json(real_case.candidate.model_dump(mode="json"))
-        st.download_button(
-            "下载严格 JSON 空白模板",
-            data=strict_template_bytes(),
-            file_name="uploaded-report-template.json",
-            mime="application/json",
-            use_container_width=True,
-        )
         uploaded = st.file_uploader(
             "服务商报表",
             type=("json", "csv", "xlsx"),
