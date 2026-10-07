@@ -11,6 +11,26 @@ last-reviewed: 2026-10-07
 
 # 安全、隐私与密钥规则
 
+## 业务报告与本地导出
+
+业务报告只列受控字段：任务范围、原确定性结果、公共账户/事件引用、来源类型与取得时间、回执/任务哈希。
+不复制上传原件、report_text、签名、模型原文、任意 Finding explanation/expected/actual 字典、source details 或来源 URI。
+Finding 数值说明仅选规范整数的既有 amount/count/decimals；证据引用只保留符合固定事件键语法的引用，凭据型 RPC URL 不进入报告。
+
+HTML/SVG 必须转义文本且无脚本、外部图像/字体/样式请求；DOCX/PDF 只由固定模板及本包 OFL 字体生成。
+字体是受审查的程序资源，不接受用户提供路径。导出直接返回 bytes，不持有 Shell、任意文件写入、网络、publisher 或链上端口。
+固定 Node worker 使用 subprocess argv / shell=False，只接业务 view 派生 JSON，禁止用户 code/formatter/image URL。
+不传入凭据、NODE_OPTIONS 或继承的 NODE_PATH；单实例并发 2、20 秒超时、128 MB JS 堆、256 KB stdin、512 KB SVG、
+4 MB PNG、6 MB stdout、260 万像素，sharp 无缓存且线程为 1。JS 堆限不是 native 总内存硬限，部署必须另加 cgroup/Job、pids 和禁止网络出口。
+回包 binding 必须匹配完整 view/option 哈希，导出不接受跨任务 PNG；stderr 不进入用户日志或报告。
+文档资源检查上限为每 attempt 400 条投影记录、1000 项 Finding、2 MB view 序列化与单文本 4096 字符、正文 6 万字符。
+绘图独立上限为 200 条保存记录，超限明确不可用；主图最多四条，拥挤并行线仅首条，明确标出总数。
+完整记录保留于明细附录。页面绑定当前工作区后才主动下载，不得从公开验证入口读取私有报告或把下载当成发布授权。
+
+报告的资产/精度未知时显示原整数与未确认单位；不能给错误或混合资产总额套用任务代币精度。
+INCONCLUSIVE 不能在任何格式中写成服务失败；两次交付关系缺证时不得声称已核实修复。
+QA 容器仅挂载离线测试产物与专用工具，实际渲染使用 network=none、资源上限及超时，不挂载 .env、密钥或真实私有数据。
+
 ## 原型安全边界
 
 本项目处理外部报告、链上地址、API 密钥和测试网签名。原型不应持有主网资金控制权，不提供托管、支付或自动转账能力。

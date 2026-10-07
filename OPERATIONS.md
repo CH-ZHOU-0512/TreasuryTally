@@ -11,6 +11,30 @@ last-reviewed: 2026-10-07
 
 # 本地开发与运行手册
 
+## 业务报告与本地导出运行边界
+
+报告调用 `build_business_report(receipt, submission, fund_flow=..., previous=..., revisions=...)`，页面的原 JSON 回执下载不变。
+`export_html`、`export_docx`、`export_pdf` 与 `graph_png` 返回 bytes，不执行上传、写链或任意路径写入。
+报告仅使用已记录证据，不为导出重取 RPC 或调用 AI。冷恢复使用默认 recorded 模式，实时核验只有确认实际来源后才标 live_rpc。
+
+DOCX 使用 python-docx 1.2.0，PDF 使用 reportlab 4.4.9，PNG 使用 Node 22.23.3 / sharp 0.34.5 的 ECharts SVG 栅格结果；
+Pillow 12.3.0 只校验 PNG。独立 package.json/package-lock.json 位于 `src/trust_receipt/reporting/assets/renderer/`，用 npm ci 安装。
+组合层复用 `EChartsRenderer(node_path=..., modules_path=...)`，所有导出显式传 `renderer=renderer`。
+node_path 省略时从受信 PATH 查找 node；modules_path 省略时按包目录发现 node_modules，不从报告字段传入路径。
+部署方加无网络、native 总内存/pids 限额；缺失依赖、失败或繁忙明确 EXPORT_UNAVAILABLE。Python 正式安装以规范生成的主环境锁为准，
+不能因为本地 adapter 能调用就声称生产依赖已经就绪。生产 Linux 不依赖 Word/LibreOffice；中文字体随 wheel 打包并保留 OFL 许可证，
+PDF 嵌入子集，DOCX 内嵌字体。资源缺失必须显示导出不可用，不生成假后缀；原 JSON 下载不受渲染器影响。
+带图 HTML 也需要 ECharts worker，不能声称 Node 缺失仍可导出完整 HTML。
+Linux 还需 Fontconfig：将打包的 ReportSans-Regular.ttf 安装到镜像字体目录并执行 fc-cache；
+worker 用固定 fc-match 探针核对 TreasuryTally Report Sans，字体缺失拒绝导出。原生 npm 包保留 README/package.json
+许可声明与 sharp LICENSE；@img/sharp-libvips-linux-x64 1.2.4 声明 LGPL-3.0-or-later，不能只保留 sharp 的 Apache 许可证。
+图超过 200 条保存记录明确不可用，不能把局部图称为完整图；文档边界检查的 400 条只用于拒绝资源超限，非绘图能力承诺。
+
+作者与 QA artifact 使用 loader-selected bundled Python；Windows bundle 不含 LibreOffice，不能调用会回退桌面 soffice 的渲染路径。
+专属 QA Dockerfile 位于 `tests/reporting/qa/Dockerfile`，只用于离线测试报告。构建可拉取字体/工具依赖，实际渲染必须 `--network none`，
+不挂 .env、密钥、data 或私有回执；使用单独可写输出目录、CPU/内存/pids 上限与 timeout，逐页检查生成 PNG。
+可复用经过核实的本地 Debian 工具基础镜像，但必须记录来源与独立 QA 工具版本，不当作 loader bundled renderer。
+
 ## 已准备环境
 
 - 主 Python 3.12 虚拟环境：`D:\HACKTHON\.venv`

@@ -660,6 +660,12 @@ schemas/v1/public_verification_bundle.schema.json
 
 ## 精确计算规则
 
+### 业务报告本地渲染绑定
+
+只读 `RenderedDiagram` 保存完整冻结 view JSON 的 SHA-256、派生 option JSON 的 SHA-256、PNG bytes 与静态 SVG。
+view 包含 spec/receipt hash；worker binding 是上述两个哈希拼接字符串的 SHA-256。导出自身调用 renderer，不接受用户 PNG。
+这些本地字段不进入 Receipt、公有 Schema 或链上承诺，不重新决定金额/状态；图是局部预览，全部事件与精确单位保留在附录。
+
 ### M8 专用锚候选的读回绑定
 
 专用最小锚只记录 requester 的完整 task commitment digest、spec hash、service ID hash 和指定 service signer，

@@ -11,6 +11,20 @@ last-reviewed: 2026-10-07
 
 # 系统架构
 
+## 业务报告与本地导出边界
+
+`reporting.projection` 从通过既有完整性重放的 Receipt、绑定的 ServiceSubmission、已有 FundFlowProjection 和可选 M9
+版本关系生成冻结 `BusinessReportView`。它是只读解释层：不重新汇总事件、不调用模型或 RPC、不写数据库、不改原金额/结论。
+无资金流快照时不造图；历史恢复应使用 recorded 来源模式，不拿当前运行配置冒充旧证据的取得方式。
+
+`reporting.layout` 定义各格式共享的中文业务内容顺序；`graphics` 委托本地固定 ECharts worker 生成 SVG/PNG，不用 Python 仿制图。
+组合层复用 `EChartsRenderer` 实例，通过固定 argv/JSON stdin 调用包内脚本与独立 pinned sharp 依赖。
+图像绑定完整 view（含 spec/receipt hash）和派生 option 哈希，不接任意用户 JS、SVG、PNG 或路径。
+Node/modules 路径只属于受信部署配置。缺依赖或超时明确 EXPORT_UNAVAILABLE，不回退假格式。
+`html_export`、`docx_export`、`pdf_export` 分别负责离线 HTML、真实 DOCX 和 PDF 字节。外部库仅在使用对应导出时加载；
+适配层不接受文件路径、模板或外部资源 URL。页面只有一个业务读模型，不从 raw dict 另建金额或风险真值。
+报告是原签名回执的阅读副本，原 JSON 下载继续使用既有对象，不被报告格式替代；下载不改变 publication 状态。
+
 ## 架构目标
 
 让确定性核对独立于模型、页面和单一数据供应商运行。核心验收能力必须能从测试或命令行调用；Streamlit 和 LangChain 都只是适配层。
@@ -214,4 +228,4 @@ Streamlit 定位为链上报表验收工具，而不是开发工作台。首屏�
 
 页面使用宽布局，但关键内容以卡片和可换行字段呈现，不依赖宽表格。桌面端允许资金流与问题列表并排；760px 及以下强制
 折叠为单列，按钮占满可用宽度，长哈希与 JSON 可换行或横向滚动。资金流颜色不能是唯一语义，还必须配合图标、文本和
-可访问标签。响应式样式和可视化投影 adapter 只属于 `app/`，不会进入领域层。
+可访问标签。页面响应式和交互属于 `app/`；业务报告的只读展示与本地渲染 adapter 属于 `reporting/`，不会进入领域层。

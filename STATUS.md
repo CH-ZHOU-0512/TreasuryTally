@@ -716,7 +716,18 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
 - reporting 与图接口测试 37 项通过，限定文件 Ruff 通过；五种离线视图各在 390/1440px 完成 SVG SSR 生成检查。
   此项不是人工视觉验收；独立组件交接时尚未接入页面，本地接线现况见首项，也没有生产部署。
 - 用户已要求暂停浏览器自动操作，由其手动验证。实际手机可读性、交互与页面接线仍待验；
-  Word/PDF 逐页验收尚未完成，本分支不能标记全量收尾。
+  浏览器手动验收和页面导出接线仍待联合集成，本分支不能标记全量上线。
+
+- 本地固定 ECharts SSR → sharp 图已进入真实 DOCX/PDF/HTML 导出；未使用 Canva 或 Python 绘图兜底。
+  7 类离线样例覆盖 FAIL、PASS、INCONCLUSIVE、补交历史、极大整数、255 位精度与 200 条微小金额；
+  Word 40 页、PDF 46 页共 86 页按原始 PNG 逐页检查完成。修正单笔节点拉伸和末页账户索引断组；
+  最终重渲染只改变 2 页，其余页面 SHA-256 与已检查页面一致。完整事件引用、金额、原回执和补交历史的格式一致性检查通过。
+- loader bundled Python/Node 与独立 Linux Python 3.12.14 / Node 22.23.3 / sharp 0.34.5 均实际完成 7 类四格式生成与校验；
+  Linux runtime 使用 network none/read-only root、单独输出目录及 CPU/内存/pids 上限，pip check 通过。
+  reporting 专项 49 通过、schema 三组 38 通过；未执行外部 RPC/真实密钥/写链/公开上传，未恢复浏览器自动操作。
+  独立 reporting 工作树实际执行 pytest -m 'not external' -q：416 通过、14 排除、1 条第三方弃用 warning；
+  全目录 Ruff、1000 物理行与 diff 检查通过，wheel 含字体/许可证/固定 worker/npm lock/ECharts，未打入 node_modules 或测试产物。
+  依赖与 renderer 只在独立工作树；主环境锁和生产镜像接线仍由主控/M14 规范生成并联合验证，未部署。
 
 ## 状态更新规则
 

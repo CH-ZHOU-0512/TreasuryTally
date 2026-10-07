@@ -11,6 +11,21 @@ last-reviewed: 2026-10-07
 
 # 测试与验收计划
 
+## 业务报告与导出验证
+
+- 固定 ECharts worker 核验资源哈希、只接派生 JSON、拒绝未知键/image/code；测试缺依赖、超时、并发上限、回包 binding 错误与凭据环境不转发。
+- 用独立 Linux Python 3.12 / Node 22.23.3 / sharp 0.34.5 无网络运行 SSR→PNG→DOCX/PDF，与 bundled 作者验证分别记录。
+  Windows 成功不是部署就绪；全部页须另检查，缺 font/Node 不允许 Python 仿制回退。
+
+- 12 份冻结案例投影必须保持原 outcome、最小单位总额与事件引用；报告不得改变 Receipt 字节或 schema。
+- 覆盖 1 最小单位/18 精度、超大整数、零与有符号差额；未知精度、DECIMAL_ERROR、错误与混合资产不得伪装为可比正常金额。
+- 完整性篡改、不同任务/attempt/金额的图、错误版本关系必须拒绝；两次交付保留原 FAIL，缺关系只写未核实。
+- Finding 的私有备注、模型英文全文、凭据型 URL、签名和原件不得进入任何报告；HTML/SVG 转义、无外部请求；长度/规模超限拒绝。
+- DOCX/PDF 由同一 view 输出，校验正文中文、精确金额、同一 spec/receipt hash、两次 outcome、全部 200 事件引用、嵌入字体和可打开结构。
+- 使用 loader 选定的 bundled runtime authoring，并在首次创建产物前执行对应 artifact marker；Windows 缺 bundled LibreOffice 时禁止回退桌面安装版。
+- 文档必须渲染为逐页 PNG 并检查所有页：中文字体、分页、图例、长地址/哈希、微小金额、200 条记录、三态和双 attempt；文本或 magic bytes 检查不代替视觉门。
+- 隔离 QA 容器是独立验收工具链，不是生产依赖或 bundled LibreOffice；生成代码不能硬编码本机 Office、bundled runtime 或 QA 容器路径。
+
 ## 测试目标
 
 证明系统能在限定范围内完整、精确、可重复地核对报表，并能把供应商错误、基础设施故障和证据不足区分开。

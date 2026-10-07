@@ -13,7 +13,10 @@ dependencies = [
   "langchain-openai>=1.6,<2",
   "mcp==1.26.0",
   "pydantic",
+  "python-docx==1.2.0",
   "python-dotenv",
+  "reportlab==4.4.9",
+  "Pillow==12.3.0",
   "streamlit",
   "web3==7.13.0",
 ]
@@ -22,7 +25,7 @@ dependencies = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-"trust_receipt.reporting" = ["assets/echarts/*"]
+"trust_receipt.reporting" = ["assets/*.ttf", "assets/*.txt", "assets/*.md", "assets/echarts/*", "assets/renderer/*.cjs", "assets/renderer/*.json", "assets/renderer/*.md"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
