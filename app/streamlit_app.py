@@ -281,7 +281,7 @@ def _render_publication(runtime: AppRuntime, execution, index: int) -> None:
             key=f"publish-authorized-{index}",
         )
         if st.button(
-            "发布到 Pinata / IPFS",
+            "发布公开 JSON 回执",
             key=f"publish-{index}",
             disabled=runtime.publisher is None or not authorized,
             use_container_width=True,

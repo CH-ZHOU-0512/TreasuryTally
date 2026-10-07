@@ -20,8 +20,8 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 `d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
 M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面、
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
-M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执与 ERC-8004
-产品 adapter 已完成离线实现、测试和安全降级部署；真实 Pinata 上传与新的链上写入仍待外部配置。
+M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布已完成真实 HTTPS
+内容寻址闭环，ERC-8004 产品 adapter 已完成离线实现与部署；新的链上写入仍待测试钱包和受控身份配置。
 
 ## 已完成
 
@@ -124,8 +124,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 - 已实现 `ContentPublisher` 端口、Pinata/IPFS adapter 与隔离目录离线 adapter。公开快照在上传前拒绝私钥、签名、JWT、
   Authorization、API key、secret 和原始报告正文等字段；上传后必须从 gateway 下载精确字节并核对 SHA-256。
-- Pinata adapter 已按官方 v3 multipart 协议固定 `network=public`，JWT 只进入 Bearer header；缺少 `PINATA_JWT` 时页面明确禁用
-  真实公共上传，不用本地文件冒充公网发布。
+- Pinata adapter 已按官方 v3 multipart 协议固定 `network=public`，JWT 只进入 Bearer header。缺少 JWT 时生产使用同一端口下的
+  内容寻址 HTTPS fallback：应用只创建公共文件，Nginx 只读公开，并执行相同的公网下载哈希核验；不冒充 IPFS 固定。
 - SQLite 新增只追加 `publication_events`，保存 `NOT_SUBMITTED / SUBMITTED / CONFIRMED / FAILED` 全部快照；进程重启按
   receipt ID 恢复最新状态，旧状态不覆盖。
 - ERC-8004 产品 adapter 在写入前核对 Sepolia chain ID、受控 service owner、Reviewer、余额和 pending nonce；直接绑定公共
@@ -134,13 +134,17 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
   用户再次授权后从 `FAILED` 恢复为 `NOT_SUBMITTED`，`TRANSACTION_UNKNOWN` 禁止走该恢复路径。
 - Streamlit 已接入两次独立授权：先授权公开脱敏 JSON，再授权 Sepolia 写入；页面分别展示公共 URI、内容哈希、nonce、交易哈希、
   feedback index、区块和脱敏错误。新会话可只读公共 JSON，在独立进程校验哈希并重放确定性三态检查。
-- M6 安全降级版本已部署到广州服务器；生产应用容器为 `healthy`，匿名页面与健康端点返回 `200`，WebSocket 握手成功，应用端口
-  仍仅在 Docker 网络暴露。当前服务器未配置 Pinata/M6 写入，因此发布和写链按钮安全禁用。
-- 最新非 external 质量门为 146 项通过、8 项 external 明确排除；Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制通过。
+- M6 HTTPS publisher 已部署到广州服务器；生产应用容器为 `healthy`，匿名页面与健康端点返回 `200`，WebSocket 握手成功，
+  应用端口仍仅在 Docker 网络暴露。公共路径只允许 GET/HEAD，POST 实测返回 `403`。
+- 已用真实 DeepSeek + Sepolia RPC + Blockscout 生成一份 `PASS` 回执并公开至
+  `https://creatoros.top/trust-receipt/public/3b922f5825fe7127c0fa5da6c3664a2e93e7381db49579cc992d85b4292fa26e-receipt-e593dcc8-dc29-4db9-829c-31802a7de630.json`；
+  公网下载返回 `200 application/json`，精确字节 SHA-256 为 `0x3b922f…a26e`，独立进程复核 receipt/task/link 与三态重放均有效。
+  SQLite 已保存授权发布事件，链上状态正确保持 `NOT_SUBMITTED`。
+- 最新非 external 质量门为 148 项通过、8 项 external 明确排除；Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制通过。
 
 ## 待外部配置验证
 
-- 配置 `PINATA_JWT` 后执行一次真实公共上传、gateway 下载哈希核验与公网回执重放。
+- Pinata/IPFS 是优先 adapter，但当前缺少 `PINATA_JWT`；MVP 已按计划使用真实 HTTPS 公共文件 fallback 完成发布验收。
 - 在显式启用 `M6_ENABLE_WRITES` 前恢复并复核团队控制 service、Reviewer 测试钱包、Sepolia 余额与 nonce；随后只提交一笔 M6
   测试反馈并完成链上读回。现有 M0 历史确认反馈仅用于只读重放，不替代新的 M6 写入。
 
@@ -161,8 +165,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-启动 M6：在保留授权、`SUBMITTED` 与 `CONFIRMED` 状态边界的前提下接入公共回执发布与 ERC-8004 关联。M5 真实读取
-产品闭环与 Blockscout 补充抽样均已完成。
+完成 M6 最后一项外部验收：取得团队控制的 ERC-8004 service 配置与有 Sepolia 测试币的 Reviewer 测试钱包后，执行一次
+明确授权的反馈提交和链上读回；未知广播状态仍禁止自动重发。
 
 ## 状态更新规则
 

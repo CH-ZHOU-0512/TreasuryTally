@@ -80,6 +80,8 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
   镜像、仓库、页面或日志。
 - `PINATA_JWT` 与 `REVIEWER_PRIVATE_KEY` 只能由 `.env` 注入 publisher/reputation adapter；公共回执扫描禁止
   `private_key`、`signature`、`jwt`、`authorization`、`api_key`、`secret` 和原始 `report_text` 字段。
+- HTTPS fallback 公共目录只允许应用容器写、Nginx 容器只读，文件名必须内容寻址且只创建不覆盖；公网路径仅允许 GET/HEAD、
+  禁止目录列表，并不得与 `receipts/private/` 共用目录或挂载权限。
 - Streamlit 需要内联启动脚本和运行时样式；生产反向代理仅在公开的 `/trust-receipt/` 路径放开
   `script-src/style-src 'unsafe-inline'`，其余站点继续使用更严格的全局 CSP，并保留 HSTS、同源 frame、MIME 嗅探防护和权限策略。
 

@@ -79,6 +79,9 @@ publisher 返回 URI 后必须重新下载并按实际字节做 SHA-256 核验�
 ERC-8004 adapter 在写入前核对 Sepolia chain ID、受控 service owner、Reviewer、余额和 pending nonce；每次只广播一次，随后只按
 已保存的 nonce/交易哈希读回，禁止把未知状态自动重发。
 
+生产 publisher 优先 Pinata/IPFS；未配置 JWT 时可使用内容寻址 HTTPS 目录。后者由应用容器只写公共目录、Nginx 只读公开，
+仍执行公网下载哈希核验，但不把 HTTPS 文件表述为 IPFS 固定内容。
+
 ## 模块与文件约束
 
 - 模块按领域能力组织，一个模块只拥有一个主要变化原因。

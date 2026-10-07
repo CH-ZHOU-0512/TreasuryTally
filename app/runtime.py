@@ -27,7 +27,7 @@ from trust_receipt.orchestration import (
     evidence_from_fixture,
     load_vertical_demo_fixture,
 )
-from trust_receipt.publishing import M6Settings, PinataPublisher
+from trust_receipt.publishing import HttpsDirectoryPublisher, M6Settings, PinataPublisher
 from trust_receipt.reputation import ERC8004ReceiptFeedback
 from trust_receipt.services import FaultMode, TeamControlledReportService
 from trust_receipt.storage.sqlite import SQLiteRepository
@@ -46,7 +46,7 @@ class AppRuntime:
     editable_seed: TaskSpecCandidate
     evidence_label: str
     publication_workflow: M6Workflow
-    publisher: PinataPublisher | None
+    publisher: PinataPublisher | HttpsDirectoryPublisher | None
     feedback_adapter: ERC8004ReceiptFeedback | None
     publication_status: str
     feedback_status: str
@@ -109,6 +109,16 @@ def create_runtime(
         else None
     )
     publication_status = "Pinata/IPFS 已配置" if publisher else "缺少 PINATA_JWT，公共发布暂不可用"
+    if (
+        publisher is None
+        and m6_settings.public_receipt_directory is not None
+        and m6_settings.public_receipt_base_url is not None
+    ):
+        publisher = HttpsDirectoryPublisher(
+            m6_settings.public_receipt_directory,
+            m6_settings.public_receipt_base_url,
+        )
+        publication_status = "HTTPS 内容寻址公共目录已配置（Pinata 未配置）"
     feedback_adapter = None
     feedback_status = "M6_ENABLE_WRITES=false，ERC-8004 写入已关闭"
     settings = M0Settings.load(project_root / ".env")

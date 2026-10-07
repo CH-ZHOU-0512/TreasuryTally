@@ -133,6 +133,10 @@ Pinata adapter 使用 `POST https://uploads.pinata.cloud/v3/files`，multipart �
 返回 CID 后生成 `ipfs://` URI，并经配置的公开 gateway 重新下载；只有下载字节 SHA-256 与上传前一致才记录发布成功。超时、认证
 失败、CID 缺失或哈希不一致都保留为未提交，不触发 ERC-8004 写入。
 
+缺少 Pinata JWT 时，生产可使用同一 `ContentPublisher` 端口下的 HTTPS 内容寻址目录 adapter。文件名固定包含实际字节
+SHA-256，采用只创建不覆盖语义；Nginx 只读公开该目录，publisher 随后从公网 HTTPS URI 下载并执行同一哈希验证。该 fallback
+是真实公共文件发布，但不宣称 IPFS 固定；配置 Pinata 后优先切回 `ipfs://`。
+
 ## M0 执行矩阵
 
 | 探针 | 真实调用 | 成功证据 | 必测失败 | 当前状态 |
