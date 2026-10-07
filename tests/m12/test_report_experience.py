@@ -50,6 +50,12 @@ def test_unknown_verified_amount_is_not_rendered_as_zero_or_failure():
     assert "证据不足" in summary.direction
 
 
+def test_incompatible_units_do_not_produce_a_misleading_difference():
+    summary = amount_summary("120000", "110000", decimals=6, units_comparable=False)
+    assert summary.difference == "无法确定"
+    assert "金额单位" in summary.direction
+
+
 def test_every_finding_type_has_business_copy_and_next_action():
     for finding_type in FindingType:
         title, action = finding_copy(finding_type)

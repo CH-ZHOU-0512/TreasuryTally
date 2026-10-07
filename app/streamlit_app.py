@@ -43,6 +43,7 @@ from trust_receipt.m9 import PublicReceiptReference, PublicReferenceKind, verify
 from trust_receipt.models import (
     ExclusionRule,
     ExclusionRuleType,
+    FindingType,
     PublicationChainStatus,
     VerificationOutcome,
 )
@@ -461,6 +462,10 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 execution.submission.claimed_total_base_units,
                 result.calculated_total_base_units,
                 decimals=token_decimals,
+                units_comparable=not any(
+                    finding.finding_type in {FindingType.WRONG_TOKEN, FindingType.DECIMAL_ERROR}
+                    for finding in result.findings
+                ),
             )
             verified_display = (
                 format_token_amount(summary.verified, summary.decimals)

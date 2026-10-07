@@ -56,9 +56,13 @@ def contract_example_bytes(project_root: Path) -> bytes:
     return json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
 
 
-def amount_summary(claimed: str, verified: str | None, *, decimals: int | None) -> AmountSummary:
+def amount_summary(
+    claimed: str, verified: str | None, *, decimals: int | None, units_comparable: bool = True,
+) -> AmountSummary:
     if verified is None:
         return AmountSummary(claimed, "无法确定", "无法确定", "独立证据不足，暂时不能计算差额。", decimals)
+    if not units_comparable:
+        return AmountSummary(claimed, verified, "无法确定", "报表含不同代币或精度错误，请先核对金额单位。", decimals)
     delta = int(claimed) - int(verified)
     if delta > 0:
         direction = f"报表比链上有效金额多计 {delta} 个最小单位。"
