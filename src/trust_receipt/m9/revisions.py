@@ -140,6 +140,8 @@ class LocalRevisionStore:
         )
         if any(not verify_receipt_revision_hash(revision) for revision in revisions):
             raise ValueError("revision hash does not match canonical revision content")
+        if any(revision.task_id != task_id for revision in revisions):
+            raise ValueError("revision store contains records for a different task")
         if len(revisions) > 2:
             raise ValueError("revision store contains more than two attempts")
         if revisions and revisions[0].attempt != 1:

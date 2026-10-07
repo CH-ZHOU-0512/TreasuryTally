@@ -61,6 +61,10 @@ M9 不修改冻结的 `Receipt 1.0`：`ReceiptRevision` 以外置自哈希记录
 `LocalRevisionStore` 一个 attempt 只创建一个文件。`ReceiptCommitmentVerifier` 是稳定适配端口；M8 承诺快照可用时，
 M9 通过实际 EIP-712 校验给出 `VERIFIED`，缺少快照时保留 `UNVERIFIED` 而不阻塞 v1 回执重放。
 `PublicReceiptResolver` 只能返回公开字节、内容哈希和公开关系，不允许回查 SQLite 私有工作区。
+`PublicVerificationBundle` 将授权公开快照与重新绑定的公开版本链一起移交；`PublicBundleResolver` 校验完整历史后定位
+公开回执。M9 用例位于 `orchestration.m9`，公开下载采用配置限定、禁重定向、限时限体积的 `PublicArtifactReader`。
+`ERC8004PublicResolver` 只读 canonical 交易和 Registry 事件，核验 reviewer、URI、内容哈希与结果标签；独立页面不加载
+原任务工作区或模型运行时。完整历史发布单独授权，由 `PublicBundleStore` 保存只追加元数据，恢复不重复上传。
 Service History Projection 仍属于 M10。
 
 M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名

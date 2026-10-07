@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import ValidationError
 
 from trust_receipt.hashing import content_hash
+from trust_receipt.m9.bundles import InvalidPublicEvidence, read_public_json
 from trust_receipt.m9.models import (
     CommitmentStatus,
     PublicReferenceKind,
@@ -20,6 +21,7 @@ from trust_receipt.m9.ports import (
     ReceiptCommitmentVerifier,
 )
 from trust_receipt.m9.revisions import (
+    build_receipt_revision,
     receipt_evidence_refs,
     validate_revision_pair,
     verify_receipt_revision_hash,
@@ -63,7 +65,7 @@ def _reference_check(reference: PublicReceiptReference, resolved, receipt: Recei
         return VerificationCheck(
             check_id="reference-binding",
             state=VerificationCheckState.PASSED,
-            detail="The resolver fetched a public receipt from the requested URI.",
+            detail="The supplied public artifact is resolved under the requested URI; origin is not authenticated.",
         )
     if reference.kind is PublicReferenceKind.RECEIPT_HASH:
         valid = receipt.receipt_hash.lower() == reference.value.lower()
@@ -95,7 +97,12 @@ def verify_public_reference(
     """Resolve public evidence and replay it without database, UI, or model access."""
     try:
         resolved = resolver.resolve(reference)
-    except (KeyError, OSError, TimeoutError, ValueError) as exc:
+    except InvalidPublicEvidence as exc:
+        return _terminal_result(
+            reference, status=PublicVerificationStatus.INVALID,
+            check_id="public-integrity", detail=str(exc),
+        )
+    except (KeyError, LookupError, OSError, TimeoutError, ValueError, RuntimeError) as exc:
         return _terminal_result(
             reference,
             status=PublicVerificationStatus.INCONCLUSIVE,
@@ -110,8 +117,9 @@ def verify_public_reference(
             detail="Resolved receipt attempt must be 1 or 2.",
         )
     try:
-        receipt = Receipt.model_validate_json(resolved.payload)
-    except ValidationError:
+        receipt = Receipt.model_validate(read_public_json(resolved.payload))
+        replay = replay_receipt(receipt)
+    except (ValidationError, InvalidPublicEvidence, ValueError, TypeError):
         return _terminal_result(
             reference,
             status=PublicVerificationStatus.INVALID,
@@ -119,7 +127,6 @@ def verify_public_reference(
             detail="Public bytes are not a valid Receipt 1.0 object.",
         )
 
-    replay = replay_receipt(receipt)
     checks: list[VerificationCheck] = [
         VerificationCheck(
             check_id="receipt-replay",
@@ -212,6 +219,16 @@ def verify_public_reference(
                     revision_incomplete = True
                     raise LookupError("attempt 2 parent revision is unavailable")
                 validate_revision_pair(resolved.parent_revision, revision)
+                parent_receipt = resolved.parent_receipt
+                if parent_receipt is None:
+                    revision_incomplete = True
+                    raise LookupError("attempt 2 parent public receipt is unavailable")
+                if not parent_receipt.publication.authorized or not replay_receipt(parent_receipt).valid:
+                    raise ValueError("parent public receipt authorization or replay failed")
+                if parent_receipt.task_spec.spec_hash != receipt.task_spec.spec_hash:
+                    raise ValueError("parent public receipt changes the immutable task spec")
+                if build_receipt_revision(parent_receipt, attempt=1) != resolved.parent_revision:
+                    raise ValueError("parent revision does not bind the parent public receipt")
             resolution = revision.resolution
             checks.append(
                 VerificationCheck(
@@ -282,7 +299,7 @@ def verify_public_reference(
     failures = [check for check in checks if check.state is VerificationCheckState.FAILED]
     feedback_incomplete = (
         reference.kind is PublicReferenceKind.FEEDBACK_TRANSACTION
-        and resolved.expected_content_hash is None
+        and (resolved.expected_content_hash is None or not resolved.feedback_binding_verified)
     )
     if failures:
         status = PublicVerificationStatus.INVALID
@@ -292,7 +309,7 @@ def verify_public_reference(
         reason = (
             "Necessary revision evidence is incomplete."
             if revision_incomplete
-            else "Feedback verification requires an independently read content hash."
+            else "Feedback verification requires an independently read chain event and content hash."
         )
     else:
         status = PublicVerificationStatus.VERIFIED

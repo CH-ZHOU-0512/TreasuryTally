@@ -19,6 +19,7 @@ from trust_receipt.agents import (
 from trust_receipt.chain import RpcReferenceEvidenceProvider
 from trust_receipt.integrations.config import M0Settings
 from trust_receipt.m9 import LocalRevisionStore
+from trust_receipt.m9.publication import PublicBundleStore
 from trust_receipt.orchestration import (
     M5Workflow,
     M6Workflow,
@@ -58,6 +59,7 @@ class AppRuntime:
     commitment_anchor_status: str
     m8_workflow: M8WorkspaceWorkflow
     revision_store: LocalRevisionStore
+    public_bundle_store: PublicBundleStore
     upload_directory: Path
 
 
@@ -176,6 +178,9 @@ def create_runtime(
         ),
         revision_store=LocalRevisionStore(
             project_root / "receipts" / "private" / "m5" / session_id / "revisions"
+        ),
+        public_bundle_store=PublicBundleStore(
+            project_root / "receipts" / "private" / "m5" / session_id / "public-history"
         ),
         upload_directory=project_root / "receipts" / "private" / "m5" / session_id / "uploads",
     )

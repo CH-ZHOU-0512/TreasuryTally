@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry, Resource
 
 from scripts.export_schemas import generate_schemas
 from trust_receipt.hashing import canonical_json_bytes, content_hash
@@ -10,6 +11,7 @@ from trust_receipt.m9 import (
     PublicReceiptReference,
     PublicReferenceKind,
     ResolvedPublicReceipt,
+    build_public_bundle,
     build_receipt_revision,
     build_repair_comparison,
     build_rework_package,
@@ -56,15 +58,22 @@ def test_m9_models_satisfy_their_generated_public_schemas(two_attempts) -> None:
         ),
     )
     schemas = generate_schemas()
+    registry = Registry().with_resources(
+        (schema["$id"], Resource.from_contents(schema)) for schema in schemas.values()
+    )
     values = {
         "rework_package.schema.json": package,
         "receipt_revision.schema.json": second_revision,
         "repair_comparison.schema.json": comparison,
         "public_verification_result.schema.json": verification,
+        "public_verification_bundle.schema.json": build_public_bundle(
+            (two_attempts.first_receipt, two_attempts.second_receipt), authorized=True,
+        ),
     }
 
     for filename, model in values.items():
         Draft202012Validator(
             schemas[filename],
             format_checker=FormatChecker(),
+            registry=registry,
         ).validate(model.model_dump(mode="json"))

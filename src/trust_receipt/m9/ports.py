@@ -29,8 +29,10 @@ class ResolvedPublicReceipt:
     attempt: int
     expected_content_hash: str | None = None
     feedback_transaction_hash: str | None = None
+    feedback_binding_verified: bool = False
     revision: ReceiptRevision | None = None
     parent_revision: ReceiptRevision | None = None
+    parent_receipt: Receipt | None = None
     evidence_refs: tuple[str, ...] = ()
 
 

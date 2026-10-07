@@ -24,7 +24,7 @@ from app.m9_components import (
     render_repair_comparison,
     render_rework_package,
 )
-from app.m9_integration import PublisherReceiptResolver, build_m9_artifacts
+from app.m9_public import render_public_explorer, render_public_history
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
@@ -36,6 +36,7 @@ from trust_receipt.models import (
     PublicationChainStatus,
     VerificationOutcome,
 )
+from trust_receipt.orchestration.m9 import PublisherReceiptResolver, build_m9_artifacts
 from trust_receipt.services.upload import UploadedReport, UploadedReportService
 
 PROVIDERS = ("离线 fixture 演示", "OpenAI 真实模型", "DeepSeek 真实模型")
@@ -309,7 +310,6 @@ def _render_publication(runtime: AppRuntime, execution, index: int, m9_artifacts
             st.session_state[verification_key] = verify_public_reference(
                 reference,
                 resolver,
-                commitment_verifier=m9_artifacts.commitment_verifier,
             )
         if runtime.publisher is None:
             st.info("当前运行配置没有对应公共存储读取器，无法重新下载公开字节。")
@@ -534,6 +534,7 @@ def _render_attempts(runtime: AppRuntime) -> None:
     if m9_artifacts.comparison is not None:
         _section("返工闭环", "保留首次失败与补交结果，并核验两次 M8 EIP-712 承诺。")
         render_repair_comparison(st, m9_artifacts.comparison)
+    render_public_history(st, runtime, m9_artifacts.receipts)
 
 
 def _draft_task(runtime: AppRuntime) -> None:
@@ -601,6 +602,10 @@ def main() -> None:
     )
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _product_header()
+    if st.query_params.get("verify") == "1":
+        render_public_explorer(st, PROJECT_ROOT)
+        return
+    st.link_button("打开独立公开验证页", "?verify=1")
     runtime = _runtime()
     if runtime is None:
         return

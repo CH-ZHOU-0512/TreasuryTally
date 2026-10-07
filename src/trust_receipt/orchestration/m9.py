@@ -1,4 +1,4 @@
-"""Page-level composition for M9 artifacts over immutable M5/M8 outputs."""
+"""M9 use cases over immutable M5/M8 outputs and stable storage ports."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ class M9Artifacts:
     revisions: tuple[ReceiptRevision, ...]
     comparison: RepairComparison | None
     commitment_verifier: M8ReceiptCommitmentVerifier
+    receipts: tuple[Receipt, ...]
 
 
 def _immutable_receipt(execution) -> Receipt:
@@ -62,7 +63,7 @@ def _commitment_verifier(executions, commitment_pairs) -> M8ReceiptCommitmentVer
 def build_m9_artifacts(executions, commitment_pairs, store: LocalRevisionStore) -> M9Artifacts:
     verifier = _commitment_verifier(executions, commitment_pairs)
     if not executions:
-        return M9Artifacts(None, (), None, verifier)
+        return M9Artifacts(None, (), None, verifier, ())
     receipts = tuple(_immutable_receipt(execution) for execution in executions)
     first_revision = build_receipt_revision(receipts[0], attempt=1)
     _ensure_revision(store, first_revision)
@@ -88,7 +89,7 @@ def build_m9_artifacts(executions, commitment_pairs, store: LocalRevisionStore) 
             after_revision=second_revision,
             commitment_verifier=verifier,
         )
-    return M9Artifacts(package, tuple(revisions), comparison, verifier)
+    return M9Artifacts(package, tuple(revisions), comparison, verifier, receipts)
 
 
 class PublisherReceiptResolver:

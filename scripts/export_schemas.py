@@ -24,6 +24,7 @@ from trust_receipt.agents.models import (  # noqa: E402
     TaskSpecCandidate,
 )
 from trust_receipt.m9 import (  # noqa: E402
+    PublicVerificationBundle,
     PublicVerificationResult,
     ReceiptRevision,
     RepairComparison,
@@ -70,6 +71,7 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("receipt_revision.schema.json", "receipt-revision", ReceiptRevision),
     ("repair_comparison.schema.json", "repair-comparison", RepairComparison),
     ("public_verification_result.schema.json", "public-verification-result", PublicVerificationResult),
+    ("public_verification_bundle.schema.json", "public-verification-bundle", PublicVerificationBundle),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
@@ -142,6 +144,15 @@ def build_schema(model: type[BaseModel], kebab_name: str) -> dict[str, Any]:
     schema["$schema"] = SCHEMA_DIALECT
     schema["$id"] = f"urn:xinjv:schema:{SCHEMA_VERSION}:{kebab_name}"
     schema["title"] = model.__name__
+    if model is PublicVerificationBundle:
+        # Reuse the published contracts instead of duplicating the entire receipt graph.
+        schema.pop("$defs", None)
+        schema["properties"]["receipts"]["items"] = {
+            "$ref": f"urn:xinjv:schema:{SCHEMA_VERSION}:receipt",
+        }
+        schema["properties"]["revisions"]["items"] = {
+            "$ref": f"urn:xinjv:schema:{SCHEMA_VERSION}:receipt-revision",
+        }
     invariants = MODEL_INVARIANTS.get(model.__name__)
     if invariants:
         schema["x-contract-invariants"] = list(invariants)

@@ -214,9 +214,23 @@ M9 公开回执验证不读取 SQLite 或私有工作区。可对本地下载的
   --expected-content-hash 0x<published-byte-sha256>
 ```
 
-`--kind` 还支持 `URI`、`TASK_HASH` 和 `FEEDBACK_TRANSACTION`。attempt 2 必须使用 `--revision` 和
-`--parent-revision` 提供可验证的 parent/supersedes 关系；反馈交易入口还必须提供独立读回的内容哈希，
-否则返回 `INCONCLUSIVE`。未接入 M8 承诺 adapter 时输出 `commitment_status=UNVERIFIED`。
+`--kind` 还支持 `URI`、`TASK_HASH` 和 `FEEDBACK_TRANSACTION`。单 Receipt attempt 2 必须使用 `--revision`、
+`--parent-revision` 和 `--parent-receipt` 提供公开父回执与关系。完整历史包可直接验证最新 attempt：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli public-history.json --bundle --kind URI
+```
+
+哈希定位加 `--kind RECEIPT_HASH --value 0x<public-receipt-hash>` 或 `--kind TASK_HASH --value 0x<spec-hash>`。
+反馈入口从配置 `ETH_RPC_URL` 和 `ERC8004_REPUTATION_REGISTRY_ADDRESS` 只读真实交易：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli --kind FEEDBACK_TRANSACTION --value 0x<tx-hash> --attempt 2 --public-history public-history.json
+```
+
+未提供可验证公开父回执时返回 INCONCLUSIVE；未提供公开承诺时 `commitment_status=UNVERIFIED`。
+页面的 `?verify=1` 为独立入口，支持文件、配置公共目录 HTTPS/IPFS 和反馈交易，不需要原工作区或模型密钥。
+“分享完整验收历史”分别授权历史导出与公共上传，元数据保存在私有 `public-history/`，恢复后复用已有发布引用。
 
 M0 真实探针使用：
 

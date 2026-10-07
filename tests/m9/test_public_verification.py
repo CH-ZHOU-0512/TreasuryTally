@@ -72,6 +72,7 @@ def test_all_public_entry_kinds_resolve_to_the_same_verified_relationship(two_at
             attempt=1,
             expected_content_hash=content_hash(payload),
             feedback_transaction_hash=transaction_hash,
+            feedback_binding_verified=True,
             revision=revision,
             evidence_refs=("public-index:fixture",),
         )
@@ -146,6 +147,30 @@ def test_tampered_public_receipt_is_invalid(two_attempts) -> None:
         ),
     )
 
+    assert result.status is PublicVerificationStatus.INVALID
+
+
+def test_caller_supplied_feedback_text_is_not_independent_chain_evidence(two_attempts) -> None:
+    _, payload = _public(two_attempts.first_receipt)
+    tx = "0x" + "ab" * 32
+    result = verify_public_reference(
+        PublicReceiptReference(PublicReferenceKind.FEEDBACK_TRANSACTION, tx),
+        StaticResolver(ResolvedPublicReceipt(
+            payload=payload, attempt=1, feedback_transaction_hash=tx,
+            expected_content_hash=content_hash(payload),
+        )),
+    )
+    assert result.status is PublicVerificationStatus.INCONCLUSIVE
+
+
+def test_float_in_finding_does_not_crash_public_verification(two_attempts) -> None:
+    receipt, _ = _public(two_attempts.first_receipt)
+    raw = receipt.model_dump(mode="json")
+    raw["verification_result"]["findings"][0]["expected"] = {"amount": 1.5}
+    result = verify_public_reference(
+        PublicReceiptReference(PublicReferenceKind.RECEIPT_HASH, receipt.receipt_hash),
+        StaticResolver(ResolvedPublicReceipt(payload=json.dumps(raw).encode(), attempt=1)),
+    )
     assert result.status is PublicVerificationStatus.INVALID
 
 

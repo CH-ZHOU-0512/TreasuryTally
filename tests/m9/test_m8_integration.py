@@ -2,7 +2,6 @@ from pathlib import Path
 
 from eth_account import Account
 
-from app.m9_integration import build_m9_artifacts
 from trust_receipt.agents import OfflineDemoStructuredOutputAdapter, RestrictedAIService
 from trust_receipt.m9 import CommitmentStatus, LocalRevisionStore
 from trust_receipt.m9.commitments import M8CommitmentBinding, M8ReceiptCommitmentVerifier
@@ -16,6 +15,7 @@ from trust_receipt.orchestration import (
 )
 from trust_receipt.orchestration.m8 import M8CommitmentWorkflow
 from trust_receipt.orchestration.m8_workspace import M8WorkspaceWorkflow
+from trust_receipt.orchestration.m9 import build_m9_artifacts
 from trust_receipt.services import FaultMode, TeamControlledReportService
 from trust_receipt.storage.m8 import M8ArtifactStore
 from trust_receipt.storage.sqlite import SQLiteRepository

@@ -485,6 +485,16 @@ reason: string | null
 必要公开证据缺失返回 `INCONCLUSIVE`，内容或关系冲突返回 `INVALID`。旧 v1 单回执仍可独立重放；未提供 M8 承诺
 核验端口时仅将 `commitment_status` 记为 `UNVERIFIED`，不伪造已验证承诺。
 
+### PublicVerificationBundle
+
+`bundle_version="1.0"`、`receipts`（按 attempt 排序的 1–2 份已授权公开 Receipt）、`revisions`（对应 1–2 条
+外置版本记录）和 `bundle_hash` 构成可移交的公开验证包。`bundle_hash` 覆盖除自身外的 canonical 对象。
+包不包含原报告、ServiceSubmission、私有签名、SQLite 路径或模型文本；生成、下载和公开发布均须授权完整历史。
+公开快照的 receipt hash 与私有 attempt hash 可不同，包内版本关系必须重新绑定公开快照，不能复用私有版本记录。
+验证必须检查所有回执授权、哈希、确定性重放、同一不可变 spec hash、连续 attempt 和 parent/supersedes 链。
+第三方从包 URI 或包内 receipt/task hash 定位回执；task hash 默认定位最新 attempt。仅有反馈交易文本不算链上证据，
+缺少独立反馈读回不能验证交易关联。未提供公开承诺证据时 commitment_status 保持 UNVERIFIED。
+
 ### ServiceHistoryProjection
 
 ```yaml
@@ -571,10 +581,13 @@ schemas/v1/rework_package.schema.json
 schemas/v1/receipt_revision.schema.json
 schemas/v1/repair_comparison.schema.json
 schemas/v1/public_verification_result.schema.json
+schemas/v1/public_verification_bundle.schema.json
 ```
 
 每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口为
-`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，随后四份为 M4 受限 AI 中间产物，再后四份为 M8 契约，最后四份为 M9 追加契约。
+`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，随后四份为 M4 受限 AI 中间产物，再后四份为 M8 契约，最后五份为 M9 追加契约。
+公开验证包 Schema 通过稳定 URN `$ref` 复用 Receipt 与 ReceiptRevision；独立 JSON Schema 验证器须将
+`schemas/v1/` 契约按 `$id` 注册到本地 schema registry，不依赖网络解析，也不重复内嵌整份回执定义。
 重复生成不得产生差异。
 
 ## 精确计算规则

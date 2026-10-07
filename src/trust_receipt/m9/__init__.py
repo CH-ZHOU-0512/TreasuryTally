@@ -1,5 +1,6 @@
 """M9 rework, immutable receipt revisions, comparison, and public replay."""
 
+from trust_receipt.m9.bundles import PublicBundleResolver, PublicVerificationBundle, build_public_bundle
 from trust_receipt.m9.commitments import M8CommitmentBinding, M8ReceiptCommitmentVerifier
 from trust_receipt.m9.models import (
     AttemptSnapshot,
@@ -48,9 +49,11 @@ __all__ = [
     "LocalRevisionStore",
     "M8CommitmentBinding",
     "M8ReceiptCommitmentVerifier",
+    "PublicBundleResolver",
     "PublicReceiptReference",
     "PublicReceiptResolver",
     "PublicReferenceKind",
+    "PublicVerificationBundle",
     "PublicVerificationResult",
     "PublicVerificationStatus",
     "ReceiptCommitmentVerifier",
@@ -65,6 +68,7 @@ __all__ = [
     "V1SubmissionSignatureVerifier",
     "VerificationCheck",
     "VerificationCheckState",
+    "build_public_bundle",
     "build_receipt_revision",
     "build_repair_comparison",
     "build_rework_package",
