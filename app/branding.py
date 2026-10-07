@@ -24,7 +24,7 @@ def logo_display_url(base_path: str = "") -> str:
 
     url = image_to_url(
         str(LOGO_PATH), LayoutConfig(width=LOGO_DISPLAY_WIDTH),
-        clamp=False, channels="RGB", output_format="PNG", image_id="trust-receipt-brand-logo",
+        clamp=False, channels="RGB", output_format="PNG", image_id="treasurytally-brand-logo",
     )
     if not url:
         return logo_static_url(base_path)  # Bare Python, with no media-serving runtime.

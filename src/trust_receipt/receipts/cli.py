@@ -10,7 +10,7 @@ from trust_receipt.receipts.replay import replay_receipt
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate and replay a local trust receipt")
+    parser = argparse.ArgumentParser(description="Validate and replay a local TreasuryTally receipt")
     parser.add_argument("receipt", type=Path)
     args = parser.parse_args()
     replay = replay_receipt(load_receipt(args.receipt))

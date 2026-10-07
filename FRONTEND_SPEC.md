@@ -1,6 +1,6 @@
 ---
 doc-id: frontend-design-spec
-title: 信据 Agent 前端规范
+title: TreasuryTally 前端规范
 status: active
 authority-for:
   - frontend-information-hierarchy
@@ -9,7 +9,7 @@ authority-for:
 last-reviewed: 2026-10-07
 ---
 
-# 信据 Agent 前端规范
+# TreasuryTally 前端规范
 
 ## 1. 适用范围与依据
 
@@ -49,7 +49,7 @@ last-reviewed: 2026-10-07
 | 一级：服务选择与历史 | 预配置服务；计划 `ServiceHistoryProjection` | 服务身份、任务类型、首次通过/修复后通过/未通过/无法判断、可验证回执数、最近交付 | 人工选服务、从统计进入来源回执 | 当前服务 A/B；历史事实聚合为 M10 目标 |
 | 二级：运行配置与恢复 | `AppRuntime`、工作区 ID、配置阻塞、来源诊断 | 模型/证据模式、恢复入口、来源角色与状态、页数/记录数/耗时 | 选择本地模式、恢复工作区、查看配置问题 | 当前页面已有；生产固定真实模型与 RPC |
 
-素材只使用可追溯的项目名称、数据、状态图标与资金流节点/边。保留“信据 Agent”名称；品牌图形采用用户提供的透明 PNG 原图（`app/static/logo.png`），同时用于页首与 favicon，不新增未经确认的品牌图形、营销图片、收益曲线或综合评分。
+素材只使用可追溯的项目名称、数据、状态图标与资金流节点/边。产品与品牌名称统一为“TreasuryTally”；品牌图形采用用户提供的透明 PNG 原图（`app/static/logo.png`），同时用于页首与 favicon，不新增未经确认的品牌图形、营销图片、收益曲线或综合评分。
 
 ## 3. 信息层级与布局
 

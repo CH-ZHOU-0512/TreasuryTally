@@ -77,9 +77,10 @@ def _product_header() -> None:
         environment = "Sepolia · 真实只读核验"
     st.html(
         '<div class="product-bar"><div class="brand">'
-        f'<img class="brand-logo" src="{logo_url}" alt="信据品牌 Logo" width="52" height="52" '
+        f'<img class="brand-logo" src="{logo_url}" alt="TreasuryTally Logo" width="52" height="52" '
         'loading="eager" decoding="async">'
-        f'<span>信据 Agent</span></div><span class="env-chip"><i class="env-dot"></i>{escape(environment)}</span></div>'
+        '<span>TreasuryTally</span></div><span class="env-chip"><i class="env-dot"></i>'
+        f'{escape(environment)}</span></div>'
         '<section class="hero-main"><div class="hero-copy"><div class="eyebrow">链上报表验收工具</div>'
         '<h1>核对服务商报表与链上资金流</h1>'
         '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></div>'
@@ -772,7 +773,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
 
 def main() -> None:
     st.set_page_config(
-        page_title="信据 Agent · 链上验收工作台",
+        page_title="TreasuryTally · 链上验收工作台",
         page_icon=str(LOGO_PATH),
         layout="wide",
         initial_sidebar_state="collapsed",

@@ -16,6 +16,8 @@ def test_brand_shell_is_direct_html_and_logo_is_eager(monkeypatch, tmp_path):
     assert any("--tr-bg-page" in body for body in bodies)
     brand = next(body for body in bodies if 'class="product-bar"' in body)
     assert "核对服务商报表与链上资金流" in brand
+    assert "<span>TreasuryTally</span>" in brand
+    assert 'alt="TreasuryTally Logo"' in brand
     assert 'loading="eager" decoding="async"' in brand
     assert 'class="brand-logo"' in brand
     assert 'class="hero-emblem"' in brand
