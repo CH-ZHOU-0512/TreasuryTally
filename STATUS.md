@@ -15,12 +15,12 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
-### Logo 首屏加载修复（进行中）
+### Logo 首屏与间距修复（已部署，公网冷加载时序待复核）
 
 用户确认两个 Logo 曾一起缺席、随后出现，并授权修复。原图仍为 1,395,476 字节；标题和全局样式原经
 Markdown 异步组件，当前 Streamlit 1.65.0 的 Markdown 独立 chunk 为 226,308 字节，HTML 独立 chunk 为 1,788 字节
 （不含各自共享依赖，不把此大小比当作加载速度提升倍数）。修复首屏 CSS/品牌区改用直接 HTML，Logo 明确 eager，
-两个位置复用原生媒体管道生成的 288px PNG 预览；保持原始图字节、布局及业务行为不变。正在验证，尚未声称生产加载速度已改善。
+两个位置复用原生媒体管道生成的 288px PNG 预览；保持原始图字节及业务行为不变。实际渲染资源已调整，不能沿用原始静态 URL 不变的旧结论；尚未声称生产加载速度已改善。
 
 同次规范核查发现移动同组字段/卡片 gap 为 8px、页顶 padding 为 11.2px，结果结论卡片 margin 为 24px；分别修正为
 16px、12px、16px。桌面输入面板 24px / 移动 16px 内边距属于 FRONTEND_SPEC 材质面板明确例外，保持不变。
@@ -28,7 +28,17 @@ Markdown 异步组件，当前 Streamlit 1.65.0 的 Markdown 独立 chunk 为 22
 修正后浏览器复测：移动页顶 12px、同组字段 16px、三步卡片间距 16px；桌面同组字段/三步卡片均为 16px。
 显示预览为 288×288 RGBA（alpha 范围 0–254），82,098 bytes；原图 SHA-256 为
 `875de454cce5210d4d8ca3049f68126b6196be1e465d558f8aa840146a00610c`，未修改。
-本地非外部 pytest 329 passed / 14 deselected，ruff、pip check、diff check 通过；线上发布与实际首屏复核待完成。
+本地非外部 pytest 329 passed / 14 deselected，ruff、pip check、diff check 通过；DPR 2 桌面小图 52px / 大图 144px
+复用自然宽 288px 资源，手机小图 44px / 大图按规范隐藏，均已加载。
+修复提交 `ea8f772a9bd8a512e01de0319e028bb24df99344` 经 [PR #13](https://github.com/CH-ZHOU-0512/xinjv/pull/13)
+合并至 `2cc27e23ae8e2c71756b0c5206c5ee8e02f0b633`，两者源码树相同，分支/PR/main CI 均通过。
+生产镜像 `trust-receipt:recovery-ea8f772a9bd8a512e01de0319e028bb24df99344` 已切换，仅重建 app；构建、独立运行和
+切换前真实入口检查均 PASS（98 个源码文件与 wheel 一致、首页异常 0、品牌区存在）。容器 healthy，公网健康端点 200，
+生产原图 hash 一致；APP_REQUIRE_LIVE=true、M6_ENABLE_WRITES=false，三处数据/回执挂载保持原路径，Blockscout 启动时间未变。
+回滚镜像 `trust-receipt:recovery-rollback-ea8f772a9bd8a512e01de0319e028bb24df99344` 指向本次切换前已恢复的版本，
+源码备份位于 `/opt/trust-receipt-backups/recovery-ea8f772a9bd8a512e01de0319e028bb24df99344/source.tar.gz`。
+本轮新独立公网浏览器导航 60s 超时，未取得可用的线上冷加载时序；不能以容器/健康端点正常替代实际浏览器加载速度，
+也不能由本地时序或资源字节比推断线上加速。线上加载复核与完整多状态视觉验收仍未完成；本轮没有真实用户测试、公开上传或写链。
 
 本轮用户明确取消真实用户测试要求，并授权更新文档、提交、推送、合并与部署。发布采用 M14 已合流的 M9–M12 功能、
 M13 已提交专属材料及 M14 技术验收交付；不纳入 M13 未提交浏览器驱动，不恢复暂停的浏览器排练。
