@@ -20,6 +20,20 @@ M13 已提交专属材料及 M14 技术验收交付；不纳入 M13 未提交浏
 真人参与不是发布条件，但 M14 仍为 8 PASS / 6 BLOCKED，M13 重新确认排练第三轮中断；不得称全部技术验收完成。
 本授权不包含新增公开回执上传、合约部署或写链。当前发布执行结果将在本文件记录。
 
+### M9–M14 发布与部署（2026-10-07）
+
+- 发布分支已提交并推送，[PR #8](https://github.com/CH-ZHOU-0512/xinjv/pull/8) 已合并；
+  主线部署提交为 `cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`，分支、PR 与合并主线 CI 均通过。
+- 广州应用镜像为 `trust-receipt:m14-cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`，revision label 与部署提交完全一致。
+  源码归档与纯 Python wheel 哈希校验通过；依赖未变，镜像内 pip check 通过，无网络 FAIL→PASS、回执重放及恢复 valid=true。
+- 应用 running/healthy；匿名公网入口、健康端点、Logo 均为 200，WebSocket 连接为 Open。
+  原 `.env`、data、private/public 回执挂载保留；Blockscout 仍为 `trust-receipt-blockscout:d0cf46a`，未重建其他应用，
+  `M6_ENABLE_WRITES=false`。
+- 回滚镜像为 `trust-receipt:m14-rollback-cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`；源码备份为
+  `/opt/trust-receipt-backups/m14-cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7/source.tar.gz`，同目录记录旧镜像。
+- 本次不做真实用户测试，不恢复暂停的页面交互验证；M14 的 6 项待验收及 M13 第三轮中断保留。
+  未新增公开回执上传、合约部署或链上交易。后续文档收尾提交不改变已部署的应用代码版本。
+
 ### 本轮发布质量门
 
 - 发布合流版本实际执行非 external pytest：319 passed、14 deselected，1 条既有第三方弃用 warning。
@@ -35,7 +49,8 @@ fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已�
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
 `codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8 资金流投影、EIP-712 承诺、前端主流程
-重构与 Validation Registry 只读探针已合并并部署到广州应用；专用锚仍只是未部署候选，M9–M10 独立分支仍在并行开发。
+重构与 Validation Registry 只读探针已合并并部署到广州应用；M9–M14 本轮已集成发布，剩余技术验收见前述记录。
+专用锚仍只是未部署候选。
 
 合流依赖分支补充记录（待主控统一治理）：
 
@@ -204,7 +219,7 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
 
 ## 下一步
 
-审查并合并当前 M8+M9+M10 集成交付分支，授权后重建生产镜像并复验加载性能。专用最小锚只交付未部署候选；
+按新授权补齐保留的技术验收；不依赖用户招募，也不自动恢复暂停的浏览器操作。专用最小锚只交付未部署候选；
 真实部署、生产接入、公共上传验证与写链仍需额外审查、配置和明确授权。
 
 ## M8 开发分支进展
