@@ -95,8 +95,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - 页面明确区分服务交付 `SUBMITTED` 与公共发布 `NOT_SUBMITTED`；M5 不执行公开上传、ERC-8004 写入或 M6 发布动作。
 - 桌面 1440×1000 浏览器检查确认任务编辑采用双列；移动 390×844 检查确认关键水平容器折叠为单列、页面
   `scrollWidth=innerWidth=390`，长地址、Finding、attempt、回执与按钮均可读可操作。
-- M5 AppTest 实际走通未确认拒绝、attempt 1 `FAIL`、attempt 2 `PASS`，两个结果同时保留；当前全量质量门为
-  143 项通过、4 项 external 因配置缺失明确跳过，Ruff、pip check 和 1000 行限制均通过。
+- M5 AppTest 实际走通未确认拒绝、attempt 1 `FAIL`、attempt 2 `PASS`，两个结果同时保留；M5 收尾复核的
+  非 external 质量门为 140 项通过、8 项 external 明确排除，Ruff、pip check 和 1000 行限制均通过。
 - 已实现真实 `RpcReferenceEvidenceProvider`：校验 chain ID 与确认数、连续分页读取完整区块范围、保留整数与完整事件键；
   RPC 失败、缺页或未确认范围返回 `INCONCLUSIVE`。Blockscout 仅作可选补充抽样，未配置时明确显示 RPC-only。
 - 真实组合 external 探针已使用 DeepSeek、Sepolia RPC 与 Blockscout 跑通候选生成、服务 A 漏项 `FAIL`、切换服务 B
@@ -116,6 +116,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - 固定上游、只转发 GET/POST 且要求 Blockscout Pro Bearer key 的中继已部署至 Vercel，并绑定
   `https://blockscout-relay.creatoros.top`。广州容器实测配置端点 `200`、真实交易端点 `200`、MCP 工具和分页完整性通过；
   产品证据诊断为 RPC `COMPLETE`、Blockscout `SAMPLED`，抽样 1 条记录。
+- M5 最终交接复核确认 Git 工作树无未提交改动；生产应用容器为 `healthy`，Blockscout 容器持续运行，公网未认证入口
+  返回 `401`，容器内健康端点返回 `ok`。本地同名远端分支尚未同步，当前分支领先 24 个提交。
 
 ## 待集成或尚未开始
 
