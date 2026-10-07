@@ -86,6 +86,9 @@ Vercel 区域，再把 MCP 的 `BLOCKSCOUT_PRO_API_BASE_URL` 指向该 HTTPS 地
 配置端点可匿名读取，其余路径必须携带格式合法的 Pro Bearer key；中继不保存密钥。中继未部署或未经真实探针验证前，生产必须
 继续显示 RPC-only，不能据此声称 Blockscout 已完成抽样。
 
+当前生产中继为 `https://blockscout-relay.creatoros.top`。2026-10-07 从广州服务器实测 Pro 配置与固定交易端点均返回 `200`，
+MCP `get_transaction_info` 返回结构化结果且分页完整，产品证据诊断为 `SAMPLED`。中继失败时仍按上述规则降级为 RPC-only。
+
 ## Agent0
 
 用途：提供团队控制的演示服务身份和后续服务发现接口。

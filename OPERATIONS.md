@@ -138,9 +138,13 @@ docker compose -f deploy/docker-compose.prod.yml ps
 明确显示 `RPC-only`。此时必须单独验证 `ETH_RPC_URL` 的真实 Sepolia 读取；不得保留已配置提示并让每次操作等待
 Blockscout 超时，也不得把 RPC 结果伪装成 Blockscout 抽样成功。
 
-若要恢复受阻地域的 Blockscout 补充抽样，可将 `deploy/blockscout-relay/` 作为 Vercel 预览部署，认领并固定部署后再设置
+若要恢复受阻地域的 Blockscout 补充抽样，可将 `deploy/blockscout-relay/` 部署到 Vercel，绑定并验证自定义域名后再设置
 `BLOCKSCOUT_PRO_API_BASE_URL`。部署完成必须从目标服务器运行真实 MCP 探针；只有返回 `SAMPLED` 后才能重新启用
 `BLOCKSCOUT_PRO_API_KEY`。未认领的临时 URL 不得作为生产依赖。
+
+当前生产值为 `BLOCKSCOUT_PRO_API_BASE_URL=https://blockscout-relay.creatoros.top`；DNSPod 的 `blockscout-relay` CNAME
+指向 Vercel 提供的项目专用记录。更换域名或部署后应先执行 Vercel 域名验证，再从广州服务器验证配置端点、真实交易端点、
+MCP 工具与产品级 `SAMPLED` 诊断，整个过程不得输出 Bearer key。
 
 本地首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面
