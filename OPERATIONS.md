@@ -135,9 +135,16 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 部署不要求真实用户参与；仍须记录版本、质量门与未完成的技术验收。部署授权不自动授权公开回执上传、写链或恢复已暂停的浏览器排练。
 
 若依赖声明与锁定快照完全未变，可复用已验证运行镜像作为基底，以本地构建的纯 Python wheel 执行
-`pip install --no-index --no-deps --force-reinstall`，再复制对应提交的 `app/`、`fixtures/` 与 `.streamlit/`。
+`pip install --no-index --no-deps --force-reinstall`，再复制同一提交的 `src/`、`app/`、`fixtures/` 与 `.streamlit/`。
+永久配置使用 `deploy/Dockerfile.release`，构建上下文包含源码归档和同源 wheel。页面入口优先导入 `/app/src`，
+只更新 wheel 会被旧基镜像源码遮蔽；禁止省略源码同步，也不能通过 PYTHONPATH 绕过验收。
 使用 `git archive` 打包已提交源码，传输后校验源码和 wheel 的 SHA-256；镜像必须写入完整
 `org.opencontainers.image.revision`，并执行镜像内 `pip check` 和无网络演示。依赖发生变化时不得沿用此快捷路径。
+两种 Dockerfile 均在构建期执行 `scripts/deploy/check_image.py`：比较 `/app/src/trust_receipt` 与已安装 wheel 的全部
+Python 文件（仅归一化 Git 换行），并用真实 `/app/app/streamlit_app.py` 执行 AppTest，要求零 exception、实际产品标题
+及正确源码导入路径。隔离检查不挂生产目录、不注入 `.env`、不提供真实密钥，构建时使用 `--network=none`。
+缺外部配置可显示明确阻塞，不可有导入异常。健康端点、HTTP 200、WebSocket 和 `/release` 下演示不能替代真实入口检查。
+切换后只用新独立浏览器会话检查首页渲染及无异常；这不补记业务矩阵或真实用户验收。
 切换前保留旧镜像及源码备份，保留 `.env`、data 与私有/公开回执挂载；仅使用
 `docker compose ... up -d --no-deps --no-build app` 切换已构建应用镜像，不重建其他容器。
 

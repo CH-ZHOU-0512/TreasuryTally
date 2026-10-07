@@ -15,9 +15,11 @@ RUN python -m pip install --no-cache-dir .
 COPY app ./app
 COPY .streamlit ./.streamlit
 COPY fixtures ./fixtures
+COPY scripts/deploy/check_image.py /opt/trust-receipt-smoke/check_image.py
 RUN mkdir -p /app/data /app/receipts/private && chown -R app:app /app
 
 USER app
+RUN python /opt/trust-receipt-smoke/check_image.py
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
