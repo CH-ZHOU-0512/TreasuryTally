@@ -14,4 +14,5 @@ COPY --chown=app:app .streamlit /app/.streamlit
 COPY scripts/deploy/check_image.py /opt/trust-receipt-smoke/check_image.py
 WORKDIR /app
 USER app
-RUN python /opt/trust-receipt-smoke/check_image.py
+# -c retains the /app working-directory import semantics of python -m streamlit.
+RUN python -c "import runpy; runpy.run_path('/opt/trust-receipt-smoke/check_image.py', run_name='__main__')"
