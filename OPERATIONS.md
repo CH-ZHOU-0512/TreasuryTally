@@ -131,11 +131,16 @@ docker compose -f deploy/docker-compose.prod.yml ps
 长连接和 HTTP Basic Auth；Basic Auth 只能放在有效 HTTPS 证书之后，明文 HTTP 入口必须重定向到 HTTPS。
 认证文件必须位于反向代理容器可读取、但不可公开下载的位置。如果 Nginx 配置使用单文件 bind mount，宿主机
 原子替换配置后应重建代理容器，使新 inode 被重新挂载。部署后分别检查容器内健康端点、经认证的公网入口以及
-一次页面 WebSocket 会话。`.env`、访问口令和 PEM 私钥不得进入镜像。
+一次页面 WebSocket 会话。Streamlit 的内联启动脚本和运行时样式需要路径级 CSP 例外；必须使用
+`deploy/nginx-location.conf` 中受认证且仅限该路径的安全头，不能放宽整个域名。`.env`、访问口令和 PEM 私钥不得进入镜像。
 
 若部署地域无法连接 `api.blockscout.com`，清空部署环境的 `BLOCKSCOUT_PRO_API_KEY` 并重建主应用容器，页面会
 明确显示 `RPC-only`。此时必须单独验证 `ETH_RPC_URL` 的真实 Sepolia 读取；不得保留已配置提示并让每次操作等待
 Blockscout 超时，也不得把 RPC 结果伪装成 Blockscout 抽样成功。
+
+若要恢复受阻地域的 Blockscout 补充抽样，可将 `deploy/blockscout-relay/` 作为 Vercel 预览部署，认领并固定部署后再设置
+`BLOCKSCOUT_PRO_API_BASE_URL`。部署完成必须从目标服务器运行真实 MCP 探针；只有返回 `SAMPLED` 后才能重新启用
+`BLOCKSCOUT_PRO_API_KEY`。未认领的临时 URL 不得作为生产依赖。
 
 本地首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面

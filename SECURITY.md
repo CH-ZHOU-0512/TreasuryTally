@@ -77,6 +77,8 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
 - 外部响应正文仅在必要时保存，并采用大小限制和访问边界。
 - `APP_REQUIRE_LIVE` 只控制生产能力开关，不包含凭据；DeepSeek、RPC 与 Blockscout 凭据仍只通过受限 `.env` 注入，禁止进入
   镜像、仓库、页面或日志。
+- Streamlit 需要内联启动脚本和运行时样式；生产反向代理仅在受 Basic Auth 保护的 `/trust-receipt/` 路径放开
+  `script-src/style-src 'unsafe-inline'`，其余站点继续使用更严格的全局 CSP，并保留 HSTS、同源 frame、MIME 嗅探防护和权限策略。
 
 ## 依赖与供应链
 

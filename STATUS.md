@@ -110,6 +110,12 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - 部署服务器已真实调用 DeepSeek 并得到 schema 合法候选，真实 Sepolia RPC 读回固定交易与整数金额。该地域对
   `api.blockscout.com` 返回污染 DNS 结果并不可达，因此部署实例按既定降级策略明确运行 RPC-only；本地 M5 的
   Blockscout `SAMPLED` 真实联调证据不受影响。
+- 生产 Compose 已固定 `APP_REQUIRE_LIVE=true`，线上页面只提供 DeepSeek 真实模型和真实 Sepolia RPC；容器内复验得到
+  `deepseek_schema_ok=True`、`rpc_real_ok=True`，且浏览器真实点击已返回由 DeepSeek 生成的缺失字段与澄清问题。
+- M5 页面已重构为可用的验收工作台，包含运行信号、结构化步骤、任务摘要、attempt 结果卡和移动端布局；生产反向代理的
+  Streamlit 路径级 CSP 已修复。桌面与 390×844 生产浏览器检查通过，移动端 `scrollWidth=innerWidth=390`。
+- 已实现固定上游、只转发 GET/POST 且要求 Blockscout Pro Bearer key 的 Vercel 中继；当前未部署，因为无账号临时部署已被
+  Vercel 拒绝且本机没有可用 Vercel 登录。生产仍明确为 RPC-only，没有把该待部署组件表述为已采样成功。
 
 ## 待集成或尚未开始
 
@@ -128,6 +134,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - 上游 npm 审计报告 35 个依赖漏洞；该仓库当前仅作参考和合约测试，没有执行自动修复。
 - GitHub Actions 仅覆盖无需密钥的本地质量门；真实 external 探针仍需显式配置后单独执行。
 - 广州生产实例无法直连 Blockscout Pro API；当前部署明确使用真实 Sepolia RPC-only，未将降级状态伪装为抽样成功。
+- 广州机房经加密 DNS 能得到 Blockscout 的正确 Cloudflare 地址，但以 `api.blockscout.com` 为 SNI 的 TLS 连接被重置；
+  域名前置请求被 Cloudflare 拒绝为 `403`。仓库内中继已就绪，启用仍需要一个可持久管理的 Vercel 部署身份。
 
 ## 下一步
 

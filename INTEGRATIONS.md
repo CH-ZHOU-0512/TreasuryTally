@@ -81,6 +81,11 @@ M5 产品 adapter 使用 `RPC_CONFIRMATIONS`（默认 2）拒绝尚未确认的�
 
 失败降级：切换为 RPC-only adapter 并记录缺少补充数据；若任务依赖 Blockscout 独有信息，则进入 `INCONCLUSIVE`。
 
+广州生产地域若出现 DNS 污染并在正确 IP 上遭遇 SNI/TLS 重置，可将 `deploy/blockscout-relay/` 部署到可直连 Blockscout 的
+Vercel 区域，再把 MCP 的 `BLOCKSCOUT_PRO_API_BASE_URL` 指向该 HTTPS 地址。中继目标固定为官方 Pro API，只允许 GET/POST，
+配置端点可匿名读取，其余路径必须携带格式合法的 Pro Bearer key；中继不保存密钥。中继未部署或未经真实探针验证前，生产必须
+继续显示 RPC-only，不能据此声称 Blockscout 已完成抽样。
+
 ## Agent0
 
 用途：提供团队控制的演示服务身份和后续服务发现接口。
