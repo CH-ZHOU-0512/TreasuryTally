@@ -21,6 +21,9 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"trust_receipt.reporting" = ["assets/echarts/*"]
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
