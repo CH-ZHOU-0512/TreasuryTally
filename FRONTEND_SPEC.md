@@ -273,7 +273,7 @@ Streamlit 原生主题必须与深色 CSS 底色一致，避免浅色主题的 `
 | `app/streamlit_app.py` | 业务页面分组、输入确认、主操作、结果与历史展示；调用稳定用例，HTML 文本保持转义 |
 | `app/runtime.py` | 运行配置与 adapter 装配、配置阻塞；UI 消费明确状态，不展示凭据 |
 | `src/trust_receipt/orchestration/` | 确认、执行、发布与恢复等用例；页面不得绕过状态与授权校验 |
-| 计划投影模块 / 页面 adapter | 按架构边界投影已有领域事实；颜色、响应式与组件细节留在 `app/` |
+| `app/m9_components.py` 与后续投影 adapter | M9 组件只消费返工包、对比和公开验证模型；颜色、响应式与其他组件细节留在 `app/` |
 
 后续代码统一用角色命名，例如 `color: var(--tr-text-secondary)`、`padding: var(--tr-space-3)`、`border-radius: var(--tr-radius-card)`。断点 `760px` 是结构规则；不能在某个页面单独选择另一移动端边界。
 

@@ -23,6 +23,13 @@ from trust_receipt.agents.models import (  # noqa: E402
     ResultExplanation,
     TaskSpecCandidate,
 )
+from trust_receipt.m9 import (  # noqa: E402
+    PublicVerificationBundle,
+    PublicVerificationResult,
+    ReceiptRevision,
+    RepairComparison,
+    ReworkPackage,
+)
 from trust_receipt.models import (  # noqa: E402
     DeliveryCommitment,
     FixtureCase,
@@ -60,6 +67,11 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("delivery_commitment.schema.json", "delivery-commitment", DeliveryCommitment),
     ("fund_flow_projection.schema.json", "fund-flow-projection", FundFlowProjection),
     ("uploaded_report.schema.json", "uploaded-report", UploadedReport),
+    ("rework_package.schema.json", "rework-package", ReworkPackage),
+    ("receipt_revision.schema.json", "receipt-revision", ReceiptRevision),
+    ("repair_comparison.schema.json", "repair-comparison", RepairComparison),
+    ("public_verification_result.schema.json", "public-verification-result", PublicVerificationResult),
+    ("public_verification_bundle.schema.json", "public-verification-bundle", PublicVerificationBundle),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
@@ -98,6 +110,16 @@ MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
     "TaskCommitment": ("signature binds the immutable task hash and explicit application domain",),
     "DeliveryCommitment": ("acceptance and delivery signatures bind task, service, attempt, and report hash",),
     "FundFlowProjection": ("visual state derives from existing findings and never changes the outcome",),
+    "ReworkPackage": ("items contain only actionable confirmed error findings from one FAIL receipt",),
+    "ReceiptRevision": (
+        "attempt 1 is ORIGINAL without parent links",
+        "attempt 2 links and supersedes attempt 1 without changing either Receipt 1.0 object",
+    ),
+    "RepairComparison": ("before is attempt 1 and after is attempt 2 for the same immutable task",),
+    "PublicVerificationResult": (
+        "missing necessary public evidence is INCONCLUSIVE and conflicting evidence is INVALID",
+        "missing optional M8 commitment evidence remains explicitly UNVERIFIED",
+    ),
 }
 
 
@@ -122,6 +144,15 @@ def build_schema(model: type[BaseModel], kebab_name: str) -> dict[str, Any]:
     schema["$schema"] = SCHEMA_DIALECT
     schema["$id"] = f"urn:xinjv:schema:{SCHEMA_VERSION}:{kebab_name}"
     schema["title"] = model.__name__
+    if model is PublicVerificationBundle:
+        # Reuse the published contracts instead of duplicating the entire receipt graph.
+        schema.pop("$defs", None)
+        schema["properties"]["receipts"]["items"] = {
+            "$ref": f"urn:xinjv:schema:{SCHEMA_VERSION}:receipt",
+        }
+        schema["properties"]["revisions"]["items"] = {
+            "$ref": f"urn:xinjv:schema:{SCHEMA_VERSION}:receipt-revision",
+        }
     invariants = MODEL_INVARIANTS.get(model.__name__)
     if invariants:
         schema["x-contract-invariants"] = list(invariants)

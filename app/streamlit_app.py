@@ -16,19 +16,35 @@ from pydantic import ValidationError
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from app.branding import LOGO_PATH, logo_data_url
+from app.branding import LOGO_PATH, logo_static_url
 from app.commitments import render_commitments
 from app.fund_flow import render_fund_flow
+from app.m9_components import (
+    render_public_verification,
+    render_repair_comparison,
+    render_rework_package,
+)
+from app.m9_public import render_public_explorer, render_public_history
+from app.report_experience import (
+    amount_summary,
+    contract_example_bytes,
+    finding_copy,
+    format_token_amount,
+    strict_template_bytes,
+)
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
+from app.service_history import render_workspace_history
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
 from trust_receipt.hashing import content_hash
+from trust_receipt.m9 import PublicReceiptReference, PublicReferenceKind, verify_public_reference
 from trust_receipt.models import (
     ExclusionRule,
     ExclusionRuleType,
     PublicationChainStatus,
     VerificationOutcome,
 )
+from trust_receipt.orchestration.m9 import PublisherReceiptResolver, build_m9_artifacts
 from trust_receipt.services.upload import UploadedReport, UploadedReportService
 
 PROVIDERS = ("离线 fixture 演示", "OpenAI 真实模型", "DeepSeek 真实模型")
@@ -49,18 +65,19 @@ def _section(title: str, subtitle: str) -> None:
 
 
 def _product_header() -> None:
+    logo_url = escape(logo_static_url(st.get_option("server.baseUrlPath")), quote=True)
     environment = "样例演示 · 非真实链上证据"
     if _live_only() or st.session_state.get("evidence_label") == "真实 Sepolia RPC":
         environment = "Sepolia · 真实只读核验"
     st.markdown(
         '<div class="product-bar"><div class="brand">'
-        f'<img class="brand-logo" src="{logo_data_url()}" alt="信据品牌 Logo" width="52" height="52">'
+        f'<img class="brand-logo" src="{logo_url}" alt="信据品牌 Logo" width="52" height="52">'
         f'<span>信据 Agent</span></div><span class="env-chip"><i class="env-dot"></i>{escape(environment)}</span></div>'
         '<section class="hero-main"><div class="hero-copy"><div class="eyebrow">链上报表验收工具</div>'
         '<h1>核对服务商报表与链上资金流</h1>'
         '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></div>'
         '<div class="hero-emblem" aria-hidden="true">'
-        f'<img src="{logo_data_url()}" alt="" width="144" height="144"></div></section>'
+        f'<img src="{logo_url}" alt="" width="144" height="144"></div></section>'
         '<nav class="workflow-steps" aria-label="验收流程">'
         '<span><b>1</b> 上传报表</span><i>→</i><span><b>2</b> 确认范围</span><i>→</i>'
         '<span><b>3</b> 链上核验</span></nav>',
@@ -98,6 +115,8 @@ def _runtime() -> AppRuntime | None:
             "draft_error",
             "commitment_pairs",
             "uploaded_service",
+            "m10-next-service",
+            "report-service",
         ):
             st.session_state.pop(key, None)
         st.session_state.runtime_config = config
@@ -241,7 +260,16 @@ def _run_attempt(runtime: AppRuntime) -> None:
             restoring_upload = bool(executions and executions[0].submission.service_id == "uploaded-report-intake")
             if uploaded_service is not None or restoring_upload:
                 choices = ("已上传报表 · 作者签名未验证",)
-            service_label = st.radio("报表服务", choices, horizontal=True)
+            if "report-service" not in st.session_state and st.session_state.get("m10-next-service"):
+                selected_id = st.session_state["m10-next-service"]
+                selected_label = next(
+                    (label for label, service in runtime.services.items() if service.service_id == selected_id), None,
+                )
+                if selected_label in choices:
+                    st.session_state["report-service"] = selected_label
+            if st.session_state.get("report-service") not in choices:
+                st.session_state.pop("report-service", None)
+            service_label = st.radio("报表服务", choices, horizontal=True, key="report-service")
             if executions:
                 repaired = st.file_uploader(
                     "上传修复后的 JSON 报表（最后一次）", type=("json",), max_upload_size=1, key="repair-upload",
@@ -284,12 +312,29 @@ def _replace_execution_receipt(index: int, receipt) -> None:
     st.session_state.executions = executions
 
 
-def _render_publication(runtime: AppRuntime, execution, index: int) -> None:
+def _render_publication(runtime: AppRuntime, execution, index: int, m9_artifacts) -> None:
     publication = execution.receipt.publication
     st.caption(runtime.publication_status)
     if publication.uri:
         st.code(publication.uri, language=None)
         st.caption(f"公开内容 SHA-256：{publication.content_hash}")
+        verification_key = f"public-verification-{index}-{execution.receipt.receipt_hash}"
+        if st.button(
+            "独立重放公开回执",
+            key=f"verify-public-{index}",
+            disabled=runtime.publisher is None,
+            use_container_width=True,
+        ):
+            reference = PublicReceiptReference(PublicReferenceKind.URI, publication.uri)
+            resolver = PublisherReceiptResolver(runtime.publisher, execution.receipt, attempt=index + 1)
+            st.session_state[verification_key] = verify_public_reference(
+                reference,
+                resolver,
+            )
+        if runtime.publisher is None:
+            st.info("当前运行配置没有对应公共存储读取器，无法重新下载公开字节。")
+        if verification_key in st.session_state:
+            render_public_verification(st, st.session_state[verification_key])
     if publication.chain_status is PublicationChainStatus.FAILED:
         st.error(f"发布/链上状态 FAILED：{publication.error_code} · {publication.error_message or ''}")
         authorized = st.checkbox("我已核对失败原因并授权重新准备", key=f"recover-{index}")
@@ -381,6 +426,15 @@ def _render_attempts(runtime: AppRuntime) -> None:
     executions = st.session_state.get("executions", [])
     if not executions:
         return
+    try:
+        m9_artifacts = build_m9_artifacts(
+            executions,
+            st.session_state.get("commitment_pairs", []),
+            runtime.revision_store,
+        )
+    except ValueError as error:
+        st.error(f"M9 版本链校验失败：{error}")
+        return
     _section("验收结果", "每次交付独立留档；后一次成功不会覆盖前一次失败。")
     for index, execution in enumerate(executions, start=1):
         result = execution.result
@@ -399,16 +453,34 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 f'{execution.receipt.publication.chain_status.value}</span></div></div>',
                 unsafe_allow_html=True,
             )
+            token_decimals = (
+                execution.submission.transfers[0].token_decimals
+                if execution.submission.transfers
+                else None
+            )
+            summary = amount_summary(
+                execution.submission.claimed_total_base_units,
+                result.calculated_total_base_units,
+                decimals=token_decimals,
+            )
+            verified_display = (
+                format_token_amount(summary.verified, summary.decimals)
+                if result.calculated_total_base_units is not None
+                else "无法确定"
+            )
+            st.markdown(
+                '<div class="business-summary"><strong>金额核对结论</strong>'
+                f'<p>{escape(summary.direction)}</p>'
+                f'<small>报表：{escape(format_token_amount(summary.claimed, summary.decimals))}</small>'
+                f'<small>链上有效：{escape(verified_display)}</small>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
             claimed, actual, difference, findings = st.columns(4)
             claimed.metric("服务声称 · 最小单位", execution.submission.claimed_total_base_units)
             with actual, st.container(key=f"metric-actual-{index}"):
                 st.metric("链上有效 · 最小单位", result.calculated_total_base_units or "无法确定")
-            delta = (
-                str(int(execution.submission.claimed_total_base_units) - int(result.calculated_total_base_units))
-                if result.calculated_total_base_units is not None
-                else "无法确定"
-            )
-            difference.metric("差异 · 声称 − 链上", delta)
+            difference.metric("精确差额 · 报表 − 链上", summary.difference)
             findings.metric("问题数量", len(result.findings))
             if result.outcome is VerificationOutcome.INCONCLUSIVE:
                 st.warning(f"证据不足，不能形成服务负面结论：{result.inconclusive_reason}")
@@ -439,15 +511,23 @@ def _render_attempts(runtime: AppRuntime) -> None:
                             f"retrieved_at={source.retrieved_at.isoformat()}"
                         )
             if result.findings:
-                st.markdown("**需要关注的 Finding**")
-                for finding in result.findings:
+                st.markdown("**需要处理的差异**")
+                for finding_number, finding in enumerate(result.findings, start=1):
+                    title, action = finding_copy(finding.finding_type)
                     refs = ", ".join(escape(ref) for ref in finding.evidence_refs)
                     st.markdown(
-                        f'<div class="finding-card"><strong>{escape(finding.finding_type.value)}</strong> · '
-                        f'{escape(finding.severity.value)} / {escape(finding.status.value)}<br>'
-                        f'{escape(finding.explanation)}<br><span class="mono">证据：{refs}</span></div>',
+                        f'<div class="finding-card"><strong>{finding_number}. {escape(title)}</strong>'
+                        f'<p>{escape(action)}</p><small>{escape(finding.status.value)} · '
+                        f'{escape(finding.finding_type.value)}</small></div>',
                         unsafe_allow_html=True,
                     )
+                    with st.expander(f"查看差异 {finding_number} 的交易与判定依据"):
+                        st.write("处理建议：", action)
+                        st.write("确定性说明：", finding.explanation)
+                        st.write("判定规则：", finding.violated_rule)
+                        st.write("证据引用：", list(finding.evidence_refs))
+                        st.json({"链上预期": finding.expected, "报表实际": finding.actual})
+                        st.caption(f"完整证据索引：{refs}")
             pairs = st.session_state.get("commitment_pairs", [])
             task_commitment = delivery_commitment = expected_signer = None
             if index <= len(pairs) and pairs[index - 1] is not None:
@@ -460,6 +540,10 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 expected_signer,
                 runtime.commitment_anchor_status,
             )
+            if index == 1 and m9_artifacts.rework_package is not None:
+                render_rework_package(st, m9_artifacts.rework_package)
+            with st.expander("M9 外置回执版本记录", expanded=False):
+                st.json(m9_artifacts.revisions[index - 1].model_dump(mode="json"))
             if (
                 index == len(executions)
                 and result.outcome is VerificationOutcome.PASS
@@ -492,37 +576,66 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 "公共回执与 ERC-8004",
                 expanded=st.session_state.get(f"show-publication-{index}", False),
             ):
-                _render_publication(runtime, execution, index - 1)
+                _render_publication(runtime, execution, index - 1, m9_artifacts)
+    if m9_artifacts.comparison is not None:
+        _section("返工闭环", "保留首次失败与补交结果，并核验两次 M8 EIP-712 承诺。")
+        render_repair_comparison(st, m9_artifacts.comparison)
+    render_public_history(st, runtime, m9_artifacts.receipts)
 
 
 def _draft_task(runtime: AppRuntime) -> None:
     _section("上传报表", "上传约定格式的 JSON 报表；演示模式也可直接使用固定样例。")
     with st.container(border=True, key="panel-input"):
+        input_mode = st.selectbox(
+            "报表输入方式",
+            ("上传自己的 JSON", "加载契约测试示例"),
+            help="测试示例来自既有人工标注契约样例，不是真实 M11 案例。",
+        )
+        st.download_button(
+            "下载严格 JSON 空白模板",
+            data=strict_template_bytes(),
+            file_name="uploaded-report-template.json",
+            mime="application/json",
+            use_container_width=True,
+        )
         uploaded = st.file_uploader(
             "服务商报表",
             type=("json",),
             accept_multiple_files=False,
             max_upload_size=1,
+            disabled=input_mode == "加载契约测试示例",
         )
         upload_valid = True
         st.caption("报表格式：schema_version、claimed_total_base_units、claimed_count、transfers。")
         with st.expander("查看上传格式与身份说明"):
             st.json(UploadedReport.model_json_schema())
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
-        if uploaded is not None:
+        payload = None
+        report_name = None
+        if input_mode == "加载契约测试示例":
+            payload = contract_example_bytes(PROJECT_ROOT)
+            report_name = "契约测试示例（人工标注合成数据，非 M11 真实案例）"
+        elif uploaded is not None:
             payload = uploaded.getvalue()
+            report_name = uploaded.name
+        if payload is not None:
             try:
-                st.session_state.uploaded_service = UploadedReportService(
-                    payload, private_directory=runtime.upload_directory,
-                )
-                st.success(f"已读取 {uploaded.name} · SHA-256 {content_hash(payload)}")
+                digest = content_hash(payload)
+                if st.session_state.get("uploaded_report_hash") != digest:
+                    st.session_state.uploaded_service = UploadedReportService(
+                        payload, private_directory=runtime.upload_directory,
+                    )
+                    st.session_state.uploaded_report_hash = digest
+                st.success(f"已读取 {report_name} · SHA-256 {digest}")
                 st.caption("原始字节已私有留档；接下来核验这份报表的原始金额和记录声明。")
             except ValueError:
                 upload_valid = False
                 st.session_state.pop("uploaded_service", None)
+                st.session_state.pop("uploaded_report_hash", None)
                 st.error("无法解析报表：需要严格 UTF-8 JSON、完整字段、整数金额、service 来源与最多 200 条记录。")
         else:
             st.session_state.pop("uploaded_service", None)
+            st.session_state.pop("uploaded_report_hash", None)
         request = st.text_area(
             "核验范围说明",
             value="核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。",
@@ -560,11 +673,16 @@ def main() -> None:
     )
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _product_header()
+    if st.query_params.get("verify") == "1":
+        render_public_explorer(st, PROJECT_ROOT)
+        return
+    st.link_button("打开独立公开验证页", "?verify=1")
     runtime = _runtime()
     if runtime is None:
         return
     if st.session_state.pop("restore_notice", False):
         st.info("已从该工作区恢复最新任务与 attempt；历史 AI 文本没有重新生成。")
+    render_workspace_history(st, runtime)
 
     if "task" not in st.session_state:
         _draft_task(runtime)
@@ -578,6 +696,15 @@ def main() -> None:
     _section("链上核验", "选择服务交付；最多两次验收，签名或计划校验失败不消耗次数。")
     _run_attempt(runtime)
     _render_attempts(runtime)
+    executions = st.session_state.get("executions", [])
+    if (
+        executions
+        and (len(executions) == 2 or executions[-1].result.outcome is VerificationOutcome.PASS)
+        and st.button("开始下一次报表验收", key="m10-next-task")
+    ):
+        for key in ("task", "candidate", "executions", "commitment_pairs", "uploaded_service"):
+            st.session_state.pop(key, None)
+        st.rerun()
 
 
 if __name__ == "__main__":

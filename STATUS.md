@@ -25,6 +25,13 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 `codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8 资金流投影、EIP-712 承诺、前端主流程
 重构与 Validation Registry 只读探针已合并并部署到广州应用；专用锚仍只是未部署候选，M9–M10 独立分支仍在并行开发。
 
+合流依赖分支补充记录（待主控统一治理）：
+
+重构与 Validation Registry 只读探针已通过 PR #6 合并到 `main`（`821bbc2`）。M9 确定性返工、外置版本链、修复对比与公开验证
+已在独立交付分支实现并完成本地验收，包括 M8 承诺快照、恢复、返工主流程、可移交公开历史包和独立验证页面；
+已只读核验既有公开回执与 Sepolia feedback，尚未合并主线、部署或上传新的公开历史包。
+M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收；尚未合并主线或部署。
+
 ## 已完成
 
 - Python 3.12 主环境 `.venv` 已创建，`pip check` 通过。
@@ -185,8 +192,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-M8 分支完成本地功能补齐与质量门后提交交接，主负责人审查合并并与 M9/M10 组件集成。
-专用最小锚只交付未部署候选；真实部署、生产接入与写链仍需额外审查和明确授权。
+审查并合并当前 M8+M9+M10 集成交付分支，授权后重建生产镜像并复验加载性能。专用最小锚只交付未部署候选；
+真实部署、生产接入、公共上传验证与写链仍需额外审查、配置和明确授权。
 
 ## M8 开发分支进展
 
@@ -253,6 +260,25 @@ M8 分支完成本地功能补齐与质量门后提交交接，主负责人审�
 - 回滚保留 `trust-receipt:m8-rollback-484f941` 镜像及
   `/opt/trust-receipt-backups/m8-before-484f941/source.tar.gz`；备份目录仅 root 可访问。
   本次没有真实链锚部署、写链或公开回执上传；网页部署不等于全量链上闭环完成。
+## M10 服务历史实现进展
+
+- 已新增独立 `trust_receipt.history` 读模型：按服务、显式任务类型与任务聚合首次 PASS、修复后 PASS、FAIL、
+  INCONCLUSIVE、可验证回执数和最近交付；所有计数可由任务事实与来源回执重新计算。
+- 只有通过现有独立回执重放的回执进入统计；篡改或未核验回执被排除。`INCONCLUSIVE` 单独展示，不增加失败数；修复成功任务
+  不继续计为负面任务，但下钻保留修复前后的完整回执链。
+- 已提供只读 `ReceiptRevisionPort` 适配 M9 父级/替代关系，并提供两服务同任务类型对比与显式人工选择 API；不生成排名、
+  综合分或自动选择。
+- 已集成 M8/M9 页面入口与运行时装配：当前工作区历史按需扫描，两服务无历史时明确显示暂无；可下钻原始回执与真实父版本，
+  显式确认服务后带入下一次报表验收。版本链核验缺父、身份冲突或篡改时排除任务并提示 INCONCLUSIVE。
+- 仅原始不可变 attempt 参与统计；M6 发布快照不重复计数，本地与公开哈希不混用。跨服务 A FAIL → B FIXED 成功只属于 B，
+  A 的失败保留。测试覆盖空历史、缺父链、伪造关系、重复发布、换服务修复与中性证据不足。
+- AppTest 走通 A FAIL → B PASS/FIXED → 来源下钻 → 选择 B → 下一任务继续选择 B；真实浏览器走通同样的两个 attempt、
+  历史对比与人工确认。1440×1000 桌面和 390×844 手机截图已检查，手机页面无横向溢出；未完成 760px 两侧/200% 全矩阵。
+- 加载优化：原图 Logo 改用可缓存同源静态 URL，避免每次重跑重复内嵌约 3.72MB base64；OpenAI/Agent0 SDK 按需加载。
+  本地 runtime 导入由约 3.81 秒降至 2.12–2.49 秒；本地热刷新从单次约 1.80 秒到三次 1.39–1.43 秒。
+  样本有限，不当作生产测速；冷启动与网络条件不同，生产优化尚未部署。
+- 本轮全量 pytest 266 项通过、9 项 external 缺配置跳过，另有第三方弃用 warning；Ruff、pip check、21 份 Schema 漂移和
+  1000 行检查通过。没有新增公开上传、真实密钥使用、写链、推送、主线合并或部署。
 
 ## M7 工作区收尾
 
@@ -265,6 +291,38 @@ M8 分支完成本地功能补齐与质量门后提交交接，主负责人审�
   LangChain，并使用现有锁定快照约束 CI 解析，避免无界回溯。
 - 修复提交对应的 GitHub Actions 主线 CI 已通过，依赖安装、非 external 测试、Ruff、`pip check`、Schema、
   文件规模检查和无凭据演示均为绿色。
+
+## M9 修复与回执验证进展
+
+- 新增确定性 `ReworkPackage`：仅把 `FAIL` 回执中 `confirmed + error` Finding 映射为闭合返工动作，
+  不把 hypothesis 或证据不足改写为确定指令；返工包使用 canonical SHA-256 自哈希。
+- 新增外置 `ReceiptRevision` 和只创建不覆盖的 `LocalRevisionStore`；两次 attempt 以 parent/supersedes 形成自哈希链，
+  不修改 `Receipt 1.0` 或旧回执哈希。`RepairComparison` 保留 task/service/attempt/receipt hash/outcome/resolution、
+  整数金额与证据引用，并复用既有 v1 交付哈希和 EVM 签名校验。
+- 新增只读 `PublicReceiptResolver` / `ReceiptCommitmentVerifier` 稳定端口及独立 CLI，支持 URI、receipt hash、
+  task hash 和 feedback transaction 入口；必要公开证据缺失返回 `INCONCLUSIVE`，冲突返回 `INVALID`。
+  M8 承诺端口缺失时显式记为 `UNVERIFIED`，不伪造承诺已核验。
+- 新增 M8→M9 适配层，直接复验持久化 Task/Delivery EIP-712 承诺、完整对象链接和期望 signer；有效快照标记为
+  `VERIFIED`，缺失保持 `UNVERIFIED`，篡改或冲突标记为 `INVALID`。`NOT_SUBMITTED` 锚状态继续明确展示，不冒充链上确认。
+- `app/streamlit_app.py` 已接入首次失败返工单、每次 attempt 的外置版本记录、第二次修复前后对比和公共 URI 独立重放入口；
+  版本存储基于原始不可变 attempt 回执，避免后续 M6 publication 状态改变回执哈希时覆盖历史。
+  公共 attempt 2 缺少公开 parent revision 时按契约返回 `INCONCLUSIVE`，不会借用私有 SQLite 补证。
+- 新增显式授权的 `PublicVerificationBundle`，同时携带公开父/子回执与对应外置版本链；公开哈希与本地不可变
+  attempt 哈希分开重建，不混用两套历史。导出可在另一进程和空私有会话中独立验证；重复发布从追加元数据恢复，
+  上传后必须下载原始字节核对哈希。未授权不能导出或上传，首轮 FAIL 不会被修复成功掩盖。
+- 独立 `?verify=1` 页面不初始化 AI 或私有工作区；支持公开文件、配置范围内 HTTPS/IPFS、回执/任务哈希和真实
+  feedback 交易。真实 feedback 只读校验链、Registry、确认数、canonical 区块、交易 sender、事件字段和公开内容哈希；
+  调用者自报交易字符串不能作为链上证据，缺少公开父回执仍为 `INCONCLUSIVE`。
+- 浏览器实际走通 fixture 服务 A 首轮 FAIL → 服务 B 第二轮 PASS → FIXED 对比 → 授权导出 → 新独立页面验证
+  PASS/FIXED；两个 attempt 和不同服务身份保留。主流程与独立结果页在 390×844 均无页面横向溢出，抽查可见字号
+  在 `12/14/16/20/24px` 集合内。本轮未完成 760px 两侧及 200% 放大的完整视觉矩阵。
+- 已匿名下载并重放既有公开 M6 回执；已真实只读核验既有 Sepolia feedback 交易
+  `0xbf09156a706ca8a49b18606083cacd2f2d844684a0af60e65602c6167374dad9`。事件、公开授权、字节哈希和回执重放通过；
+  旧 attempt 2 缺少公开父链，所以总体为 `INCONCLUSIVE`，M8 承诺仍为 `UNVERIFIED`。没有新增公开上传或写链。
+- 五份 M9 追加契约纳入稳定导出，总计 21 份 Schema。全量本地测试为 251 项通过、9 项 external 因当前环境配置
+  缺失而明确跳过；公开历史和反馈冲突、缺父链、非规范 JSON、独立进程等边界均覆盖。M9 下一步为交给现有 M10
+  分支集成服务历史与人工选择，不把 M10 能力标为已经完成。
+- 收尾 Ruff、`pip check`、21 份 Schema 漂移、1000 物理行限制与无凭据 FAIL→PASS→恢复演示均通过。
 
 ## 状态更新规则
 

@@ -40,7 +40,8 @@ header[data-testid="stHeader"],[data-testid="stToolbar"],[data-testid="stSidebar
 .signal-value { color:var(--tr-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.signal-value:before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--tr-state-matched); margin-right:8px; }
 .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:32px 0 12px; }.section-head h2 { margin:4px 0 0; color:var(--tr-text-primary); font-size:var(--tr-font-subtitle); }.section-head p { max-width:500px; margin:0; color:var(--tr-text-note); font-size:var(--tr-font-helper); text-align:right; }
 .task-summary { display:grid; grid-template-columns:1.1fr .65fr .65fr; gap:16px; }.summary-cell strong { display:block; overflow-wrap:anywhere; color:var(--tr-text-primary); font-size:var(--tr-font-helper); }
-.attempt-card,.status-card,.finding-card { overflow-wrap:anywhere; border:1px solid var(--tr-border-default); border-radius:12px; padding:12px; background:var(--tr-bg-raised); margin:8px 0; }
+.attempt-card,.status-card,.finding-card,.business-summary { overflow-wrap:anywhere; border:1px solid var(--tr-border-default); border-radius:12px; padding:12px; background:var(--tr-bg-raised); margin:8px 0; }
+.business-summary { padding:20px; margin:16px 0; }.business-summary strong { display:block; font-size:var(--tr-font-subtitle); }.business-summary p { margin:8px 0 12px; color:var(--tr-text-primary); }.business-summary small { display:block; color:var(--tr-text-secondary); font-variant-numeric:tabular-nums; margin-top:4px; }
 .attempt-card { display:flex; align-items:center; justify-content:space-between; gap:16px; border-left-width:4px; }.attempt-title { font-size:var(--tr-font-title); font-weight:800; }.outcome-PASS { border-left-color:var(--tr-state-matched); }.outcome-FAIL { border-left-color:var(--tr-state-error); }.outcome-INCONCLUSIVE { border-left-color:var(--tr-state-inconclusive); }
 .badge { display:inline-block; padding:5px 9px; border:1px solid var(--tr-border-default); border-radius:9999px; color:var(--tr-text-secondary); font-size:var(--tr-font-note); font-weight:800; margin:2px; }.badge-confirmed { border-color:var(--tr-state-matched); }.badge-submitted { border-color:var(--tr-state-inconclusive); }.badge-not-submitted { color:var(--tr-text-note); }
 .mono,.flow-key { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
@@ -61,7 +62,8 @@ div[data-testid="stMetric"] { border:1px solid var(--tr-border-default); border-
 .stApp input::placeholder,.stApp textarea::placeholder { color:var(--tr-text-note); opacity:1; }
 .stApp input:disabled,.stApp textarea:disabled { color:var(--tr-text-secondary); -webkit-text-fill-color:var(--tr-text-secondary); opacity:1; }
 .product-bar,.hero-main,.brand-mark,.env-chip,.workflow-steps b,
-.signal-card,.summary-cell,.attempt-card,.status-card,.finding-card,.badge,.flow-edge,.flow-legend { border:0; box-shadow:none; }
+.signal-card,.summary-cell,.attempt-card,.status-card,.business-summary { border:0; box-shadow:none; }
+.finding-card,.badge,.flow-edge,.flow-legend { border:0; box-shadow:none; }
 .env-chip,.workflow-steps b { background:var(--tr-bg-raised); }
 .flow-legend { background:transparent; padding:4px 0; color:var(--flow-color,var(--tr-text-secondary)); }
 .flow-legend-row { gap:16px; }
@@ -115,7 +117,7 @@ div[data-testid="stMetric"] { border:1px solid var(--tr-border-default); border-
 .stApp [data-testid="stFileUploaderDropzone"] { background:var(--tr-bg-page); border:0; border-radius:8px; padding:20px; }
 .stApp [data-testid="stFileUploaderDropzone"] small { color:var(--tr-text-note); }
 .stApp [data-testid="stExpander"] details { background:transparent; }
-.signal-card,.summary-cell,.attempt-card,.status-card,.finding-card,.flow-edge,
+.signal-card,.summary-cell,.attempt-card,.status-card,.finding-card,.business-summary,.flow-edge,
 .stApp [data-testid="stMetric"],.stApp [data-testid="stExpander"] {
   background-image:var(--tr-material-panel);
   background-color:var(--tr-bg-surface);
