@@ -10,7 +10,9 @@
     await uploader.setInputFiles(config.report);
     await page.getByText(/已读取/).waitFor();
     await page.getByRole("textbox", { name: "核验范围说明", exact: true }).fill(config.scope);
-    await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).click();
+    const draftButton = page.getByRole("button", { name: "生成可核对的任务候选", exact: true });
+    await draftButton.focus();
+    await draftButton.press("Enter");
     await page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true }).waitFor({ timeout: 90000 });
     await page.getByRole("spinbutton", { name: "Chain ID", exact: true }).fill(String(config.task.chain_id));
     await page.getByRole("textbox", { name: "代币地址", exact: true }).fill(config.task.token_address);
@@ -20,7 +22,8 @@
     await page.getByRole("textbox", { name: "资助对象（每行一个）", exact: true }).fill(config.task.recipient_addresses.join("\n"));
     const exclusion = page.getByRole("checkbox", { name: "排除资金账户之间的内部互转", exact: true });
     if (await exclusion.isChecked() !== (config.task.exclusion_rules.length > 0)) {
-      await page.getByText("排除资金账户之间的内部互转", { exact: true }).click();
+      await exclusion.focus();
+      await exclusion.press("Space");
     }
     await page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true }).click();
     await page.getByText("任务未确认：请先勾选任务边界确认框。", { exact: true }).waitFor();
@@ -28,24 +31,39 @@
     const prior = results.find(item => item.id === "UR-06");
     prior.evidence.uncheckedConfirmationRejected = true;
     const confirmation = page.getByRole("checkbox", { name: "我已核对链、资产、账户与区块边界，并确认冻结此任务", exact: true });
-    await page.getByText("我已核对链、资产、账户与区块边界，并确认冻结此任务", { exact: true }).click();
+    await confirmation.focus();
+    await confirmation.press("Space");
     ensure(await confirmation.isChecked(), "keyboard confirmation failed");
-    await page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true }).click();
+    const freezeButton = page.getByRole("button", { name: "确认并冻结 TaskSpec", exact: true });
+    await freezeButton.focus();
+    await freezeButton.press("Enter");
     await page.getByRole("button", { name: "开始验收 · Attempt 1", exact: true }).waitFor();
-    await page.getByRole("button", { name: "开始验收 · Attempt 1", exact: true }).click();
+    const runButton = page.getByRole("button", { name: "开始验收 · Attempt 1", exact: true });
+    await runButton.focus();
+    await runButton.press("Enter");
     await page.getByText(/验收通过/).first().waitFor({ timeout: 180000 });
     ensure((await page.locator("body").innerText()).includes(config.expectedTotal), "independent expected amount absent");
-    await page.getByText("证据来源与采样诊断", { exact: true }).first().click();
+    const sourceDisclosure = page.locator("summary").filter({ hasText: "证据来源与采样诊断" }).first();
+    await sourceDisclosure.focus();
+    await sourceDisclosure.press("Enter");
     ensure((await page.locator("body").innerText()).includes("COMPLETE"), "real RPC completeness absent");
     await page.getByText("查看不可变任务指纹与完整边界", { exact: true }).click();
     const hash = await page.locator('code').filter({ hasText: /^0x[a-f0-9]{64}$/ }).first().innerText();
-    return { workspace: config.workspace, expectedTotal: config.expectedTotal, taskHash: hash, realRpcComplete: true, screenshot: await screen("independent-pass") };
+    return { workspace: config.workspace, expectedTotal: config.expectedTotal, taskHash: hash, realRpcComplete: true, keyboardActions: ["draft", "exclusion", "confirm", "freeze", "run", "source disclosure"], screenshot: await screen("independent-pass") };
   });
   const independent = results.find(item => item.id === "UR-02");
   const cold = results.find(item => item.id === "UR-03");
   if (independent.status === "PASS" && cold.status === "PASS") cold.evidence.independentInputCompleted = true;
   else if (cold.status === "PASS") { cold.status = "BLOCKED"; cold.reason = "cold screen verified but independent path incomplete"; }
   if (independent.status === "PASS") {
+    const keyboard = results.find(item => item.id === "UR-13");
+    if (keyboard.status === "BLOCKED") {
+      keyboard.status = "PASS";
+      keyboard.reason = "";
+      keyboard.evidence.coreActions = independent.evidence.keyboardActions;
+      keyboard.evidence.resultEvidenceOpened = true;
+    }
+    record("UR-14", "PASS", { steps: ["own JSON upload", "edit candidate", "explicit confirm", "live verification", "source disclosure"], screenshot: independent.evidence.screenshot });
     const responsive = results.find(item => item.id === "UR-12");
     const resultViews = [];
     for (const [width, height] of [[1440,1000],[390,844],[759,900],[761,900]]) {
