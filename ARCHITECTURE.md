@@ -21,6 +21,8 @@ last-reviewed: 2026-10-07
 组合层复用 `EChartsRenderer` 实例，通过固定 argv/JSON stdin 调用包内脚本与独立 pinned sharp 依赖。
 图像绑定完整 view（含 spec/receipt hash）和派生 option 哈希，不接任意用户 JS、SVG、PNG 或路径。
 Node/modules 路径只属于受信部署配置。缺依赖或超时明确 EXPORT_UNAVAILABLE，不回退假格式。
+Linux 镜像通过固定 renderer-node 启动器为子进程继承 socket-denying seccomp；应用本身仍保留模型/RPC 能力。
+容器 cgroup 约束应用与 renderer 合计 native 内存/pids，单应用复用并发 2 的 renderer，不把 JS 堆标志当 native 边界。
 `html_export`、`docx_export`、`pdf_export` 分别负责离线 HTML、真实 DOCX 和 PDF 字节。外部库仅在使用对应导出时加载；
 适配层不接受文件路径、模板或外部资源 URL。页面只有一个业务读模型，不从 raw dict 另建金额或风险真值。
 报告是原签名回执的阅读副本，原 JSON 下载继续使用既有对象，不被报告格式替代；下载不改变 publication 状态。

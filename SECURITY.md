@@ -23,6 +23,11 @@ HTML/SVG 必须转义文本且无脚本、外部图像/字体/样式请求；DOC
 不传入凭据、NODE_OPTIONS 或继承的 NODE_PATH；单实例并发 2、20 秒超时、128 MB JS 堆、256 KB stdin、512 KB SVG、
 4 MB PNG、6 MB stdout、260 万像素，sharp 无缓存且线程为 1。JS 堆限不是 native 总内存硬限，部署必须另加 cgroup/Job、pids 和禁止网络出口。
 回包 binding 必须匹配完整 view/option 哈希，导出不接受跨任务 PNG；stderr 不进入用户日志或报告。
+Linux 部署通过受信 `REPORT_RENDERER_NODE` 启动器继承 seccomp 的 socket 拒绝规则，父应用仍可访问 RPC；
+启动器仅允许固定包内脚本和固定 Node 参数，未知 ABI/无法启用隔离时拒绝。`REPORT_RENDERER_MODULES` 仅由运维设置。
+compose 提供 app 与 renderer 合计 2 GiB native 内存硬限、无额外 swap、256 pids、2 CPU、no-new-privileges、drop ALL capabilities；
+它不是每个 worker 独立的 native 内存保证，极端 OOM 可能影响同容器应用。单应用复用一个并发 2 的 renderer，
+进程另有 20 秒 CPU、64 fd、8 MB file-size、禁 core dump。worker 网络限制不依赖“代码没有网络调用”的假设。
 文档资源检查上限为每 attempt 400 条投影记录、1000 项 Finding、2 MB view 序列化与单文本 4096 字符、正文 6 万字符。
 绘图独立上限为 200 条保存记录，超限明确不可用；主图最多四条，拥挤并行线仅首条，明确标出总数。
 完整记录保留于明细附录。页面绑定当前工作区后才主动下载，不得从公开验证入口读取私有报告或把下载当成发布授权。

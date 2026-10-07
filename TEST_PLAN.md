@@ -11,6 +11,15 @@ last-reviewed: 2026-10-07
 
 # 测试与验收计划
 
+## Linux 报告运行接线门
+
+`scripts/deploy/check_report_runtime.py` 仅在无密钥、无网络、无生产数据挂载的镜像运行，输入 7 个合成 view：
+验证实际隔离 launcher → ECharts SSR → sharp PNG → DOCX/PDF 字节、view hash、内嵌字体及 source/wheel 全报告资产一致。
+同时实际断言 renderer socket 创建返回 EPERM、父应用仍可创建 socket、任意 Node 参数被拒绝、缺 renderer 不兜底。
+验证时设置 `--memory 2g --memory-swap 2g --pids-limit 256 --cpus 2 --cap-drop ALL --security-opt no-new-privileges`
+及 `--network none`；这证明受控本地渲染，不声称 RPC 连通、生产部署或新增逐页视觉审批。
+实际 `/app` 初始入口另由 `scripts/deploy/check_image.py` 检查源码/wheel、AppTest exception 和品牌区，不能替代下载状态矩阵。
+
 ## 业务报告与导出验证
 
 - 固定 ECharts worker 核验资源哈希、只接派生 JSON、拒绝未知键/image/code；测试缺依赖、超时、并发上限、回包 binding 错误与凭据环境不转发。

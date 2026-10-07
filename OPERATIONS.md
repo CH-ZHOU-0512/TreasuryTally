@@ -20,7 +20,17 @@ last-reviewed: 2026-10-07
 DOCX 使用 python-docx 1.2.0，PDF 使用 reportlab 4.4.9，PNG 使用 Node 22.23.3 / sharp 0.34.5 的 ECharts SVG 栅格结果；
 Pillow 12.3.0 只校验 PNG。独立 package.json/package-lock.json 位于 `src/trust_receipt/reporting/assets/renderer/`，用 npm ci 安装。
 组合层复用 `EChartsRenderer(node_path=..., modules_path=...)`，所有导出显式传 `renderer=renderer`。
-node_path 省略时从受信 PATH 查找 node；modules_path 省略时按包目录发现 node_modules，不从报告字段传入路径。
+底层 node_path 省略时从受信 PATH 查找 node；部署页面必须显式使用进程配置，不走 PATH 回退。
+`REPORT_RENDERER_NODE` 固定 `/opt/trust-receipt-renderer/renderer-node`，
+`REPORT_RENDERER_MODULES` 固定 `/opt/trust-receipt-renderer/node_modules`；仅运维受信环境可配置，不接受用户路径或 JS。
+Docker 使用 pinned Node 22.23.3 / Python 3.12 镜像与 renderer lock 的 `npm ci --ignore-scripts`，保留 optional native 包及许可证。
+Fontconfig 注册包内字体；renderer-node 只允许固定参数和包内脚本，Linux seccomp 拒绝 socket 创建/连接等操作，
+不影响父应用的模型/RPC socket 能力。未知 ABI、seccomp 不可用或资源不足拒绝导出。
+生产 compose 设置总内存及 swap 2 GiB、256 pids、2 CPU、drop ALL capabilities 和 no-new-privileges；
+这约束应用与两个 renderer 的 native 总资源，不把 JS 堆 128 MB 称为独立 native 内存上限。
+单应用必须复用一个 renderer 实例，并发最多 2，20 秒 timeout；启动器另设 20 秒 CPU、64 fd、8 MB file-size 和禁 core dump。
+全量镜像以主环境生成的 requirements.lock.txt 为 constraints；app-only release 必须基于已验证的新 renderer runtime，
+旧不含 Node/字体/报告依赖的基底会拒绝构建，不会假称 app-only wheel 更新已补齐运行环境。
 部署方加无网络、native 总内存/pids 限额；缺失依赖、失败或繁忙明确 EXPORT_UNAVAILABLE。Python 正式安装以规范生成的主环境锁为准，
 不能因为本地 adapter 能调用就声称生产依赖已经就绪。生产 Linux 不依赖 Word/LibreOffice；中文字体随 wheel 打包并保留 OFL 许可证，
 PDF 嵌入子集，DOCX 内嵌字体。资源缺失必须显示导出不可用，不生成假后缀；原 JSON 下载不受渲染器影响。
