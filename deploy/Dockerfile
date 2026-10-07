@@ -13,6 +13,7 @@ COPY src ./src
 RUN python -m pip install --no-cache-dir .
 
 COPY app ./app
+COPY .streamlit ./.streamlit
 COPY fixtures ./fixtures
 RUN mkdir -p /app/data /app/receipts/private && chown -R app:app /app
 

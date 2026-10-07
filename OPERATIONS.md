@@ -132,6 +132,11 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 
 ### Linux 容器部署
 
+页面 Logo 保持用户原始 PNG，存放于 `app/static/logo.png`；`.streamlit/config.toml` 启用
+`server.enableStaticServing`，页面使用兼容 `server.baseUrlPath` 的同源 URL，使浏览器复用静态资源，避免每次重跑
+重复发送大段 base64。OpenAI/Agent0 SDK 仅在对应 adapter 实际使用时加载。生产接入这些改动须经授权重建镜像，
+随后检查 `/trust-receipt/app/static/logo.png`、页面 Logo 与 WebSocket；本地优化不代表生产已经更新。
+
 生产服务器使用 `deploy/docker-compose.prod.yml` 构建两个相互隔离的容器：Streamlit 主应用与
 Blockscout MCP。两者只加入既有反向代理网络，不直接向公网发布容器端口；`data/` 和
 `receipts/private/` 通过宿主机目录持久化。Compose 固定设置 `APP_REQUIRE_LIVE=true`，因此生产页面只能使用真实
@@ -203,6 +208,35 @@ M4 离线门槛与真实模型探针分别运行：
 
 命令以 JSON 输出回执哈希、任务哈希、对象链接和三态结果复算状态；任一检查失败时退出码非零。
 
+M9 公开回执验证不读取 SQLite 或私有工作区。可对本地下载的公开 JSON 或 HTTP(S) URI 执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli `
+  path\to\public-receipt.json `
+  --kind RECEIPT_HASH `
+  --value 0x<receipt-hash> `
+  --attempt 1 `
+  --expected-content-hash 0x<published-byte-sha256>
+```
+
+`--kind` 还支持 `URI`、`TASK_HASH` 和 `FEEDBACK_TRANSACTION`。单 Receipt attempt 2 必须使用 `--revision`、
+`--parent-revision` 和 `--parent-receipt` 提供公开父回执与关系。完整历史包可直接验证最新 attempt：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli public-history.json --bundle --kind URI
+```
+
+哈希定位加 `--kind RECEIPT_HASH --value 0x<public-receipt-hash>` 或 `--kind TASK_HASH --value 0x<spec-hash>`。
+反馈入口从配置 `ETH_RPC_URL` 和 `ERC8004_REPUTATION_REGISTRY_ADDRESS` 只读真实交易：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli --kind FEEDBACK_TRANSACTION --value 0x<tx-hash> --attempt 2 --public-history public-history.json
+```
+
+未提供可验证公开父回执时返回 INCONCLUSIVE；未提供公开承诺时 `commitment_status=UNVERIFIED`。
+页面的 `?verify=1` 为独立入口，支持文件、配置公共目录 HTTPS/IPFS 和反馈交易，不需要原工作区或模型密钥。
+“分享完整验收历史”分别授权历史导出与公共上传，元数据保存在私有 `public-history/`，恢复后复用已有发布引用。
+
 M0 真实探针使用：
 
 ```powershell
@@ -247,6 +281,25 @@ npm test
 当前 4.79.0 在本机因旧运行时链接启动失败，自动升级需要管理员步骤。开发默认走本地 Blockscout MCP，不把修复 Docker 作为 MVP 前置条件。
 
 ## 清理与恢复
+
+### M8 上传与工作区恢复
+
+上传只接受 `schemas/v1/uploaded_report.schema.json` 对应的 UTF-8 JSON，最多 1 MB、200 条 service 来源记录。
+原始文件保存在 `receipts/private/m5/<workspace-id>/uploads/`；不得公开该目录。SQLite 同工作区新增只追加 M8 artifact
+表，不存私钥。重启后输入原 workspace ID，系统校验承诺、证据 manifest 并重放结果；上传任务恢复后补交需重新上传文件，
+不会静默换成演示服务。缺少旧快照只保留原回执；损坏快照拒绝恢复，不自动覆盖或重拉参考证据。
+
+专用锚候选当前没有部署地址或生产配置；本地编译可用 `npx --yes --package solc@0.8.30 solcjs --bin --abi
+contracts/CommitmentAnchor.sol -o .tmp/m8-solc`。不将本地模拟交易当作 Sepolia 已提交或已确认。
+
+可在隔离开发端口启动 `npx --yes --package ganache@7.9.2 ganache --server.host 127.0.0.1 --server.port 18549 --logging.quiet --wallet.deterministic`，
+然后运行 `python scripts/check_m8_anchor_local.py`。脚本只允许 loopback HTTP 与开发 chain 1337，使用本地测试币和新生成的
+测试身份，校验授权、requester 命名空间、只追加 attempt 和 task/delivery 事件读回；不读取 `.env` 或真实密钥。
+Ganache 启动输出中的默认开发密钥不是生产凭据，但日志仍应留在忽略的 `.tmp/`。
+
+页面主题由 `.streamlit/config.toml` 的原生深色主题与 `app/styles.py` 共同控制；不要只修改背景却保留原生浅色主题。
+生产 Dockerfile 必须复制 `.streamlit/` 到镜像工作目录；发布需重建应用镜像，不能只刷新浏览器或更新 CSS。
+更新导入的样式后重启开发 Streamlit，浏览器刷新并用原 workspace ID 恢复，避免缓存旧样式。
 
 - 不删除 `fixtures/`、`schemas/` 或已发布回执。
 - 本地数据库损坏时先复制 `data/` 作为证据，再重建开发数据库。

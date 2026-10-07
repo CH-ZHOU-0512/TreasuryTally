@@ -27,6 +27,8 @@ class FakeStreamlit:
     def header(self, _value): pass
     def subheader(self, _value): pass
     def markdown(self, _value): pass
+    def text(self, _value): pass
+    def code(self, _value, **_kwargs): pass
     def link_button(self, _label, _uri): pass
     def caption(self, value): self.captions.append(value)
     def columns(self, count): return tuple(Context(self) for _ in range(count))

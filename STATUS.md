@@ -22,8 +22,11 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek �
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
-`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8–M10 产品方向已经完成文档设计，
-尚未实现或部署。
+`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8 资金流投影、EIP-712 承诺、前端主流程
+重构与 Validation Registry 只读探针已通过 PR #6 合并到 `main`（`821bbc2`）。M9 确定性返工、外置版本链、修复对比与公开验证
+已在独立交付分支实现并完成本地验收，包括 M8 承诺快照、恢复、返工主流程、可移交公开历史包和独立验证页面；
+已只读核验既有公开回执与 Sepolia feedback，尚未合并主线、部署或上传新的公开历史包。
+M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收；尚未合并主线或部署。
 
 ## 已完成
 
@@ -185,13 +188,53 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-M8–M10 前端规范已建立于 [FRONTEND_SPEC.md](FRONTEND_SPEC.md)，黑金视觉与 12px 卡片圆角已由用户确认；页面代码尚未按该规范改版。
+审查并合并当前 M8+M9+M10 集成交付分支，授权后重建生产镜像并复验加载性能。专用最小锚只交付未部署候选；
+真实部署、生产接入、公共上传验证与写链仍需额外审查、配置和明确授权。
 
-启动 M8：先重构首屏为“上传报表 → 确认范围 → 链上核验”的单一主流程，实现由现有 Finding 驱动的资金流投影；随后冻结
-TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry 或专用最小锚定 adapter 做 Sepolia 接口探针。
-在探针与 schema 完成前，不把任务承诺表述为已上链。
+## M8 开发分支进展
+
+- 页面已重构为黑金 12px 卡片主题和“上传报表 → 确认范围 → 链上核验”主流程，结果优先展示服务声称、链上有效金额、
+  精确差异、资金流与 Finding；RPC、签名、Registry 和原始 JSON 默认折叠。
+- `FundFlowProjection` 从已有 submission、reference evidence 与 Finding 投影匹配、漏报、链上未找到、内部互转、重复和
+  证据不足；每条边保留完整事件键、双方来源引用与 Finding ID，不反向计算 outcome。
+- `TaskCommitment` 与 `DeliveryCommitment` 使用 EIP-712；服务接单和交付分别签名，篡改 task/service/attempt/report hash
+  或错误签名者会被拒绝。三个 M8 Schema 已加入稳定导出。
+- Sepolia 只读探针已真实读取 Validation Registry 的 bytecode、Identity Registry 关联与 service `11155111:10691` 请求列表。
+  当前接口不适合作为 requester 通用任务锚，因此未广播交易，页面明确显示 `NOT_SUBMITTED`。
+- 非 external 全量门为 158 项通过、9 项排除；M8 Sepolia 只读 external 探针单独 1 项通过。Ruff、pip check、15 份 Schema
+  漂移、1000 行限制与无凭据 MVP 演示均通过。真实浏览器走通首次 FAIL 资金流，390×844 下无页面水平溢出。
 
 ## M8–M10 计划范围
+
+### M8 补齐与视觉收敛
+
+- 严格 UTF-8 JSON 上传现在是实际核验对象，不再仅作为提示词。原始字节内容寻址私有留档，原金额/count/事件声明不改写；
+  本地 intake 签名明确不认证原作者。固定错误报表 FAIL、补交完整报表 PASS、第三次提交拒绝的路径已通过测试。
+- 接单在交付生成前签名，绑定完整 task commitment digest、spec hash 和微秒时间戳。M8 SQLite artifacts 只追加保存承诺与
+  reference evidence，重启恢复须验证签名、receipt manifest 并重放同一确定性结果；篡改证据拒绝恢复，缺少旧快照不伪造图。
+- SVG 有向账户图与事件明细保留双方原始记录；字段不一致、范围错误不再误标成“链上未找到”。12 个冻结 fixture 的投影矩阵通过。
+- `.streamlit/config.toml` 与页面 CSS 统一深色，移除说明文字原生 60% 透明度和大面积白底。正文/辅助/说明文字与三个背景
+  对比度均超过 7:1；普通卡片/指标/折叠区不描边，状态装饰统一中性灰，强调靠结论层级、行动含义和独立金额分组。
+- `CommitmentAnchor.sol` 候选与只读 `DedicatedAnchorReader` 已提供；Solidity 0.8.30 编译和 loopback 开发链 1337 模拟执行通过，
+  覆盖 requester 命名空间防占位、服务授权、只追加两次交付与事件读回。没有真实部署、没有 Sepolia 写链，也未接入生产页面。
+- 实际上传文件的浏览器路径已走通 FAIL → 补交 → PASS；进程重启后通过原 workspace ID 恢复两份签名、证据与图。
+  真实 Sepolia Validation Registry 只读探针单独 1 项通过（进程内补充公开 Registry 地址与 agent ID，未修改 `.env`）。
+- 专用锚候选不等于独立安全审查通过；真实委托方/外部服务作者认证、专用锚部署和外部写入验收仍未完成，不能称全量链上闭环。
+- 根据用户后续视觉要求：添加本地静态区块/节点/链式连接背景、炭黑层次与轻微材质光影；金色集中在主操作，强调用字号、
+  字重与独立分组。运行参数只保留折叠区，不再重复为三张气泡；流程序号只保留顶部一套。原 TR 占位与 favicon 已换为
+  用户最新提供的透明 PNG Logo，原图无修改。390px 输入页实测无水平溢出、无大块白底；说明文字 opacity=1。
+- 字号按用户要求收敛到 `12/14/16/20/24px` 五级角色 token，自定义 HTML 与原生组件共用；页面标题、结论和关键金额不再使用
+  32px/约 29px。SVG 固定 720px 画布，窄屏局部滚动，避免容器缩放改变 12px 节点文字。
+  `FRONTEND_SPEC.md` 清理字体、描边、状态配色、材质和旧 TR 占位的矛盾表述；纳入用户五张 H5 参考图的组件取舍。
+  `TEST_PLAN.md` 增加实际计算字号与视觉回归规则，设计规范不复制瞬时进展。
+- 本次浏览器输入页实测 `1440×1000` 与 `390×844`：可见文字计算字号均在五级集合内，无页面级水平溢出。
+  本次未完成结果页、760px 两侧及 200% 放大的完整视觉复验，不把自动测试视作全部前端验收。
+- 参考图已落实到 M8 页面：深灰双层输入/确认/执行面板、短金色标题底衬与结论光泽、桌面原 logo 材质展示、
+  香槟金细斜纹、12 条金色曲线与暖金区块链几何；移动端隐藏纯装饰 logo。正文与状态不普遍染金，不增加卡片外框。
+  1440px 桌面与 390px 手机输入页截图已检查；手机计算字号无越界，页面无水平溢出。
+  Dockerfile 已补齐原生主题配置复制，避免生产镜像缺少深色控件主题。本次提交、推送、合并与部署仅针对 M8，不包含 M9/M10 分支。
+- 最新非 external 门 207 项通过、9 项排除；Ruff、pip check、16 份 Schema、1000 行限制和无凭据演示通过。
+  实际链上只有前述只读 Registry 探针；本地模拟合约交易不计作 Sepolia 外部写入验收。
 
 - M8：资金流对账图、任务/接单/交付承诺和可下钻链上证据；技术详情默认折叠，每个状态只有一个主操作。
 - M9：确认 Finding 生成返工包、修复前后并排对比、只追加回执版本链和独立公开验证入口。
@@ -206,8 +249,17 @@ TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry �
   不继续计为负面任务，但下钻保留修复前后的完整回执链。
 - 已提供只读 `ReceiptRevisionPort` 适配 M9 父级/替代关系，并提供两服务同任务类型对比与显式人工选择 API；不生成排名、
   综合分或自动选择。
-- 已新增独立 `app/service_history.py` Streamlit 组件，不修改 M8 拥有的页面入口和运行时装配。M10 定向测试及非 external
-  全量质量门已通过；尚未合并 M8 页面入口，也未部署或执行任何写链。
+- 已集成 M8/M9 页面入口与运行时装配：当前工作区历史按需扫描，两服务无历史时明确显示暂无；可下钻原始回执与真实父版本，
+  显式确认服务后带入下一次报表验收。版本链核验缺父、身份冲突或篡改时排除任务并提示 INCONCLUSIVE。
+- 仅原始不可变 attempt 参与统计；M6 发布快照不重复计数，本地与公开哈希不混用。跨服务 A FAIL → B FIXED 成功只属于 B，
+  A 的失败保留。测试覆盖空历史、缺父链、伪造关系、重复发布、换服务修复与中性证据不足。
+- AppTest 走通 A FAIL → B PASS/FIXED → 来源下钻 → 选择 B → 下一任务继续选择 B；真实浏览器走通同样的两个 attempt、
+  历史对比与人工确认。1440×1000 桌面和 390×844 手机截图已检查，手机页面无横向溢出；未完成 760px 两侧/200% 全矩阵。
+- 加载优化：原图 Logo 改用可缓存同源静态 URL，避免每次重跑重复内嵌约 3.72MB base64；OpenAI/Agent0 SDK 按需加载。
+  本地 runtime 导入由约 3.81 秒降至 2.12–2.49 秒；本地热刷新从单次约 1.80 秒到三次 1.39–1.43 秒。
+  样本有限，不当作生产测速；冷启动与网络条件不同，生产优化尚未部署。
+- 本轮全量 pytest 266 项通过、9 项 external 缺配置跳过，另有第三方弃用 warning；Ruff、pip check、21 份 Schema 漂移和
+  1000 行检查通过。没有新增公开上传、真实密钥使用、写链、推送、主线合并或部署。
 
 ## M7 工作区收尾
 
@@ -220,6 +272,38 @@ TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry �
   LangChain，并使用现有锁定快照约束 CI 解析，避免无界回溯。
 - 修复提交对应的 GitHub Actions 主线 CI 已通过，依赖安装、非 external 测试、Ruff、`pip check`、Schema、
   文件规模检查和无凭据演示均为绿色。
+
+## M9 修复与回执验证进展
+
+- 新增确定性 `ReworkPackage`：仅把 `FAIL` 回执中 `confirmed + error` Finding 映射为闭合返工动作，
+  不把 hypothesis 或证据不足改写为确定指令；返工包使用 canonical SHA-256 自哈希。
+- 新增外置 `ReceiptRevision` 和只创建不覆盖的 `LocalRevisionStore`；两次 attempt 以 parent/supersedes 形成自哈希链，
+  不修改 `Receipt 1.0` 或旧回执哈希。`RepairComparison` 保留 task/service/attempt/receipt hash/outcome/resolution、
+  整数金额与证据引用，并复用既有 v1 交付哈希和 EVM 签名校验。
+- 新增只读 `PublicReceiptResolver` / `ReceiptCommitmentVerifier` 稳定端口及独立 CLI，支持 URI、receipt hash、
+  task hash 和 feedback transaction 入口；必要公开证据缺失返回 `INCONCLUSIVE`，冲突返回 `INVALID`。
+  M8 承诺端口缺失时显式记为 `UNVERIFIED`，不伪造承诺已核验。
+- 新增 M8→M9 适配层，直接复验持久化 Task/Delivery EIP-712 承诺、完整对象链接和期望 signer；有效快照标记为
+  `VERIFIED`，缺失保持 `UNVERIFIED`，篡改或冲突标记为 `INVALID`。`NOT_SUBMITTED` 锚状态继续明确展示，不冒充链上确认。
+- `app/streamlit_app.py` 已接入首次失败返工单、每次 attempt 的外置版本记录、第二次修复前后对比和公共 URI 独立重放入口；
+  版本存储基于原始不可变 attempt 回执，避免后续 M6 publication 状态改变回执哈希时覆盖历史。
+  公共 attempt 2 缺少公开 parent revision 时按契约返回 `INCONCLUSIVE`，不会借用私有 SQLite 补证。
+- 新增显式授权的 `PublicVerificationBundle`，同时携带公开父/子回执与对应外置版本链；公开哈希与本地不可变
+  attempt 哈希分开重建，不混用两套历史。导出可在另一进程和空私有会话中独立验证；重复发布从追加元数据恢复，
+  上传后必须下载原始字节核对哈希。未授权不能导出或上传，首轮 FAIL 不会被修复成功掩盖。
+- 独立 `?verify=1` 页面不初始化 AI 或私有工作区；支持公开文件、配置范围内 HTTPS/IPFS、回执/任务哈希和真实
+  feedback 交易。真实 feedback 只读校验链、Registry、确认数、canonical 区块、交易 sender、事件字段和公开内容哈希；
+  调用者自报交易字符串不能作为链上证据，缺少公开父回执仍为 `INCONCLUSIVE`。
+- 浏览器实际走通 fixture 服务 A 首轮 FAIL → 服务 B 第二轮 PASS → FIXED 对比 → 授权导出 → 新独立页面验证
+  PASS/FIXED；两个 attempt 和不同服务身份保留。主流程与独立结果页在 390×844 均无页面横向溢出，抽查可见字号
+  在 `12/14/16/20/24px` 集合内。本轮未完成 760px 两侧及 200% 放大的完整视觉矩阵。
+- 已匿名下载并重放既有公开 M6 回执；已真实只读核验既有 Sepolia feedback 交易
+  `0xbf09156a706ca8a49b18606083cacd2f2d844684a0af60e65602c6167374dad9`。事件、公开授权、字节哈希和回执重放通过；
+  旧 attempt 2 缺少公开父链，所以总体为 `INCONCLUSIVE`，M8 承诺仍为 `UNVERIFIED`。没有新增公开上传或写链。
+- 五份 M9 追加契约纳入稳定导出，总计 21 份 Schema。全量本地测试为 251 项通过、9 项 external 因当前环境配置
+  缺失而明确跳过；公开历史和反馈冲突、缺父链、非规范 JSON、独立进程等边界均覆盖。M9 下一步为交给现有 M10
+  分支集成服务历史与人工选择，不把 M10 能力标为已经完成。
+- 收尾 Ruff、`pip check`、21 份 Schema 漂移、1000 物理行限制与无凭据 FAIL→PASS→恢复演示均通过。
 
 ## 状态更新规则
 

@@ -103,23 +103,29 @@ def test_task_types_are_isolated_and_inconclusive_is_not_negative(make_receipt) 
 
 
 def test_m9_revision_port_can_mark_a_verified_pass_as_fixed(make_receipt) -> None:
+    parent = make_receipt(
+        receipt_id="parent", task_id="task-1", service_id="a", outcome="FAIL", created_at="2026-10-02T00:00:00Z"
+    )
     fixed = make_receipt(
         receipt_id="fixed", task_id="task-1", service_id="a", outcome="PASS", created_at="2026-10-03T00:00:00Z"
     )
     link = ReceiptRevisionLink(
         receipt_hash=fixed.receipt_hash,
-        parent_receipt_hash="0x" + "ab" * 32,
-        supersedes_receipt_hash="0x" + "ab" * 32,
+        parent_receipt_hash=parent.receipt_hash,
+        supersedes_receipt_hash=parent.receipt_hash,
         resolution=RevisionResolution.FIXED,
     )
     history = project_service_histories(
-        (ReceiptHistoryInput(receipt=fixed, task_type="grant-report"),),
+        (
+            ReceiptHistoryInput(receipt=parent, task_type="grant-report"),
+            ReceiptHistoryInput(receipt=fixed, task_type="grant-report"),
+        ),
         revision_port=RevisionMap((link,)),
     )[0]
 
     assert history.fixed_pass_count == 1
     assert history.first_pass_count == 0
-    assert history.receipt_refs[0].revision == link
+    assert history.receipt_refs[-1].revision == link
 
 
 def test_two_service_comparison_requires_explicit_manual_choice(make_receipt) -> None:

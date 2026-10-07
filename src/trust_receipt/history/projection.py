@@ -92,12 +92,28 @@ def project_service_histories(
 ) -> tuple[ServiceHistoryProjection, ...]:
     """Ignore invalid receipts and produce independently recomputable projections."""
     revisions = revision_port or NoReceiptRevisions()
+    items = tuple(inputs)
+    verified = {item.receipt.receipt_hash: item for item in items if replay_receipt(item.receipt).valid}
     grouped: dict[tuple[str, str, str], list[ReceiptSourceRef]] = defaultdict(list)
     names: dict[str, str] = {}
     seen_receipts: dict[str, tuple[str, str, str]] = {}
-    for item in inputs:
+    for item in items:
         source = _verified_source(item, revisions)
         if source is None:
+            continue
+        link = source.revision
+        if link is not None and link.parent_receipt_hash is not None:
+            parent = verified.get(link.parent_receipt_hash)
+            if (
+                parent is None
+                or link.supersedes_receipt_hash != link.parent_receipt_hash
+                or parent.task_type != item.task_type
+                or parent.receipt.task_spec != item.receipt.task_spec
+                or parent.receipt.verification_result.outcome is VerificationOutcome.PASS
+                or parent.receipt.created_at > item.receipt.created_at
+            ):
+                continue
+        elif link is not None and link.resolution is not RevisionResolution.ORIGINAL:
             continue
         context = (source.service_id, source.task_type, source.task_id)
         previous_context = seen_receipts.get(source.receipt_hash)
@@ -148,15 +164,20 @@ def compare_services(
     *,
     task_type: str,
     service_ids: tuple[str, str],
+    service_names: dict[str, str] | None = None,
 ) -> ServiceComparison:
     by_key = {(history.service_id, history.task_type): history for history in histories}
-    try:
-        services = (
-            by_key[(service_ids[0], task_type)],
-            by_key[(service_ids[1], task_type)],
+    def history_for(service_id: str) -> ServiceHistoryProjection:
+        existing = by_key.get((service_id, task_type))
+        if existing is not None:
+            return existing
+        return ServiceHistoryProjection(
+            service_id=service_id, service_name=(service_names or {}).get(service_id, service_id),
+            task_type=task_type, verified_task_count=0, first_pass_count=0, fixed_pass_count=0,
+            fail_count=0, inconclusive_count=0, verifiable_receipt_count=0,
+            latest_delivery_at=None, latest_verified_at=None, receipt_refs=(), task_facts=(),
         )
-    except KeyError as error:
-        raise ValueError("both services require history for the selected task type") from error
+    services = (history_for(service_ids[0]), history_for(service_ids[1]))
     return ServiceComparison(task_type=task_type, services=services)
 
 

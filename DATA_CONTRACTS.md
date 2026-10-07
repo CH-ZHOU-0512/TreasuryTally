@@ -306,10 +306,26 @@ publication:
 - attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
 - 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
-## M8–M10 计划契约
+## M8–M9 已实现契约与 M10 计划契约
 
-以下对象描述已接受的后续语义，但尚未进入 `schemas/v1/`，也不代表已经实现。实现前必须确定 schema 版本、链上承载方式和
-迁移策略，再生成 Pydantic 模型与 JSON Schema。
+M8 收尾约定：上传入口支持严格 UTF-8 JSON `UploadedReport`（声称金额、声称数量、最多 200 条 service 来源转账），
+原始字节先按 SHA-256 保存于工作区私有目录，解析失败也不能替换为服务 A/B。无外部签名的上传文件由本地
+`uploaded-report-intake` 接收器留档签名，身份标签必须为 `local-upload-intake`，不表示原报表作者或 ERC-8004 owner 已签名。
+上传文件中的金额和数量声明保持原值，不由 AI、解析器或接收器重算。
+
+承诺、完整证据与提交关联通过工作区私有的只追加 M8 SQLite 表保存；恢复时重新验证签名、任务/交付链接、
+证据 manifest 哈希与确定性结果，缺少旧版本快照必须明确显示不可恢复，不能伪造历史承诺。
+服务接单和交付签名同时绑定完整任务承诺摘要与 `spec_hash`，防止复用同一 commitment ID 替换任务内容；时间签名
+绑定完整 UTC ISO 值，包含微秒精度。投影新增非颜色问题标签与双侧明细，金额/方向不一致不得写成链上不存在。
+
+`TaskCommitment`、`DeliveryCommitment` 与 `FundFlowProjection` 已以 `1.0` 进入 Pydantic 与 `schemas/v1/`。
+链上承载尚未实现：真实 Sepolia 只读探针确认当前 Validation Registry 是服务 owner/operator 发起、指定 validator
+响应的验证接口，不是 requester 通用任务锚；因此 M8 承诺保持 EIP-712 可验证且 anchor=`NOT_SUBMITTED`。
+
+M9 的 `ReworkPackage`、`ReceiptRevision`、`RepairComparison` 和 `PublicVerificationResult` 使用独立
+`1.0` 契约并进入 `schemas/v1/`。它们只引用既有 `Receipt 1.0`，不向旧回执内增加字段，因此不会改变
+已生成回执的 canonical JSON 或 `receipt_hash`。M9 通过稳定端口消费 M8 承诺核验结果；缺少承诺快照时必须标记为
+`UNVERIFIED`，不得伪造链上确认。M10 使用下述只读历史契约，不改写公共回执。
 
 ### TaskCommitment
 
@@ -332,7 +348,8 @@ anchor:
 ```
 
 任务承诺只绑定已确认 `TaskSpec.spec_hash`，不得把 restricted 组织标签、私有报告正文或凭据直接写链。`CONFIRMED` 必须读回
-与 `spec_hash`、requester 和 service 一致的链上记录；链上承载 adapter 尚待 M8 接口探针确定。
+与 `spec_hash`、requester 和 service 一致的链上记录。当前只读探针已确定现有 Validation Registry 不适合作为该锚，
+因此状态保持 `NOT_SUBMITTED`。
 
 ### DeliveryCommitment
 
@@ -347,11 +364,13 @@ accepted_at: datetime
 submitted_at: datetime
 signer_address: address
 signature_scheme: EIP712
+acceptance_signature: string
 signature: string
 ```
 
-接单与交付可以是同一对象的两个签名阶段，也可以由两个对象实现，但必须分别证明服务接受了哪个任务以及提交了哪个报告。
-签名者必须解析到已确认的 ERC-8004 服务 owner 或明确授权者；`report_hash` 继续绑定原始交付而不是解析后的展示模型。
+接单与交付使用同一对象中的两个 EIP-712 签名阶段，分别证明服务接受了哪个任务以及提交了哪个报告。签名者必须解析到
+预配置服务签名者；接入 ERC-8004 服务时还必须核对 owner 或明确授权者。`report_hash` 继续绑定原始交付而不是解析后的
+展示模型。EIP-712 domain 固定应用名、版本与 chain ID，防止跨链和跨用途重放。
 
 ### FundFlowProjection
 
@@ -366,7 +385,8 @@ edges: [fund_flow_edge]
 ```
 
 每条 edge 必须保留完整事件键、服务声明引用、参考证据引用和视觉状态。视觉状态只允许 `MATCHED`、`MISSING_FROM_REPORT`、
-`NOT_FOUND_ON_CHAIN`、`INTERNAL_TRANSFER`、`DUPLICATE`、`INCONCLUSIVE`；它由确定性 Finding 投影产生，不能反向决定
+`NOT_FOUND_ON_CHAIN`、`INTERNAL_TRANSFER`、`DUPLICATE`、`INCONCLUSIVE`、`MISMATCH`、`INVALID_SCOPE`；后两者分别表示
+同一事件的金额/方向/精度/区块声明不一致，以及确定范围违规，不能误标为链上不存在。它由确定性 Finding 投影产生，不能反向决定
 `VerificationResult`。颜色属于 UI，不进入领域权威。
 
 ### ReceiptRevisionLink
@@ -380,6 +400,100 @@ resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED
 
 替代关系只能追加，不能撤销或覆盖旧回执。`FIXED` 必须引用同一任务的早期 FAIL/INCONCLUSIVE 回执以及后续 PASS 回执；
 服务切换时仍保留两个不同的 service identity。
+
+M9 实现使用完整的 `ReceiptRevision`：
+
+```yaml
+revision_version: "1.0"
+task_id: string
+service_id: string
+attempt: 1 | 2
+receipt_hash: hash
+outcome: PASS | FAIL | INCONCLUSIVE
+resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED
+parent_receipt_hash: hash | null
+supersedes_receipt_hash: hash | null
+evidence_refs: [string]
+created_at: datetime
+revision_hash: hash
+```
+
+attempt 1 必须为 `ORIGINAL` 且不带父关系。attempt 2 必须同时把 attempt 1 记为 parent 和 superseded；后续
+`PASS` 记为 `FIXED`，否则记为 `UNRESOLVED`。每条记录必须与其引用回执的 task、service、outcome 一致。
+`revision_hash` 覆盖除自身外的完整 canonical 对象，用于检测关系记录被改写。
+
+### ReworkPackage
+
+```yaml
+package_version: "1.0"
+package_id: string
+task_id: string
+source_submission_id: string
+source_receipt_hash: hash
+created_at: datetime
+items:
+  - finding_id: string
+    finding_type: enum
+    violated_rule: string
+    expected: object | null
+    actual: object | null
+    evidence_refs: [string]
+    required_action: ADD_MISSING_TRANSFER | REMOVE_EXTRA_TRANSFER | REMOVE_DUPLICATE_TRANSFER |
+                     REMOVE_EXCLUDED_INTERNAL_TRANSFER | CORRECT_SCOPE | CORRECT_TOKEN |
+                     CORRECT_DIRECTION | CORRECT_AMOUNT | CORRECT_DECIMALS
+package_hash: hash
+```
+
+只有 `FAIL` 回执中 `confirmed + error` 的 Finding 能进入返工包。`hypothesis`、warning 和
+`INSUFFICIENT_EVIDENCE` 不能变成确定返工指令。`package_hash` 覆盖除自身外的完整 canonical 对象。
+
+### RepairComparison
+
+```yaml
+comparison_version: "1.0"
+task_id: string
+before: attempt_snapshot
+after: attempt_snapshot
+resolved_finding_ids: [string]
+remaining_finding_ids: [string]
+resolution: FIXED | UNRESOLVED
+```
+
+`before.attempt=1`、`after.attempt=2`，两者必须引用同一 task 的不同回执，并与追加版本关系一致。快照保留
+task/service/attempt/receipt hash/outcome/resolution、整数金额字符串和证据引用；对比不重新决定验收结论。
+
+### PublicVerificationResult
+
+```yaml
+verification_version: "1.0"
+reference_kind: URI | RECEIPT_HASH | TASK_HASH | FEEDBACK_TRANSACTION
+reference_value: string
+status: VERIFIED | INCONCLUSIVE | INVALID
+task_id: string | null
+service_id: string | null
+attempt: 1 | 2 | null
+receipt_hash: hash | null
+outcome: PASS | FAIL | INCONCLUSIVE | null
+resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED | null
+evidence_refs: [string]
+commitment_status: VERIFIED | UNVERIFIED | INVALID
+checks: [verification_check]
+reason: string | null
+```
+
+独立验证从解析端口取得公开字节和版本记录，重新校验内容哈希、`receipt_hash`、`spec_hash`、对象链接和三态重放。
+必要公开证据缺失返回 `INCONCLUSIVE`，内容或关系冲突返回 `INVALID`。旧 v1 单回执仍可独立重放；未提供 M8 承诺
+核验端口时仅将 `commitment_status` 记为 `UNVERIFIED`，不伪造已验证承诺。
+
+### PublicVerificationBundle
+
+`bundle_version="1.0"`、`receipts`（按 attempt 排序的 1–2 份已授权公开 Receipt）、`revisions`（对应 1–2 条
+外置版本记录）和 `bundle_hash` 构成可移交的公开验证包。`bundle_hash` 覆盖除自身外的 canonical 对象。
+包不包含原报告、ServiceSubmission、私有签名、SQLite 路径或模型文本；生成、下载和公开发布均须授权完整历史。
+公开快照的 receipt hash 与私有 attempt hash 可不同，包内版本关系必须重新绑定公开快照，不能复用私有版本记录。
+验证必须检查所有回执授权、哈希、确定性重放、同一不可变 spec hash、连续 attempt 和 parent/supersedes 链。
+第三方从包 URI 或包内 receipt/task hash 定位回执；task hash 默认定位最新 attempt。仅有反馈交易文本不算链上证据，
+缺少独立反馈读回不能验证交易关联。未提供公开承诺证据时 commitment_status 保持 UNVERIFIED。
 
 ### ServiceHistoryProjection
 
@@ -415,6 +529,12 @@ M10 当前读模型通过 `ReceiptHistoryInput` 接收现有 `Receipt`、显式 
 `verified_task_count` 是上述任务事实数量，`verifiable_receipt_count` 是其唯一有效回执哈希数量。M9 版本关系只通过
 `ReceiptRevisionPort` 读取；M10 不修改关系、不覆盖原回执，也不从缺失或无效关系推导负面事实。两服务对比必须限定同一
 `task_type`，最终服务选择由用户显式确认，投影不输出排名或综合分。
+
+工作区读取固定 `erc20-grant-report-v1` 类型，仅使用原始不可变 `attempt-N.json`；M6 发布快照与公开历史包的哈希
+不作为新的交付重复计数。读取时核对数据库任务、attempt、交付签名与确定性回执重放。M9 adapter 必须取得真实父回执，
+校验完整 TaskSpec、版本自哈希、attempt、服务身份和确定性修复关系；缺父链或冲突将该任务排除并提示
+`INCONCLUSIVE`，不凭父哈希字符串生成负面事实。旧任务没有版本文件时只在内存从原始回执重建关系，不写入历史。
+跨服务 A FAIL → B PASS/FIXED 的成功属于 B，A 仍保留 FAIL。没有历史的候选显示零条记录与“暂无”，不暗示成功或失败。
 
 ## M1 fixture 契约
 
@@ -476,12 +596,32 @@ schemas/v1/task_spec_candidate.schema.json
 schemas/v1/claim_extraction.schema.json
 schemas/v1/follow_up_advice.schema.json
 schemas/v1/result_explanation.schema.json
+schemas/v1/task_commitment.schema.json
+schemas/v1/delivery_commitment.schema.json
+schemas/v1/fund_flow_projection.schema.json
+schemas/v1/uploaded_report.schema.json
+schemas/v1/rework_package.schema.json
+schemas/v1/receipt_revision.schema.json
+schemas/v1/repair_comparison.schema.json
+schemas/v1/public_verification_result.schema.json
+schemas/v1/public_verification_bundle.schema.json
 ```
 
-每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口预留为
-`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，后四份为 M4 受限 AI 中间产物。重复生成不得产生差异。
+每个文件的 `$id` 使用 `urn:xinjv:schema:1.0:<kebab-name>`，标题使用对应 Pydantic 公共类名。生成入口为
+`scripts/export_schemas.py`；前八份为冻结的 M1 顶层契约，随后四份为 M4 受限 AI 中间产物，再后四份为 M8 契约，最后五份为 M9 追加契约。
+公开验证包 Schema 通过稳定 URN `$ref` 复用 Receipt 与 ReceiptRevision；独立 JSON Schema 验证器须将
+`schemas/v1/` 契约按 `$id` 注册到本地 schema registry，不依赖网络解析，也不重复内嵌整份回执定义。
+重复生成不得产生差异。
 
 ## 精确计算规则
+
+### M8 专用锚候选的读回绑定
+
+专用最小锚只记录 requester 的完整 task commitment digest、spec hash、service ID hash 和指定 service signer，
+以及 service signer 的 attempt、submission ID hash、report hash 和完整 delivery digest。摘要使用现有 canonical JSON SHA-256；
+文本 ID 使用 UTF-8 SHA-256。合约不验证报表内容，不认证 ERC-8004 owner，不处理资金，也不替代离线 EIP-712 校验。
+读回必须匹配配置 chain ID、合约 runtime bytecode SHA-256、成功交易、canonical block hash、确认深度、交易发送方和全部事件字段。
+未知交易保持 `SUBMITTED`；读回不一致拒绝，不能按未知状态宣称成功。当前候选未部署，页面不接入写链。
 
 - 所有加减在 `amount_base_units` 整数上完成。
 - `decimals` 只影响显示格式；不得先转浮点数再汇总。

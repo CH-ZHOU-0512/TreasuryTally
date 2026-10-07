@@ -259,6 +259,54 @@ Agent、adapter、RPC、哈希与 Registry 等技术证据默认折叠；资金�
 
 后果：历史投影是可重建的读模型，不反向修改 ERC-8004 或本地回执；`INCONCLUSIVE` 单独展示且不计为失败。
 
+## ADR-021：M8 先使用离线 EIP-712 承诺，不把 Validation Registry 冒充任务锚
+
+- 状态：Accepted
+- 日期：2026-10-07
+
+决定：任务、服务接单与报告交付使用绑定应用名、版本和 chain ID 的 EIP-712 签名；M8 页面与模型中的链上锚保持
+`NOT_SUBMITTED`。当前不使用 ERC-8004 Validation Registry 写入任务承诺，也不部署临时专用合约。
+
+理由：官方接口和 Sepolia 真实只读探针表明，Validation Registry 的 `validationRequest` 由 agent owner/operator 发起并指定
+validator，面向交付验证请求，不是任意 requester 的通用任务承诺存证。把任务哈希塞入 request hash 会混淆权限和协议语义。
+
+后果：M8 可以证明 task/spec、service/attempt 与 report hash 的签名绑定，但不能宣称承诺已上链。后续若实现专用最小锚定
+adapter，必须单独完成合约审查、部署地址/bytecode 记录、写入授权、提交/确认状态机和真实读回探针，再追加 ADR。
+
+## ADR-022：M8 严格上传与私有快照恢复，专用锚仅提供待部署候选
+
+- 状态：Accepted（上传与恢复）；Proposed（专用锚部署）
+- 日期：2026-10-07
+
+决定：上传 UTF-8 JSON 按 `UploadedReport` 接收，不自动修正金额和事件来源；原字节按内容哈希私有留档。
+本地 intake 签名与真实报表作者身份分开显示。接单绑定完整 task commitment digest、spec hash 和微秒时间戳，
+并在报表生成之前签名。承诺和证据只追加保存；恢复必须重新验证签名、manifest 与确定性结果。
+
+决定：为后续审查提供无资金操作的 `CommitmentAnchor.sol` 和只读 `DedicatedAnchorReader`；页面仍保持
+`NOT_SUBMITTED`。候选合约不认证 ERC-8004 owner、不验证报表、不替代 EIP-712，也不提供主网付款能力。
+正式部署、生产接入和真实写入须另行明确授权，记录地址、runtime bytecode hash 并通过外部读回验收。
+
+理由：上传按钮必须核验用户实际提交的内容；重启恢复不能用新证据或新签名冒充原验收。Validation Registry
+依然不具备通用 requester 任务锚权限，不能借用其接口改变协议语义。
+
+后果：既有 M5/M6 回执格式不变；无 M8 快照的历史回执不显示虚构图。服务作者认证和真实任务锚仍有明确外部边界。
+
+## ADR-023：M9 公开历史包与独立只读验证
+
+- 状态：Accepted
+- 日期：2026-10-07
+
+决定：分享修复结果时提供完整脱敏 `PublicVerificationBundle`，内含所有已授权 attempt 的公开回执及重新绑定公开哈希的
+版本链。完整历史另行取得导出与上传授权。单 Receipt 1.0 和原始私有版本文件继续保留。
+独立页面通过 `?verify=1` 进入，仅读公开文件或配置允许的公共存储，不初始化私有工作区或 AI。
+
+理由：M6 公开快照与本地 publication 状态具有不同哈希；只公开第二次 PASS 不能证明首次失败与修复关系。
+只给父版本自哈希也不能证明父回执存在且任务范围一致。反馈交易文字与调用者提供的 hash 不能代替真实链上读回。
+
+后果：公开验证必须复验父回执及同一 spec hash。反馈入口使用只读 RPC、canonical block、确认数和 Registry 事件绑定，
+缺少公开历史返回 INCONCLUSIVE。公开历史不暴露私有交付、签名或模型文本；承诺证据未公开时显示 UNVERIFIED。
+公开验证只重放记录中的确定性结论，不声称重新抓取了完整链上参考数据。
+
 ## 新增决定模板
 
 ```markdown
