@@ -11,8 +11,15 @@ from pathlib import Path
 from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPOSITORY_ROOT))
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
+from scripts.m11.input_policy import (  # noqa: E402
+    read_bounded_report,
+    safe_error_reason,
+    validate_read_options,
+    validate_task_scope,
+)
 from trust_receipt.chain.rpc import EvmRpcProbe  # noqa: E402
 from trust_receipt.hashing import verify_task_spec_hash  # noqa: E402
 from trust_receipt.models import EvidenceSource, TaskSpec, TransferRecord  # noqa: E402
@@ -92,12 +99,13 @@ def load_case_bundle(case_directory: Path = DEFAULT_CASE_DIRECTORY) -> CaseBundl
         raise PreflightError("case.json must contain one JSON object")
 
     task = load_task_spec(_resolved_child(directory, str(manifest.get("task_spec"))))
+    validate_task_scope(task)
 
     reports = manifest.get("reports")
     if not isinstance(reports, dict) or set(reports) != {"error", "corrected"}:
         raise PreflightError("reports must name exactly error and corrected fixtures")
-    error_report = parse_report(_resolved_child(directory, str(reports["error"])).read_bytes())
-    corrected_report = parse_report(_resolved_child(directory, str(reports["corrected"])).read_bytes())
+    error_report = parse_report(read_bounded_report(_resolved_child(directory, str(reports["error"]))))
+    corrected_report = parse_report(read_bounded_report(_resolved_child(directory, str(reports["corrected"]))))
 
     inventory_path = _resolved_child(directory, str(manifest.get("reference_inventory")))
     inventory = _load_json(inventory_path)
@@ -152,6 +160,7 @@ def run_preflight(
     bundle = load_case_bundle(case_directory)
     provenance = bundle.manifest["provenance"]
     confirmations = int(provenance["minimum_confirmations"])
+    validate_read_options(timeout_seconds=timeout_seconds, confirmations=confirmations)
     rpc = probe or EvmRpcProbe(
         rpc_url,
         expected_chain_id=bundle.task.chain_id,
@@ -245,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
             "ok": False,
             "status": "INCONCLUSIVE",
             "error_type": type(error).__name__,
-            "reason": str(error),
+            "reason": safe_error_reason(error),
         }, indent=2))
         return 1
     print(json.dumps(result, indent=2))

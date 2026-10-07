@@ -14,6 +14,12 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT))
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
+from scripts.m11.input_policy import (  # noqa: E402
+    read_bounded_report,
+    safe_error_reason,
+    validate_read_options,
+    validate_task_scope,
+)
 from scripts.m11.preflight import load_task_spec  # noqa: E402
 from trust_receipt.chain import RpcReferenceEvidenceProvider  # noqa: E402
 from trust_receipt.hashing import submission_hash  # noqa: E402
@@ -32,8 +38,10 @@ def evaluate_report(
     evidence_provider: Any | None = None,
 ) -> dict[str, Any]:
     """Run the existing deterministic engine without assuming an expected outcome."""
+    validate_read_options(timeout_seconds=timeout_seconds, confirmations=confirmations)
     task = load_task_spec(task_spec_path)
-    payload = report_path.resolve().read_bytes()
+    validate_task_scope(task)
+    payload = read_bounded_report(report_path.resolve())
     report = parse_report(payload)
     created_at = datetime.now(UTC)
     unsigned = ServiceSubmission(
@@ -89,7 +97,15 @@ def evaluate_report(
             for finding in result.findings
         ],
         "evidence_diagnostics": [
-            diagnostic.model_dump(mode="json") for diagnostic in getattr(provider, "diagnostics", ())
+            {
+                **diagnostic.model_dump(mode="json"),
+                "detail": (
+                    "Independent reference read failed; check RPC availability and task scope."
+                    if diagnostic.status in {"INCOMPLETE", "DEGRADED"}
+                    else diagnostic.detail
+                ),
+            }
+            for diagnostic in getattr(provider, "diagnostics", ())
         ],
     }
 
@@ -130,11 +146,12 @@ def main(argv: list[str] | None = None) -> int:
             "ok": False,
             "status": "INCONCLUSIVE",
             "error_type": type(error).__name__,
-            "reason": str(error),
+            "reason": safe_error_reason(error),
         }, indent=2))
         return 1
-    print(json.dumps({"ok": True, **result}, indent=2))
-    return 0
+    conclusive = result["outcome"] != "INCONCLUSIVE"
+    print(json.dumps({"ok": conclusive, **result}, indent=2))
+    return 0 if conclusive else 1
 
 
 if __name__ == "__main__":
