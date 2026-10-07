@@ -20,6 +20,7 @@ class M0Settings(BaseModel):
     rpc_url: SecretStr | None = None
     chain_id: int = SEPOLIA_CHAIN_ID
     rpc_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    rpc_confirmations: int = Field(default=2, ge=0, le=128)
     test_token_address: str | None = None
     test_transfer_tx_hash: str | None = None
     test_from_block: int | None = Field(default=None, ge=0)
@@ -41,6 +42,7 @@ class M0Settings(BaseModel):
         "ETH_RPC_URL": "rpc_url",
         "CHAIN_ID": "chain_id",
         "RPC_TIMEOUT_SECONDS": "rpc_timeout_seconds",
+        "RPC_CONFIRMATIONS": "rpc_confirmations",
         "TEST_TOKEN_ADDRESS": "test_token_address",
         "TEST_TRANSFER_TX_HASH": "test_transfer_tx_hash",
         "TEST_FROM_BLOCK": "test_from_block",

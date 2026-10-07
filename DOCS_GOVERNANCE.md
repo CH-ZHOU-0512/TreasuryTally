@@ -6,7 +6,7 @@ authority-for:
   - document-authority-map
   - document-lifecycle
   - documentation-update-policy
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 文档治理规则
@@ -92,4 +92,6 @@ last-reviewed: 2026-10-06
 
 ## 自动化策略
 
-当前已使用 Git，但尚无 CI，且项目治理文档数量较少，因此暂不安装文档索引或 watch 自动化。出现多目录文档或建立 CI 后，再引入确定性索引、链接检查和治理检查；届时生成目录必须带禁止手改声明，并在 CI 检查新鲜度。
+GitHub Actions 已运行非 external 测试、Ruff、`pip check`、Schema 漂移检查、1000 行限制和无凭据 MVP 演示。
+契约测试同时检查根目录治理文档 metadata、`doc-id` 唯一性和本地 Markdown 链接。项目仍为单一业务域和扁平文档结构，
+暂不生成文档索引；若迁移到多目录，生成物必须带禁止手改声明并在 CI 检查新鲜度。

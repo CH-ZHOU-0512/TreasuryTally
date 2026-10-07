@@ -14,7 +14,11 @@ from trust_receipt.integrations.retry import read_with_retry
 from trust_receipt.reputation.erc8004 import _write_error_code
 
 
-def test_empty_configuration_reports_explicit_blockers(tmp_path: Path) -> None:
+def test_empty_configuration_reports_explicit_blockers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in M0Settings.ENV_TO_FIELD:
+        monkeypatch.delenv(name, raising=False)
     settings = M0Settings.load(tmp_path / "missing.env")
     assert "ETH_RPC_URL" in settings.missing_for_rpc()
     assert "AGENT0_EXPECTED_OWNER" in settings.missing_for_agent0()
