@@ -10,9 +10,11 @@ requires-python = ">=3.12"
 dependencies = [
   "agent0-sdk==1.7.1",
   "httpx",
+  "langchain-openai>=1.6,<2",
   "mcp==1.26.0",
   "pydantic",
   "python-dotenv",
+  "streamlit",
   "web3==7.13.0",
 ]
 
@@ -33,3 +35,6 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/*.py" = ["E402", "RUF001"]

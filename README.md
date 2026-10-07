@@ -5,7 +5,7 @@ status: active
 authority-for:
   - documentation-routing
   - repository-entrypoint
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 信据 Agent
@@ -41,13 +41,46 @@ Copy-Item .env.example .env
 .\.venv\Scripts\Activate.ps1
 ```
 
-填写 `.env` 中的必要配置后，后续应用入口预定为：
+无需外部密钥的一条命令 MVP 演示会执行“服务 A 漏项 `FAIL` → 切换服务 B `PASS`”，保存两个 attempt 与两份回执，
+再以新会话路径恢复并独立重放两份回执：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_mvp_demo.py
+```
+
+命令成功时输出 `"valid": true`、确定性算式 `120000 - 30000 + 20000 = 110000`、两个 attempt 和两次有效重放。
+它明确使用离线 fixture，不上传公共文件或写链。需要保留演示数据库与私有回执时，传入一个空目录：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_mvp_demo.py --output-directory .tmp\mvp-demo
+```
+
+M5 页面入口为：
 
 ```powershell
 streamlit run app\streamlit_app.py
 ```
 
-当前业务代码尚未实现，实际进展请查看 [STATUS.md](STATUS.md)。不要把上述预定命令误认为当前已经存在的功能。
+默认选择“离线 fixture 演示”，不需要模型密钥，并在页面中明确标注为非真实模型调用。也可以选择 OpenAI 或
+DeepSeek 真实模型，并把独立证据切换为真实 Sepolia RPC；缺少对应 key、固定模型名或 RPC URL 时页面会显示配置阻塞，
+不会用 mock 冒充。页面支持任务候选修改与确认、服务 A/B、一次补交或换源、独立 attempt 历史、三态结果、证据来源诊断、
+Finding、受限解释与本地回执预览。工作区 ID 可在进程重启后恢复 SQLite、本地回执和发布状态。M6 页面支持经显式授权发布
+脱敏回执到 Pinata/IPFS 或内容寻址 HTTPS 公共目录，并在另一次显式授权后提交 ERC-8004；缺少配置时保持 `NOT_SUBMITTED`，
+不会用本地 mock 冒充公开发布。
+实际进展请查看 [STATUS.md](STATUS.md)。
+
+## 完整验收
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m "not external"
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe scripts\export_schemas.py --check
+.\.venv\Scripts\python.exe scripts\check_file_sizes.py
+```
+
+真实模型、RPC、Blockscout、公共回执和 ERC-8004 属于外部验收面，配置与命令见 [OPERATIONS.md](OPERATIONS.md)，
+最新实测证据见 [STATUS.md](STATUS.md)。外部探针缺少凭据时明确跳过，不能用离线演示替代真实通过。
 
 ## 仓库边界
 

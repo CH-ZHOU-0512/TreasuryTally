@@ -8,10 +8,12 @@ __pycache__/
 *.egg-info/
 *.db
 .pytest_cache/
+.playwright-cli/
 .ruff_cache/
 .mypy_cache/
 .coverage
 htmlcov/
 .streamlit/secrets.toml
+*.pem
 data/
 receipts/private/

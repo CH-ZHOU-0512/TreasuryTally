@@ -6,7 +6,7 @@ authority-for:
   - secret-handling
   - privacy-boundary
   - security-invariants
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 安全、隐私与密钥规则
@@ -18,13 +18,19 @@ last-reviewed: 2026-10-06
 ## 密钥规则
 
 - 只使用 `.env` 或运行环境注入密钥；`.env` 已被 `.gitignore` 排除。
+- `OPENAI_API_KEY` 与 `DEEPSEEK_API_KEY` 必须分别配合固定的 `OPENAI_MODEL`、`DEEPSEEK_MODEL`；不得把供应商密钥
+  放入 prompt、fixture、回执或测试快照。
 - `.env.example` 只能包含变量名和无敏感示例。
 - `SERVICE_A_PRIVATE_KEY`、`SERVICE_B_PRIVATE_KEY`、`REVIEWER_PRIVATE_KEY` 必须是测试网专用钱包。
+- 团队控制报表服务使用测试钱包对 canonical `report_hash` 签名；repository 接收前必须恢复并比对预配置签名者地址。
+  自动化测试只在运行时生成临时无资产账户，不得把测试或真实私钥提交到仓库。
 - ERC-8004 写探针还必须显式设置 `M0_ENABLE_WRITES=true`；默认值为 `false`，未知提交状态禁止自动重发。
+- M6 产品写入另由 `M6_ENABLE_WRITES=true` 显式开启；页面还必须分别取得公开文件与 ERC-8004 写入授权。匿名访问不赋予写权限。
 - `AGENT0_SERVICE_ID` 必须配合公开的 `AGENT0_EXPECTED_OWNER` 校验，避免向非团队控制身份写入测试反馈。
 - 禁止使用持有主网资产的钱包、个人常用钱包或复用助记词。
 - 不在日志、异常、截图、回执、测试 fixture 或模型 prompt 中输出密钥。
-- 如果任何密钥出现在提交、日志或对话中，按已泄露处理并立即轮换。
+- 如果密钥出现在提交或日志中，按已泄露处理并立即轮换。对话中出现的测试供应商密钥默认也应轮换；但项目所有者
+  明确授权继续使用时，只能写入被 Git 忽略的本机 `.env`，不得复制到受版本控制文件、日志、fixture、回执或模型 prompt。
 
 ## 数据分类
 
@@ -45,7 +51,8 @@ last-reviewed: 2026-10-06
 
 ### Prompt injection
 
-控制：报告文本不能扩展工具权限；模型只返回受限 schema；无任意 Shell、文件、SQL 或 Python 执行工具。
+控制：报告文本不能扩展工具权限；模型只返回受限 schema；模型端口不持有任意 Shell、文件、SQL、repository、发布、
+Python 或写链工具。未知操作、额外字段、任务参数漂移以及结果金额/状态漂移在确定性边界拒绝。
 
 ### 伪造或重复事件
 
@@ -69,6 +76,14 @@ last-reviewed: 2026-10-06
 - 地址默认可显示缩略形式；需要完整地址时明确标记其为链上公共数据。
 - 禁止记录请求头、环境变量全集、私钥、JWT 和完整模型认证信息。
 - 外部响应正文仅在必要时保存，并采用大小限制和访问边界。
+- `APP_REQUIRE_LIVE` 只控制生产能力开关，不包含凭据；DeepSeek、RPC 与 Blockscout 凭据仍只通过受限 `.env` 注入，禁止进入
+  镜像、仓库、页面或日志。
+- `PINATA_JWT` 与 `REVIEWER_PRIVATE_KEY` 只能由 `.env` 注入 publisher/reputation adapter；公共回执扫描禁止
+  `private_key`、`signature`、`jwt`、`authorization`、`api_key`、`secret` 和原始 `report_text` 字段。
+- HTTPS fallback 公共目录只允许应用容器写、Nginx 容器只读，文件名必须内容寻址且只创建不覆盖；公网路径仅允许 GET/HEAD、
+  禁止目录列表，并不得与 `receipts/private/` 共用目录或挂载权限。
+- Streamlit 需要内联启动脚本和运行时样式；生产反向代理仅在公开的 `/trust-receipt/` 路径放开
+  `script-src/style-src 'unsafe-inline'`，其余站点继续使用更严格的全局 CSP，并保留 HSTS、同源 frame、MIME 嗅探防护和权限策略。
 
 ## 依赖与供应链
 

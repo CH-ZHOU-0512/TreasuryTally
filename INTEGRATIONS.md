@@ -6,12 +6,12 @@ authority-for:
   - external-integration-contracts
   - external-probe-acceptance
   - external-fallback-policy
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 外部集成与 M0 连通性规格
 
-本文是 RPC、Blockscout、Agent0 和 ERC-8004 外部集成的权威入口。它记录需要核实的端点、公开合约与资产、最小探针、成功条件和降级策略。总体进度仍由 [STATUS.md](STATUS.md) 负责，密钥规则由 [SECURITY.md](SECURITY.md) 负责。
+本文是 RPC、Blockscout、Agent0、ERC-8004 和结构化模型供应商外部集成的权威入口。它记录需要核实的端点、公开合约与资产、最小探针、成功条件和降级策略。总体进度仍由 [STATUS.md](STATUS.md) 负责，密钥规则由 [SECURITY.md](SECURITY.md) 负责。
 
 ## 共同约束
 
@@ -31,7 +31,7 @@ last-reviewed: 2026-10-06
 | 网络 | Sepolia | 已验证 | RPC `eth_chainId` |
 | Chain ID | `11155111` | 已验证 | RPC 返回 `11155111` |
 | RPC 端点 | 公共 Sepolia RPC，来自 `ETH_RPC_URL` | 已验证 | 无密钥公共端点；请求超时 30 秒 |
-| Blockscout MCP | `http://127.0.0.1:8000` | 本地 CLI 已验证，HTTP 工具调用待实测 | M0 探针 |
+| Blockscout MCP | `http://127.0.0.1:8000` | 本地与生产 HTTP 工具调用已验证 | M0/M5 探针 |
 | 测试 ERC-20 | Sepolia WETH `0x7b79…7f9` | 已验证 | block `11855664` 的真实 Transfer |
 | Identity Registry | `0x8004A818…4BD9e` | 已验证 | 上游部署记录、链上 proxy bytecode、owner/tokenURI 读回 |
 | Reputation Registry | `0x8004B663…88713` | 已验证 | 上游部署记录、链上 proxy bytecode、Identity Registry 关联 |
@@ -60,6 +60,9 @@ last-reviewed: 2026-10-06
 
 失败降级：RPC 数据不完整、网络不符、重组风险未知或查询失败时，验收证据标记不完整并进入 `INCONCLUSIVE`；Blockscout 不能单独掩盖参考节点失败。
 
+M5 产品 adapter 使用 `RPC_CONFIRMATIONS`（默认 2）拒绝尚未确认的结束区块，并把范围拆成连续分页；任何页失败都会保留
+来源诊断并返回不完整证据。页面显示 RPC 的权威角色、页数、原始记录数和耗时。
+
 ## Blockscout MCP
 
 用途：补充地址、交易、代币和分页信息，不作为被评价服务，也不单独承担参考真值。
@@ -77,6 +80,14 @@ last-reviewed: 2026-10-06
 成功条件：返回可映射到领域模型的结构化结果，并能明确判断分页是否完整。
 
 失败降级：切换为 RPC-only adapter 并记录缺少补充数据；若任务依赖 Blockscout 独有信息，则进入 `INCONCLUSIVE`。
+
+广州生产地域若出现 DNS 污染并在正确 IP 上遭遇 SNI/TLS 重置，可将 `deploy/blockscout-relay/` 部署到可直连 Blockscout 的
+Vercel 区域，再把 MCP 的 `BLOCKSCOUT_PRO_API_BASE_URL` 指向该 HTTPS 地址。中继目标固定为官方 Pro API，只允许 GET/POST，
+配置端点可匿名读取，其余路径必须携带格式合法的 Pro Bearer key；中继不保存密钥。中继未部署或未经真实探针验证前，生产必须
+继续显示 RPC-only，不能据此声称 Blockscout 已完成抽样。
+
+当前生产中继为 `https://blockscout-relay.creatoros.top`。2026-10-07 从广州服务器实测 Pro 配置与固定交易端点均返回 `200`，
+MCP `get_transaction_info` 返回结构化结果且分页完整，产品证据诊断为 `SAMPLED`。中继失败时仍按上述规则降级为 RPC-only。
 
 ## Agent0
 
@@ -111,6 +122,21 @@ last-reviewed: 2026-10-06
 
 失败降级：保留本地回执与 publication adapter 状态，不显示为已上链；不得向真实第三方服务写入负面测试反馈。
 
+M6 产品 adapter 直接调用 Reputation Registry 的 `giveFeedback`，将公共回执 URI 同时写入 endpoint/feedbackURI，并将公共文件
+精确字节的 SHA-256 写入 `feedbackHash`。结果标签为 `PASS`、`FAIL` 或 `INCONCLUSIVE`；后者使用中性值，不映射为负面信誉。
+写前必须核对 Sepolia、团队控制 service owner、Reviewer、余额和 pending nonce。广播超时仍保存已签名交易哈希与 nonce 为
+`SUBMITTED`，禁止自动重发；确认后从 `NewFeedback` 事件读回服务、Reviewer、URI、哈希和标签。
+
+## Pinata / IPFS 公共文件
+
+Pinata adapter 使用 `POST https://uploads.pinata.cloud/v3/files`，multipart 明确设置 `network=public`，JWT 只放在 Bearer header。
+返回 CID 后生成 `ipfs://` URI，并经配置的公开 gateway 重新下载；只有下载字节 SHA-256 与上传前一致才记录发布成功。超时、认证
+失败、CID 缺失或哈希不一致都保留为未提交，不触发 ERC-8004 写入。
+
+缺少 Pinata JWT 时，生产可使用同一 `ContentPublisher` 端口下的 HTTPS 内容寻址目录 adapter。文件名固定包含实际字节
+SHA-256，采用只创建不覆盖语义；Nginx 只读公开该目录，publisher 随后从公网 HTTPS URI 下载并执行同一哈希验证。该 fallback
+是真实公共文件发布，但不宣称 IPFS 固定；配置 Pinata 后优先切回 `ipfs://`。
+
 ## M0 执行矩阵
 
 | 探针 | 真实调用 | 成功证据 | 必测失败 | 当前状态 |
@@ -119,6 +145,25 @@ last-reviewed: 2026-10-06
 | Blockscout MCP | initialize、tools、交易或地址查询 | 工具名、脱敏结果摘要、分页状态 | 缺少密钥、限流、服务不可达 | 已实测通过；发现 16 项工具并读回同一交易 |
 | Agent0 | 读取或创建受控身份 | 服务 ID、所有者、公网交易或读结果 | 网络或 Registry 错配 | 已实测通过；受控 ID `11155111:10691` |
 | ERC-8004 | 写入、receipt、读回 | 交易哈希、区块、读回摘要 | 余额不足、revert、未知提交状态 | 已实测通过；中性反馈已确认并读回 |
+
+## M4 结构化模型供应商
+
+用途：把自然语言任务和服务报告组织成严格候选，并生成白名单计划、受限补查建议与结果解释。模型不拥有金额、
+Finding、三态结论、数据库、发布或写链权限。
+
+- OpenAI：要求 `OPENAI_API_KEY` 与非空 `OPENAI_MODEL`；通过 LangChain `ChatOpenAI` 请求严格 JSON Schema 输出。
+- DeepSeek：要求 `DEEPSEEK_API_KEY` 与非空 `DEEPSEEK_MODEL`；使用官方 `https://api.deepseek.com` 的
+  OpenAI-compatible Responses API 和 JSON Schema 输出。
+- 两者统一 30 秒默认超时、只读请求最多重试两次；原始响应必须立即进入 Pydantic 与确定性白名单校验。
+- 外部测试分别位于 `tests/external/test_openai_ai_probe.py` 和 `test_deepseek_ai_probe.py`，统一使用 `external` marker。
+- 缺少 key 或固定模型名时报告阻塞；离线 mock 只能验证 adapter 映射和安全边界，不能宣称供应商已实测。
+
+2026-10-07 已使用固定 `deepseek-flash` 完成真实结构化调用，返回的 `TaskSpecCandidate` 通过严格 Pydantic 校验；凭据仅在
+被 Git 忽略的本机 `.env` 中配置，不在 Git、日志或文档中保留。OpenAI 真实调用仍因缺少 `OPENAI_API_KEY` 和
+`OPENAI_MODEL` 阻塞。
+
+失败降级：结构化输出为空、截断、schema 不符、未知操作或与确定性结果冲突时拒绝该候选，保留用户确认或纯确定性流程；
+不得自动采用模型猜测，也不得把模型失败映射成服务负面信誉。
 
 ## 2026-10-06 脱敏执行记录
 
@@ -139,6 +184,9 @@ last-reviewed: 2026-10-06
   主环境 MCP 客户端固定为 1.26.0，与服务端依赖一致；访问本机端点时禁用系统代理继承。
 - 当前记录只包含公开地址、区块和缩略交易哈希；不包含端点密钥、认证头、钱包私钥或环境变量全集。
 - M0 四项真实外部探针均已通过；密钥只保存在被 Git 忽略的本地 `.env` 中。
+- 2026-10-07 的 M5 产品探针使用真实 DeepSeek、Sepolia RPC 和 Blockscout，完成任务候选、服务 A 漏项 `FAIL`、切换
+  服务 B `PASS`、两个独立本地回执及合法受限 AI 产物；浏览器复跑显示 RPC 读取 1 页、6 条原始事件并筛出目标事件，
+  两个 attempt 的 Blockscout 补充来源均为 `SAMPLED`。Blockscout 仍不作为单独真值。
 
 执行结果更新规则：
 

@@ -6,7 +6,7 @@ authority-for:
   - test-matrix
   - quality-gates
   - acceptance-evidence
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 测试与验收计划
@@ -47,6 +47,7 @@ last-reviewed: 2026-10-06
 - 只读幂等请求最多自动重试两次，并采用退避；交易广播响应不确定时不得自动重发。
 - 外部测试输出只保留脱敏摘要、公开地址、交易哈希、区块和错误分类，不打印密钥、认证头或环境变量全集。
 - Mock 测试只能验证 adapter 行为，不能作为“外部能力已实测”的证据。
+- OpenAI 与 DeepSeek 模型探针分别要求 API key 和固定模型名；缺少任一项时必须以 `external` skip 原因明确报告阻塞。
 
 ### 集成测试
 
@@ -61,6 +62,13 @@ last-reviewed: 2026-10-06
 - 正确报告直接通过。
 - 120000 报告包含 30000 内部互转并漏掉 20000，正确总额为 110000。
 - 全新进程只读取公共回执，校验哈希并复现至少一项确定性检查。
+- Streamlit 页面在任务确认前不提供执行入口，首次 FAIL 后可完成唯一一次补交或换源，并同时保留两个 attempt。
+- 真实 DeepSeek、Sepolia RPC 与 Blockscout 组合探针必须完成候选生成、A `FAIL`、B `PASS`、两个 `SAMPLED` 补充诊断、
+  无 AI 产物校验错误和两个独立回执。
+- 同一工作区 ID 在 Streamlit 进程重启后必须恢复已确认任务及两个 attempt，不重新生成历史 AI 文本。
+- 桌面宽屏可并排显示编辑与指标；760px 及以下强制单列，长地址、Finding、回执 JSON 和主要按钮不产生不可操作的水平溢出。
+- M7 无凭据演示必须完成服务 A `FAIL`、切换服务 B `PASS`、两个 attempt 留档、两份回执独立重放及新进程路径恢复；
+  输出必须显式标注 `publication_mode=not-executed`，不得冒充 M6 外部验收。
 
 ## 人工标注数据集
 
@@ -86,6 +94,10 @@ last-reviewed: 2026-10-06
 - 未知工具、过滤器或检查类型必须被拒绝。
 - Prompt injection 文本不得取得文件、Shell、数据库或写链权限。
 - 同一确定性输入允许解释措辞不同，但验证结果和金额必须一致。
+- 任务候选缺失字段列表必须与空字段精确一致；存在缺失或歧义时不得确认任务。
+- 计划中的查询、过滤、聚合和检查必须完整命中白名单，参数必须来自已确认任务。
+- 补查建议只能使用封闭动作枚举；解释必须覆盖相同 Finding ID 和证据引用。
+- OpenAI-compatible/DeepSeek adapter 的离线 mock 只证明协议映射，不计作真实模型调用。
 
 ## 质量门槛
 
@@ -95,6 +107,9 @@ last-reviewed: 2026-10-06
 - Ruff 检查通过。
 - `pip check` 无破损依赖。
 - 涉及外部系统的能力必须报告“已实测”或“未实测”，不能用 mock 结果代替实测声明。
+- GitHub Actions 的普通质量门运行 `not external` 测试、Ruff、`pip check`、Schema 重生成检查、1000 物理行限制和
+  无凭据 MVP 演示；治理文档 metadata 与链接检查包含在契约测试中。外部探针没有显式密钥时保持跳过，不得以 mock 或
+  空配置标记为外部成功。
 
 ## 标准命令
 
