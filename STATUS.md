@@ -15,7 +15,7 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
-### M14 报告运行集成本地依赖锁（2026-10-08，未发布）
+### M14 报告运行集成本地验收（2026-10-08，运行通过，未发布）
 
 M14 独立 `codex/report-runtime-integration` 从 M12 `5f59055` 整合 M13 export `0a0883a`（映射 `d408f1c`）、
 运行接线 `2a9c90e` 与 M12 最终下载 UI `ecaa992`（映射 `2c198a5`），不修改主 checkout、共享环境或线上配置。
@@ -26,7 +26,36 @@ M14 原样机械复制主环境 `pip freeze --exclude-editable` 生成产物为 
 独立 Compare-Object 确认仅新增上述 3 条锁项，其余 Git 差异只是 freeze 排序；未手改锁条目。
 requirements.txt 同步三精确导出依赖，与 pyproject 主声明一致，避免开发安装与正式包声明分叉。
 运行接线包括 pinned Node/sharp、字体、许可证、子进程 seccomp、容器 native 总内存/pids 与缓存并发界限。
-最终 UI/锁组合验证仍在进行；纵向内部互转箭头的 M13 视觉修复待消费，不将本地格式成功计为视觉完整验收。
+最终运行代码 `07cdf4a9b17e94ede57d6a12f8bfeea9df019808`：组合非 external 独立实跑 571 passed /
+16 deselected / 1 条既有 warning；Ruff、pip check、21 Schema、1000 行门、diff check 通过。
+离线 MVP FAIL→PASS、双回执重放与冷恢复 valid=true。没有模型/RPC/公开发布或写链动作。
+
+- 同源完整 Linux 镜像 `trust-receipt:report-runtime-07cdf4a`，实际 revision 为上述完整 SHA，
+  image ID `sha256:b14f4a38cc60ac9c81733e7251a499821f0ebdffef471565ce5be642f945ac72`。
+  新锁 constraints 构建与镜像 pip check 通过；实读 Python 3.12.14、Node 22.23.3、python-docx 1.2.0、
+  reportlab 4.4.9、Pillow 12.3.0、lxml 6.1.3；worker 实查 sharp 0.34.5。
+- 两镜像运行均 network=none、read-only、2 GiB memory/swap=0、256 pids、2 CPU、drop ALL capabilities、
+  no-new-privileges；只读挂 7 个合成 view，无源/app/launcher 覆盖挂载，无真实 env/key/data/私有回执。
+  实际 cgroup 限制断言通过，父 socket 可创建；隔离子进程网络 socket 和 AF_INET socketpair 返回 EPERM，
+  匿名 AF_UNIX stdio socketpair 可用；任意 Node -e 参数拒绝、缺 renderer 明确不可用。
+- 7 例（PASS/FAIL/INCONCLUSIVE/修复/uint256 大额/精度 255/200 条事件）的真实 ECharts SSR→sharp PNG→
+  DOCX/PDF 完成，PNG/view 哈希绑定、字体内嵌、完整报告资产 source/wheel 与安装字体一致；
+  保留 Node/LICENSE、sharp/LICENSE、native README/package.json LGPL 声明。
+- 使用实际 app 单实例 renderer 的 AppTest 主动生成 Word/PDF/HTML/PNG/SVG，六个下载（含独立原 JSON）注册，
+  格式 magic、完整 view 缓存、原 JSON 和业务结论不变；不是预生成 bytes 或 mock exporter。
+  实际 `/app` 初始入口独立通过：115 源文件匹配 wheel、package_origin=/app/src/trust_receipt、exception=0、品牌区存在。
+  Streamlit 输出已有 bare-context/components-v1 弃用提示，不隐瞒或将其写为业务错误修复。
+- 同提交归档 SHA-256 `b9c0c0582455eade9d516005bbefbe83448978b01dfa2ab6b361d0ffb0997e4f`；
+  其 wheel SHA-256 `ea6b1c8c5d8e512a5bb762673cda4fee6c712264ec95f1f6465a20cb90a76804`。
+  `Dockerfile.release --network none` 以已验证新 runtime 为基底完成离线 wheel 安装、pip check、source/wheel 与入口门；
+  `trust-receipt:report-release-07cdf4a` image ID
+  `sha256:fb7e412152f205625a7e17187162099c8238bd565c88d082a403d375b6e15797`，revision 同上，
+  另独立原样重跑 7 例真实导出与 AppTest 五格式门全部通过。release 显式要求 RUNTIME_IMAGE，不默认使用旧基底。
+- 首次运行隔离规则误拦匿名 stdio socketpair，收窄为仅允许 AF_UNIX 后原样重跑通过；
+  一次重构下载 PyArrow 遇构建网络超时，依赖缓存/分层重构后重试成功，未删测试断言或降级渲染格式。
+  早期 smoke 的 .gitignore 资产对比和 HTML PNG-data-url 假设分别按真实 wheel 内容及内联 SVG 契约修正。
+- 纵向内部互转箭头的 M13 视觉修复仍待消费；本门不等于逐页视觉总体通过、浏览器/HTTP 下载、真人测试或线上能力。
+  未推送、主线合并、部署、操作用户 workspace、公开上传或写链；当前生产未改变。
 
 ### M12 业务报告导出页面本地接线（2026-10-08）
 
