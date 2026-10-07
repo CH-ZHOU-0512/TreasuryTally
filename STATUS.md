@@ -15,6 +15,20 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
+### Attempt 持久化状态错位修复（仅本地，待页面集成）
+
+- 用户截图的“仍显示 Attempt 1，却被安全锁拒绝”已在隔离测试复现同类路径：交付后异常保留 VERIFYING，
+  或结果已保存但回执写入失败；恢复过滤未完成/缺回执 attempt，页面空 session 错当未开始。不归因于重复点击。
+  未读取或修改用户线上工作区，因此不宣称已确认其具体数据库状态。
+- 新增只读 `get_attempt_status(task_id)`，由持久化 state、交付与结果计数决定 in-flight/next attempt；
+  缺失或冲突原始回执阻塞页面执行。M5/M8 `restore_task(task_id)` 仅读当前任务，不误选其他会话最新任务。
+  REQUESTED/SUBMITTED/VERIFYING 不自动解锁、回滚或重跑；最多两次和第二次仅 FAIL/INCONCLUSIVE 规则不变。
+- `request_attempt` 读/检查/请求在 SQLite IMMEDIATE 事务内串行化，两连接不能同时预约同一 attempt。
+  本轮11项新增状态/故障/并发回归通过；页面接线由 M12 唯一写入，尚未部署或在线恢复用户任务。
+- 修复基线为已知 `origin/main=675728a`；本轮 fetch 因 GitHub 443 连接失败未成功，不称已取实时最新远端。
+- 本地完整 pytest 为340通过、14项外部配置缺失跳过；Ruff、pip check、21份 Schema、1000行限制和diff检查通过。
+  无凭据 FAIL→PASS→回执重放→恢复演示 valid=true；没有外部探针、线上数据操作或部署。
+
 ### Logo 首屏与间距修复（已部署，公网冷加载时序待复核）
 
 用户确认两个 Logo 曾一起缺席、随后出现，并授权修复。原图仍为 1,395,476 字节；标题和全局样式原经

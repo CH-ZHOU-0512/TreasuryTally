@@ -306,6 +306,14 @@ publication:
 - attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
 - 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
+内部只读 `AttemptStatus` 投影包含 `task_id`、持久化 `state`、`persisted_attempts`、`completed_attempts`、
+`in_flight_attempt`、`next_attempt` 和 `blocking_reason`；不增加 Receipt 字段或公共 Schema。
+数据库一次快照读取任务状态、交付和结果，不能从 UI session 的回执数量猜测 attempt。
+REQUESTED / SUBMITTED / VERIFYING 或状态冲突时不得给出新的执行许可；首次仅 CONFIRMED 且无交付可请求，
+补交仅在第一轮终态 FAIL / INCONCLUSIVE 后可请求，最多两次。原始回执缺失或冲突时页面投影阻塞，
+不删除交付、不自动取消旧请求、不重跑、不把未知当成功。状态查询不生成历史回执或调用外部服务；
+实际执行仍须通过事务内的状态机校验，查询结果不是可重复使用的授权令牌。
+
 ## M8–M9 已实现契约与 M10 计划契约
 
 M8 收尾约定：上传入口支持严格 UTF-8 JSON `UploadedReport`（声称金额、声称数量、最多 200 条 service 来源转账），

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -24,8 +24,9 @@ from trust_receipt.models import (
 )
 from trust_receipt.orchestration.workflow import ReferenceEvidenceProvider
 from trust_receipt.projections import project_fund_flow
-from trust_receipt.receipts import build_receipt, load_receipt, save_receipt
+from trust_receipt.receipts import build_receipt, load_receipt, replay_receipt, save_receipt
 from trust_receipt.services import ReportService, verify_submission_signature
+from trust_receipt.storage.models import AttemptBlockReason, AttemptStatus
 from trust_receipt.storage.ports import TaskRepository
 from trust_receipt.verification import ReferenceEvidence, ReferencePage, ReferenceStream, verify_submission
 from trust_receipt.verification.scope import scope_violation
@@ -166,12 +167,36 @@ class M5Workflow:
     def list_attempts(self, task_id: str):
         return self._repository.list_attempts(task_id)
 
+    def get_attempt_status(self, task_id: str) -> AttemptStatus:
+        status = self._repository.get_attempt_status(task_id)
+        if self._receipt_directory is None:
+            return status
+        records = self._repository.list_attempts(task_id)
+        if len(records) != status.persisted_attempts:
+            return replace(status, next_attempt=None, blocking_reason=AttemptBlockReason.STATE_CONFLICT)
+        task = self._repository.get_task(task_id).task
+        for record in records:
+            if record.verification_result is None:
+                continue
+            path = self._receipt_directory / task_id / f"attempt-{record.submission.attempt}.json"
+            if not path.is_file():
+                return replace(status, next_attempt=None, blocking_reason=AttemptBlockReason.MISSING_RECEIPT)
+            try:
+                self._validate_restored_receipt(load_receipt(path), task, record)
+            except (OSError, ValueError):
+                return replace(status, next_attempt=None, blocking_reason=AttemptBlockReason.RECEIPT_CONFLICT)
+        return status
+
     def restore_latest(self) -> tuple[TaskSpec, tuple[AttemptExecution, ...]] | None:
         """Restore the newest completed task after a Streamlit process restart."""
         tasks = self._repository.list_tasks()
         if not tasks:
             return None
-        task = tasks[0].task
+        return self.restore_task(tasks[0].task.task_id)
+
+    def restore_task(self, task_id: str) -> tuple[TaskSpec, tuple[AttemptExecution, ...]]:
+        """Read only this task's available receipts; never request or rerun it."""
+        task = self._repository.get_task(task_id).task
         executions: list[AttemptExecution] = []
         for attempt in self._repository.list_attempts(task.task_id):
             if attempt.verification_result is None or self._receipt_directory is None:
@@ -181,6 +206,7 @@ class M5Workflow:
             if not path.is_file():
                 continue
             receipt = load_receipt(path)
+            self._validate_restored_receipt(receipt, task, attempt)
             list_publications = getattr(self._repository, "list_publications", None)
             if list_publications is not None:
                 events = list_publications(receipt.receipt_id)
@@ -202,6 +228,16 @@ class M5Workflow:
                 )
             )
         return task, tuple(executions)
+
+    @staticmethod
+    def _validate_restored_receipt(receipt, task, record) -> None:
+        if (
+            not replay_receipt(receipt).valid or receipt.task_spec != task
+            or receipt.submission_hash != record.submission.report_hash
+            or receipt.verification_result != record.verification_result
+            or receipt.service_identity.service_id != record.submission.service_id
+        ):
+            raise ValueError("stored receipt conflicts with the persisted task attempt")
 
     @staticmethod
     def _validate_delivery(service: ReportService, submission) -> None:
