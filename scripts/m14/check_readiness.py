@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -42,10 +41,10 @@ def run_cli(npx: str, session: str, args: list[str], cwd: Path, timeout: int = 9
 
 
 def parse_observations(output: str) -> list[dict]:
-    matches = re.findall(r"M14_RESULT=(\[.*\])", output)
-    if len(matches) != 1:
-        raise ValueError("browser did not emit exactly one structured evidence result")
-    return json.loads(matches[0])
+    observations = json.loads(output)
+    if not isinstance(observations, list):
+        raise ValueError("browser did not emit a structured evidence list")
+    return observations
 
 
 def main() -> int:
@@ -53,6 +52,8 @@ def main() -> int:
     parser.add_argument("--base-url", type=local_url, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--scope", required=True)
+    parser.add_argument("--task-spec", type=Path, required=True)
+    parser.add_argument("--expected-total", required=True, help="integer frozen by independent RPC precheck")
     parser.add_argument("--build", required=True)
     parser.add_argument("--workspace-id", default=f"m14-{uuid4().hex[:12]}")
     parser.add_argument("--public-test-input-confirmed", action="store_true", required=True)
@@ -71,16 +72,20 @@ def main() -> int:
         config = {
             "url": args.base_url, "report": str(args.report.resolve()), "scope": args.scope,
             "workspace": args.workspace_id, "output": str(output),
+            "task": json.loads(args.task_spec.read_text(encoding="utf-8")),
+            "expectedTotal": args.expected_total,
+            "reportData": json.loads(payload),
         }
         code = (Path(__file__).with_name("browser_checks.js").read_text(encoding="utf-8")
-                .replace("__M14_CONFIG__", json.dumps(config, ensure_ascii=False)))
+                .replace("__M14_CONFIG__", json.dumps(config, ensure_ascii=False))
+                .replace("__M14_FLOW__", Path(__file__).with_name("flow_checks.js").read_text(encoding="utf-8")))
         executable = output / "browser-checks.js"
         executable.write_text(code, encoding="utf-8")
         try:
             run_cli(npx, session, ["open", args.base_url], output)
             # Snapshot establishes live UI before role/label-based automation.
             run_cli(npx, session, ["snapshot"], output)
-            stdout = run_cli(npx, session, ["run-code", "--filename", str(executable)], output, 240)
+            stdout = run_cli(npx, session, ["--raw", "run-code", "--filename", str(executable)], output, 360)
             observations = parse_observations(stdout)
         except (RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
             observations = [{"id": "UR-03", "status": "BLOCKED", "reason": str(error), "evidence": {}}]

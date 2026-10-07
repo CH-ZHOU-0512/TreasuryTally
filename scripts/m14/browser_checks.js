@@ -1,6 +1,7 @@
 async (page) => {
   const config = __M14_CONFIG__;
   const results = [];
+  page.setDefaultTimeout(15000);
   const record = (id, status, evidence, reason = "") => results.push({ id, status, evidence, reason });
   const check = async (id, action) => {
     try { record(id, "PASS", await action()); }
@@ -13,6 +14,9 @@ async (page) => {
     return path;
   };
   await page.getByText("上传报表", { exact: true }).first().waitFor({ timeout: 45000 });
+  await page.getByText("运行配置", { exact: true }).click();
+  await page.getByRole("textbox", { name: "工作区 ID", exact: true }).fill(config.workspace);
+  await page.getByRole("textbox", { name: "工作区 ID", exact: true }).press("Enter");
   await check("UR-03", async () => {
     ensure(await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).count(), "draft action absent");
     ensure(!await page.getByRole("button", { name: /开始验收/ }).count(), "cold session contains task");
@@ -24,22 +28,26 @@ async (page) => {
       ["empty", ""], ["duplicate", '{"schema_version":"1.0","schema_version":"1.0"}'],
       ["float", '{"schema_version":"1.0","claimed_total_base_units":1.5,"claimed_count":0,"transfers":[]}'],
       ["missing", '{"schema_version":"1.0"}'],
+      ["wrong-source", JSON.stringify({ ...config.reportData, transfers: config.reportData.transfers.map(row => ({...row, source: "rpc"})) })],
+      ["count-limit", JSON.stringify({ ...config.reportData, transfers: Array(201).fill(config.reportData.transfers[0]) })],
+      ["encoding", Buffer.from([255, 254, 253])],
+      ["size-limit", " ".repeat(1048577)],
     ];
     const observed = [];
     for (const [name, text] of invalid) {
+      await input.setInputFiles([]);
       await input.setInputFiles({ name: `${name}.json`, mimeType: "application/json", buffer: Buffer.from(text) });
-      await page.getByText(/无法解析报表/).waitFor();
+      await page.getByText(name === "size-limit" ? /exceeds|too large|超过|1MB/ : /无法解析报表/).first().waitFor();
+      if (name === "size-limit") { observed.push(name); continue; }
       ensure(await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).isDisabled(), "invalid upload can draft");
       observed.push(name);
     }
+    await input.setInputFiles([]);
     await input.setInputFiles(config.report);
     await page.getByText(/已读取/).waitFor();
     ensure(await page.getByRole("button", { name: "生成可核对的任务候选", exact: true }).isEnabled(), "valid upload did not recover");
-    return { rejected: observed, validRecovery: true, screenshot: await screen("upload-recovered"), coverage: "partial: remaining N1 categories need separate evidence" };
+    return { rejected: observed, validRecovery: true, screenshot: await screen("upload-recovered") };
   });
-  // Partial coverage cannot satisfy the complete UR-05 boundary matrix.
-  const boundary = results.find(item => item.id === "UR-05");
-  if (boundary.status === "PASS") { boundary.status = "BLOCKED"; boundary.reason = "wrong source, encoding and size/count limits not yet exercised"; }
   await check("UR-10", async () => {
     await page.getByText("查看上传格式与身份说明", { exact: true }).click();
     ensure(await page.getByText(/不表示外部作者/).isVisible(), "author caveat absent");
@@ -75,5 +83,6 @@ async (page) => {
     ensure(!await page.getByRole("button", { name: /开始验收/ }).count(), "execution visible before confirmation");
     return { executionAbsentBeforeConfirmation: true };
   });
-  console.log("M14_RESULT=" + JSON.stringify(results));
+  __M14_FLOW__
+  return results;
 }
