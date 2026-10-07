@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agent0_sdk.core.contracts import IDENTITY_REGISTRY_ABI, REPUTATION_REGISTRY_ABI
 from eth_account import Account
 from pydantic import SecretStr
 from web3 import Web3
@@ -70,6 +69,8 @@ class ERC8004ReceiptFeedback:
         )
 
     def preflight(self) -> FeedbackPreflight:
+        from agent0_sdk.core.contracts import IDENTITY_REGISTRY_ABI
+
         observed_chain = int(self._web3.eth.chain_id)
         if self._chain_id != SEPOLIA_CHAIN_ID or observed_chain != self._chain_id:
             raise ValueError(f"ERC-8004 write requires Sepolia chain_id={SEPOLIA_CHAIN_ID}")
@@ -97,6 +98,8 @@ class ERC8004ReceiptFeedback:
         )
 
     def submit_once(self, receipt: Receipt) -> Receipt:
+        from agent0_sdk.core.contracts import REPUTATION_REGISTRY_ABI
+
         publication = receipt.publication
         if (
             not publication.authorized
@@ -176,6 +179,8 @@ class ERC8004ReceiptFeedback:
         )
 
     def reconcile(self, receipt: Receipt) -> Receipt:
+        from agent0_sdk.core.contracts import REPUTATION_REGISTRY_ABI
+
         publication = receipt.publication
         if publication.chain_status is not PublicationChainStatus.SUBMITTED:
             raise ValueError("only SUBMITTED publication can be reconciled")

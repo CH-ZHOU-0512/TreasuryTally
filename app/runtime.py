@@ -18,6 +18,8 @@ from trust_receipt.agents import (
 )
 from trust_receipt.chain import RpcReferenceEvidenceProvider
 from trust_receipt.integrations.config import M0Settings
+from trust_receipt.m9 import LocalRevisionStore
+from trust_receipt.m9.publication import PublicBundleStore
 from trust_receipt.orchestration import (
     M5Workflow,
     M6Workflow,
@@ -29,6 +31,7 @@ from trust_receipt.orchestration import (
     load_vertical_demo_fixture,
 )
 from trust_receipt.orchestration.m8_workspace import M8WorkspaceWorkflow
+from trust_receipt.orchestration.m10 import M10Workflow
 from trust_receipt.publishing import HttpsDirectoryPublisher, M6Settings, PinataPublisher
 from trust_receipt.reputation import ERC8004ReceiptFeedback
 from trust_receipt.services import FaultMode, TeamControlledReportService
@@ -56,7 +59,10 @@ class AppRuntime:
     commitment_workflow: M8CommitmentWorkflow
     commitment_anchor_status: str
     m8_workflow: M8WorkspaceWorkflow
+    revision_store: LocalRevisionStore
+    public_bundle_store: PublicBundleStore
     upload_directory: Path
+    history_workflow: M10Workflow
 
 
 def create_runtime(
@@ -172,7 +178,18 @@ def create_runtime(
         m8_workflow=M8WorkspaceWorkflow(
             workflow, commitments, M8ArtifactStore(project_root / "data" / "m5" / f"{session_id}.db"),
         ),
+        revision_store=LocalRevisionStore(
+            project_root / "receipts" / "private" / "m5" / session_id / "revisions"
+        ),
+        public_bundle_store=PublicBundleStore(
+            project_root / "receipts" / "private" / "m5" / session_id / "public-history"
+        ),
         upload_directory=project_root / "receipts" / "private" / "m5" / session_id / "uploads",
+        history_workflow=M10Workflow(
+            repository,
+            project_root / "receipts" / "private" / "m5" / session_id,
+            LocalRevisionStore(project_root / "receipts" / "private" / "m5" / session_id / "revisions"),
+        ),
     )
 
 

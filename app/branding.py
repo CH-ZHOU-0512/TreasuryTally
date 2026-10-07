@@ -4,7 +4,12 @@ from base64 import b64encode
 from functools import lru_cache
 from pathlib import Path
 
-LOGO_PATH = Path(__file__).resolve().parent / "assets" / "logo.png"
+LOGO_PATH = Path(__file__).resolve().parent / "static" / "logo.png"
+
+
+def logo_static_url(base_path: str = "") -> str:
+    prefix = base_path.strip("/")
+    return f"/{prefix + '/' if prefix else ''}app/static/logo.png"
 
 
 @lru_cache(maxsize=1)

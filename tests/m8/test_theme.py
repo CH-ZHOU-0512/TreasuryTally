@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.branding import LOGO_PATH, logo_data_url
+from app.branding import LOGO_PATH, logo_data_url, logo_static_url
 from app.styles import APP_CSS
 
 
@@ -91,3 +91,13 @@ def test_brand_asset_is_a_real_png_and_sections_have_no_repeated_numbering():
     source = (Path(__file__).parents[2] / "app" / "streamlit_app.py").read_text(encoding="utf-8")
     assert 'class="section-kicker"' not in source
     assert 'class="brand-mark">TR' not in source
+
+
+def test_logo_is_static_and_preserves_reverse_proxy_prefix():
+    root = Path(__file__).parents[2]
+    config = tomllib.loads((root / ".streamlit" / "config.toml").read_text())
+    assert config["server"]["enableStaticServing"] is True
+    assert logo_static_url() == "/app/static/logo.png"
+    assert logo_static_url("/trust-receipt/") == "/trust-receipt/app/static/logo.png"
+    source = (root / "app" / "streamlit_app.py").read_text(encoding="utf-8")
+    assert "logo_data_url(" not in source
