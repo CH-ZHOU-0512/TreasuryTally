@@ -89,7 +89,9 @@ def _csv(payload: bytes) -> ReportTable:
 
 
 def _xml(archive: zipfile.ZipFile, name: str):
-    data = archive.read(name)
+    # Bound decompression too: ZIP directory sizes are untrusted metadata.
+    with archive.open(name) as stream:
+        data = stream.read(MAX_XML_BYTES + 1)
     if len(data) > MAX_XML_BYTES or b"\x00" in data or re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b", data, re.I):
         raise ConversionInputError("Excel XML 过大或包含不允许的实体声明。")
     try:
@@ -133,6 +135,8 @@ def _xlsx(payload: bytes) -> ReportTable:
                 raise ConversionInputError("Excel 包存在重复成员或成员过多。")
             if any(item.flag_bits & 1 for item in entries):
                 raise ConversionInputError("不支持加密 Excel 文件。")
+            if any(item.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED} for item in entries):
+                raise ConversionInputError("Excel 只支持标准 stored/deflate ZIP 压缩。")
             if sum(item.file_size for item in entries) > MAX_EXPANDED_BYTES:
                 raise ConversionInputError("Excel 解压后超过 4 MB。")
             if any(item.file_size > MAX_XML_BYTES for item in entries):

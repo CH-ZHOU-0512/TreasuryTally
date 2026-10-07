@@ -333,3 +333,11 @@ def test_no_block_hash_is_null_not_reference_lookup():
         row.pop(index)
     result = candidate(rows)
     assert result.ready and result.report.transfers[0].block_hash is None and result.warnings
+
+
+def test_unsupported_compression_rejected_before_decompression():
+    stream = io.BytesIO(xlsx(fixture_rows()))
+    with zipfile.ZipFile(stream, "a", compression=zipfile.ZIP_BZIP2) as archive:
+        archive.writestr("xl/other.xml", "x")
+    with pytest.raises(ConversionInputError):
+        read_report_table(stream.getvalue(), "a.xlsx")
