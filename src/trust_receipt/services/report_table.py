@@ -162,7 +162,10 @@ def _xlsx(payload: bytes) -> ReportTable:
                 raise ConversionInputError("Excel 工作表关系与文件不一致。")
             shared = []
             if "xl/sharedStrings.xml" in names:
-                shared = [_string(item) for item in _xml(archive, "xl/sharedStrings.xml")]
+                strings = _xml(archive, "xl/sharedStrings.xml")
+                if strings.tag != f"{{{NS['s']}}}sst" or any(item.tag != f"{{{NS['s']}}}si" for item in strings):
+                    raise ConversionInputError("Excel 共享字符串结构无效。")
+                shared = [_string(item) for item in strings]
             formats = ["0"]
             if "xl/styles.xml" in names:
                 formats = [
@@ -170,6 +173,13 @@ def _xlsx(payload: bytes) -> ReportTable:
                     for item in _xml(archive, "xl/styles.xml").findall("s:cellXfs/s:xf", NS)
                 ]
             data = _xml(archive, target)
+            sheet_data = data.findall("s:sheetData", NS)
+            if data.tag != f"{{{NS['s']}}}worksheet" or len(sheet_data) != 1:
+                raise ConversionInputError("Excel 工作表结构或命名空间无效。")
+            if any(item.tag != f"{{{NS['s']}}}row" for item in sheet_data[0]):
+                raise ConversionInputError("Excel 明细行命名空间或结构无效；不会跳过未知行。")
+            if data.find("s:mergeCells", NS) is not None:
+                raise ConversionInputError("请取消 Excel 合并单元格，保证每行明细独立完整。")
             rows, numeric = [], set()
             previous_row = 0
             for row in data.findall("s:sheetData/s:row", NS):
@@ -177,6 +187,8 @@ def _xlsx(payload: bytes) -> ReportTable:
                 if not row_number.isdigit() or int(row_number) <= previous_row:
                     raise ConversionInputError("Excel 行坐标重复或乱序。")
                 previous_row = int(row_number)
+                if any(item.tag != f"{{{NS['s']}}}c" for item in row):
+                    raise ConversionInputError("Excel 单元格命名空间或结构无效；不会忽略未知单元格。")
                 cells, numeric_columns = {}, set()
                 for cell in row.findall("s:c", NS):
                     if any(child.tag.rsplit("}", 1)[-1] == "f" for child in cell):

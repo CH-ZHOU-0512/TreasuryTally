@@ -270,3 +270,66 @@ def test_retention_requires_confirmation_and_raw_binding(tmp_path):
     original_path.write_bytes(b"corrupt")
     with pytest.raises(ConversionInputError):
         persist_confirmed_conversion(raw, result, tmp_path, confirmed=True)
+
+
+@pytest.mark.parametrize("change", ["unknown-row", "unknown-cell", "duplicate-cell", "wrong-row", "merge"])
+def test_xlsx_unknown_structure_never_silently_skips(change):
+    rows = fixture_rows()
+    with zipfile.ZipFile(io.BytesIO(xlsx(rows))) as archive:
+        sheet = archive.read("xl/worksheets/sheet1.xml").decode()
+    if change == "unknown-row":
+        sheet = sheet.replace('<row r="2">', '<row xmlns="urn:unknown" r="2">')
+    elif change == "unknown-cell":
+        sheet = sheet.replace('<c r="A2"', '<c xmlns="urn:unknown" r="A2"')
+    elif change == "duplicate-cell":
+        sheet = sheet.replace('<row r="2">', '<row r="2"><c r="A2"><v>1</v></c>')
+    elif change == "wrong-row":
+        sheet = sheet.replace('<c r="A2"', '<c r="A3"')
+    else:
+        sheet = sheet.replace('</worksheet>', '<mergeCells><mergeCell ref="A1:B1"/></mergeCells></worksheet>')
+    with pytest.raises(ConversionInputError):
+        read_report_table(xlsx(rows, extra={"xl/worksheets/sheet1.xml": sheet}), "a.xlsx")
+
+
+def test_zip_total_expansion_and_member_count():
+    for extra in (
+        {f"xl/unused{i}.xml": "x" * 999_000 for i in range(5)},
+        {f"xl/unused{i}.xml": "x" for i in range(129)},
+    ):
+        with pytest.raises(ConversionInputError):
+            read_report_table(xlsx(fixture_rows(), extra=extra), "a.xlsx")
+
+
+def test_duplicate_zip_member_rejected():
+    stream = io.BytesIO(xlsx(fixture_rows()))
+    with pytest.warns(UserWarning), zipfile.ZipFile(stream, "a") as archive:
+        archive.writestr("xl/workbook.xml", "<x/>")
+    with pytest.raises(ConversionInputError):
+        read_report_table(stream.getvalue(), "a.xlsx")
+
+
+def test_mixed_units_blocked_not_partitioned():
+    rows = fixture_rows()
+    rows.append(rows[1].copy())
+    rows[2][rows[0].index("token_decimals")] = "6"
+    assert not candidate(rows).ready
+
+
+def test_unlabeled_amount_requires_explicit_unit_selection():
+    rows = fixture_rows()
+    rows[0][rows[0].index("amount_base_units")] = "amount"
+    table = read_report_table(csv_payload(rows), "a.csv")
+    result = convert_report_table(table)
+    assert not result.ready and "amount_base_units_or_amount" in result.missing_fields
+    mapping = suggest_field_mapping(table)
+    mapping["amount_base_units"] = "amount"
+    assert convert_report_table(table, mapping).ready
+
+
+def test_no_block_hash_is_null_not_reference_lookup():
+    rows = fixture_rows()
+    index = rows[0].index("block_hash")
+    for row in rows:
+        row.pop(index)
+    result = candidate(rows)
+    assert result.ready and result.report.transfers[0].block_hash is None and result.warnings
