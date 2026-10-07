@@ -38,9 +38,10 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
     result = receipt.verification_result
     token_short = address_view(receipt.task_spec.token_address).short
 
-    def amount(value: str, decimals: int | None, *, signed: bool = False):
+    def amount(value: str, decimals: int | None, *, signed: bool = False, token: str | None = None):
         formatted = format_amount(value, decimals, signed=signed)
-        unit = f"{token_short} 代币" if decimals is not None else f"{token_short} 最小单位"
+        short = address_view(token).short if token else token_short
+        unit = f"{short} 代币" if decimals is not None else f"{short} 最小单位"
         return formatted.model_copy(update={"unit": unit})
 
     if (
@@ -68,6 +69,15 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
     verified_decimals = next(iter(reference_decimals)) if len(reference_decimals) == 1 else None
     declared_decimals = next(iter(claimed_decimals)) if len(claimed_decimals) == 1 else None
     declared_tokens = {record.token_address.lower() for record in submission.transfers}
+    claimed = amount(
+        submission.claimed_total_base_units,
+        declared_decimals,
+        token=next(iter(declared_tokens)) if len(declared_tokens) == 1 else None,
+    )
+    if len(declared_tokens) > 1:
+        claimed = format_amount(submission.claimed_total_base_units, None).model_copy(
+            update={"unit": "混合代币声明 不可合并换算"}
+        )
     comparable = (
         result.reference_complete
         and result.evidence_sufficient
@@ -92,6 +102,24 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
     findings = []
     for finding in result.findings:
         title, description, advice = FINDING_TEXT[finding.finding_type.value]
+        if finding.expected and finding.actual:
+            fields = (
+                ("total_base_units", "总额最小单位"),
+                ("amount_base_units", "事件金额最小单位"),
+                ("count", "记录数"),
+                ("token_decimals", "代币精度"),
+            )
+            facts = []
+            for key, label in fields:
+                expected, actual = finding.expected.get(key), finding.actual.get(key)
+                if (
+                    type(expected) in {int, str}
+                    and type(actual) in {int, str}
+                    and re.fullmatch(r"[0-9]+", str(expected))
+                    and re.fullmatch(r"[0-9]+", str(actual))
+                ):
+                    facts.append(f"{label}：核验 {expected}，报表 {actual}。")
+            description += "".join(facts)
         confirmed = finding.status.value == "confirmed"
         findings.append(
             FindingView(
@@ -116,7 +144,13 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
                 edge_id=edge.edge_id,
                 sender=address_view(nodes[edge.from_node_id].address),
                 recipient=address_view(nodes[edge.to_node_id].address),
-                amount=amount(edge.amount_base_units, edge.token_decimals),
+                amount=amount(
+                    edge.amount_base_units,
+                    edge.token_decimals,
+                    token=(edge.reference_records or edge.service_records)[0].token_address
+                    if edge.reference_records or edge.service_records
+                    else None,
+                ),
                 status=edge.status.value,
                 status_label=label,
                 event_ref=f"{edge.event_key[0]}:{edge.event_key[1]}:{edge.event_key[2]}",
@@ -153,7 +187,7 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
         if receipt.service_identity.identity_scheme == "local-upload-intake"
         else "回执记录的服务身份",
         receipt_hash=receipt.receipt_hash,
-        claimed=amount(submission.claimed_total_base_units, declared_decimals),
+        claimed=claimed,
         calculated=amount(result.calculated_total_base_units, verified_decimals)
         if result.calculated_total_base_units is not None
         else None,

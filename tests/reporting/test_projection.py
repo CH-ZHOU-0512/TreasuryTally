@@ -47,6 +47,25 @@ def test_decimal_error_does_not_expose_comparable_difference():
     assert "精度" in view.current.difference_reason
 
 
+@pytest.mark.parametrize("mixed", (False, True))
+def test_wrong_or_mixed_token_never_labels_claim_as_confirmed_asset(mixed):
+    wrong = "0x" + "f" * 40
+
+    def transform(fixture):
+        records = fixture.submission.transfers
+        changed = tuple(record.model_copy(update={"token_address": wrong}) for record in records)
+        if mixed:
+            changed = (records[0], *changed)
+        submission = fixture.submission.model_copy(update={"transfers": changed})
+        return fixture.model_copy(update={"submission": submission})
+
+    item = report_input("correct-basic", transform=transform)
+    view = build_business_report(item.receipt, item.submission, fund_flow=item.fund_flow)
+    assert view.current.difference is None
+    assert "混合代币" in view.current.claimed.unit if mixed else "ffffff" in view.current.claimed.unit
+    assert view.scope.token.short not in view.current.claimed.unit
+
+
 def test_inconclusive_is_not_failed_or_zero():
     case = next(path.stem for path in (ROOT / "fixtures/m1/cases").glob("*.json") if "insufficient" in path.stem)
     item = report_input(case)

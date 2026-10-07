@@ -17,8 +17,10 @@ from trust_receipt.verification import verify_submission
 ROOT = Path(__file__).parents[2]
 
 
-def report_input(case_name="missing-transfer-vertical-slice", *, attempt=1):
+def report_input(case_name="missing-transfer-vertical-slice", *, attempt=1, transform=None):
     fixture = FixtureCase.model_validate_json((ROOT / "fixtures/m1/cases" / f"{case_name}.json").read_bytes())
+    if transform:
+        fixture = transform(fixture)
     task = fixture.task_spec.model_copy(update={"spec_hash": task_spec_hash(fixture.task_spec)})
     draft = fixture.submission.model_copy(update={"attempt": attempt})
     submission = draft.model_copy(update={"report_hash": submission_hash(draft)})
