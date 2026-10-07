@@ -27,6 +27,11 @@ function mount(document) {
   dialog.dataset = {};
   dialog.controls = {};
   dialog.querySelector = selector => dialog.controls[selector] ??= new Control(document);
+  dialog.querySelectorAll = () => [
+    dialog.querySelector("[data-guide-close]"),
+    dialog.querySelector("[data-guide-previous]"),
+    dialog.querySelector("[data-guide-next]"),
+  ];
   dialog.showModal = () => { dialog.open = true; };
   dialog.close = () => { dialog.open = false; };
   document.dialog = dialog;
@@ -40,6 +45,10 @@ const control = name => dialog.querySelector(`[data-guide-${name}]`);
 assert.equal(dialog.open, true);
 assert.equal(control("progress").textContent, "第 1 步，共 5 步");
 assert.equal(control("previous").disabled, true);
+assert.equal(document.activeElement, control("close"));
+dialog.listeners.keydown({ key: "Tab", shiftKey: true, preventDefault() {} });
+assert.equal(document.activeElement, control("next"));
+dialog.listeners.keydown({ key: "Tab", shiftKey: false, preventDefault() {} });
 assert.equal(document.activeElement, control("close"));
 control("next").click();
 assert.equal(control("heading").textContent, "确认核验范围");
