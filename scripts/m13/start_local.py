@@ -38,6 +38,8 @@ def main() -> None:
         os.environ.pop(name, None)
     os.environ.update(APP_REQUIRE_LIVE="true", M0_ENABLE_WRITES="false", M6_ENABLE_WRITES="false")
     os.chdir(PROJECT_ROOT)
+    sys.path.insert(0, str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
     sys.argv = [
         "streamlit", "run", str(PROJECT_ROOT / "app" / "streamlit_app.py"),
         "--server.address", "127.0.0.1", "--server.port", str(args.port),
