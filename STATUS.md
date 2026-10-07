@@ -32,8 +32,10 @@ M13 已提交专属材料及 M14 技术验收交付；不纳入 M13 未提交浏
 - 旧故障镜像运行新增一致性门明确失败；恢复镜像在构建、隔离运行和切换前均通过真实 `/app/app/streamlit_app.py`
   AppTest：零 exception、产品标题渲染、实际导入 `/app/src/trust_receipt/__init__.py`。无网络、无生产挂载、无密钥，未用 PYTHONPATH。
   检查器初版直接从 `/opt` 启动的路径差异也被门拦截；修正为匹配生产模块启动的 `/app` 工作目录调用后才放行。
-- 主控独立 `root-release-recovery` 浏览器在切换后实际显示“信据 Agent · 链上验收工作台”、运行配置、服务历史、
-  示例/严格 JSON 模板与任务候选入口，无 ModuleNotFoundError；本发布会话两个连接探针超时/空快照不冒计为通过。
+- 主控独立 `root-release-recovery` 浏览器在切换后实际显示工作台、产品标题、Logo、自定义黑金样式、运行配置、服务历史、
+  示例/严格 JSON 模板与任务候选入口。最终 DOM 为 header=true、logoLoaded=true、moduleError=false、stException=0，console error=0。
+  完整首页截图为主控工作区 `.playwright-cli/page-2026-10-07T09-00-19-212Z.png`（UTC 工具文件名，仅首页呈现证据）。
+  初始灰色占位为尚未完成的异步加载，后续自行完成；未测速，不推导稳定加载耗时。本发布会话两个超时/空快照不冒计通过。
 - 应用 running/healthy，公网 health 为 200/ok，镜像 pip check 通过。只替换应用容器，原配置及三个数据/回执挂载保持不变，
   Blockscout 仍为 `trust-receipt-blockscout:d0cf46a`，`M6_ENABLE_WRITES=false`，未触发业务上传、公开发布或写链。
 - 已准备可用的 M8 回滚镜像 `trust-receipt:recovery-rollback-bdc705cff5ed073451ddf21cacb0d5df0ef1b51b`，
