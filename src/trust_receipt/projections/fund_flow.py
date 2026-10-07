@@ -109,6 +109,13 @@ def project_fund_flow(
     for record in submission.transfers:
         service_by_key[event_key(record)].append(record)
     for record in reference_records:
+        # RPC inventories may contain unrelated transfers from the same block.
+        # Keep submitted events' original evidence even when the report violates
+        # scope; reference-only edges must be eligible or explained exclusions.
+        if event_key(record) not in service_by_key and scope_violation(task, record) not in {
+            None, FindingType.EXCLUDED_INTERNAL_TRANSFER,
+        }:
+            continue
         reference_by_key[event_key(record)].append(record)
     finding_by_key = _finding_index(result)
     nodes_by_address: dict[str, FundFlowNode] = {}
