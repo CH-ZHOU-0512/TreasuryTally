@@ -1,5 +1,6 @@
 """M9 rework, immutable receipt revisions, comparison, and public replay."""
 
+from trust_receipt.m9.commitments import M8CommitmentBinding, M8ReceiptCommitmentVerifier
 from trust_receipt.m9.models import (
     AttemptSnapshot,
     CommitmentStatus,
@@ -45,6 +46,8 @@ __all__ = [
     "CommitmentStatus",
     "CommitmentVerification",
     "LocalRevisionStore",
+    "M8CommitmentBinding",
+    "M8ReceiptCommitmentVerifier",
     "PublicReceiptReference",
     "PublicReceiptResolver",
     "PublicReferenceKind",

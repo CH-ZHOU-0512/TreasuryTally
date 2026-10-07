@@ -30,15 +30,19 @@ from trust_receipt.m9 import (  # noqa: E402
     ReworkPackage,
 )
 from trust_receipt.models import (  # noqa: E402
+    DeliveryCommitment,
     FixtureCase,
     FixtureManifest,
+    FundFlowProjection,
     Receipt,
     ServiceSubmission,
+    TaskCommitment,
     TaskSpec,
     TransferRecord,
     VerificationPlan,
     VerificationResult,
 )
+from trust_receipt.services.upload import UploadedReport  # noqa: E402
 
 SCHEMA_VERSION = "1.0"
 SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -58,6 +62,10 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("claim_extraction.schema.json", "claim-extraction", ClaimExtraction),
     ("follow_up_advice.schema.json", "follow-up-advice", FollowUpAdvice),
     ("result_explanation.schema.json", "result-explanation", ResultExplanation),
+    ("task_commitment.schema.json", "task-commitment", TaskCommitment),
+    ("delivery_commitment.schema.json", "delivery-commitment", DeliveryCommitment),
+    ("fund_flow_projection.schema.json", "fund-flow-projection", FundFlowProjection),
+    ("uploaded_report.schema.json", "uploaded-report", UploadedReport),
     ("rework_package.schema.json", "rework-package", ReworkPackage),
     ("receipt_revision.schema.json", "receipt-revision", ReceiptRevision),
     ("repair_comparison.schema.json", "repair-comparison", RepairComparison),
@@ -97,6 +105,9 @@ MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {
     ),
     "FollowUpAdvice": ("follow-up actions are restricted by deterministic outcome",),
     "ResultExplanation": ("application validation binds values and finding references to VerificationResult",),
+    "TaskCommitment": ("signature binds the immutable task hash and explicit application domain",),
+    "DeliveryCommitment": ("acceptance and delivery signatures bind task, service, attempt, and report hash",),
+    "FundFlowProjection": ("visual state derives from existing findings and never changes the outcome",),
     "ReworkPackage": ("items contain only actionable confirmed error findings from one FAIL receipt",),
     "ReceiptRevision": (
         "attempt 1 is ORIGINAL without parent links",

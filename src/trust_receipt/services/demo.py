@@ -8,7 +8,10 @@ from datetime import UTC, datetime
 
 from eth_account import Account
 
+from trust_receipt.commitments import create_delivery_commitment
+from trust_receipt.commitments.eip712 import create_acceptance_signature
 from trust_receipt.hashing import submission_hash
+from trust_receipt.models import DeliveryCommitment, TaskCommitment
 from trust_receipt.models.enums import EvidenceSource
 from trust_receipt.models.submissions import ServiceSubmission
 from trust_receipt.models.tasks import TaskSpec
@@ -107,4 +110,28 @@ class TeamControlledReportService:
                 mode=mode,
                 label="synthetic-team-controlled-fault" if mode is not FaultMode.NONE else "no-fault",
             ),
+        )
+
+    def create_delivery_commitment(
+        self,
+        task_commitment: TaskCommitment,
+        submission: ServiceSubmission,
+        *,
+        accepted_at: datetime,
+        submitted_at: datetime,
+        acceptance_signature: str | None = None,
+    ) -> DeliveryCommitment:
+        return create_delivery_commitment(
+            task_commitment,
+            submission,
+            service_private_key=self._private_key,
+            accepted_at=accepted_at,
+            submitted_at=submitted_at,
+            acceptance_signature=acceptance_signature,
+        )
+
+    def accept_task(self, task_commitment, *, attempt, accepted_at):
+        return create_acceptance_signature(
+            task_commitment, attempt=attempt, accepted_at=accepted_at,
+            service_private_key=self._private_key,
         )

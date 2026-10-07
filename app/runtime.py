@@ -18,18 +18,22 @@ from trust_receipt.agents import (
 )
 from trust_receipt.chain import RpcReferenceEvidenceProvider
 from trust_receipt.integrations.config import M0Settings
+from trust_receipt.m9 import LocalRevisionStore
 from trust_receipt.orchestration import (
     M5Workflow,
     M6Workflow,
+    M8CommitmentWorkflow,
     StaticEvidenceProvider,
     candidate_from_fixture,
     eligible_records,
     evidence_from_fixture,
     load_vertical_demo_fixture,
 )
+from trust_receipt.orchestration.m8_workspace import M8WorkspaceWorkflow
 from trust_receipt.publishing import HttpsDirectoryPublisher, M6Settings, PinataPublisher
 from trust_receipt.reputation import ERC8004ReceiptFeedback
 from trust_receipt.services import FaultMode, TeamControlledReportService
+from trust_receipt.storage.m8 import M8ArtifactStore
 from trust_receipt.storage.sqlite import SQLiteRepository
 from trust_receipt.verification.scope import scope_violation
 
@@ -50,6 +54,11 @@ class AppRuntime:
     feedback_adapter: ERC8004ReceiptFeedback | None
     publication_status: str
     feedback_status: str
+    commitment_workflow: M8CommitmentWorkflow
+    commitment_anchor_status: str
+    m8_workflow: M8WorkspaceWorkflow
+    revision_store: LocalRevisionStore
+    upload_directory: Path
 
 
 def create_runtime(
@@ -146,6 +155,7 @@ def create_runtime(
         feedback_status = "ERC-8004 写入已显式启用；提交前仍需页面二次授权"
     elif m6_settings.enable_writes:
         feedback_status = "ERC-8004 配置阻塞：缺少 " + ", ".join(missing_write)
+    commitments = M8CommitmentWorkflow()
     return AppRuntime(
         workflow=workflow,
         services=services,
@@ -157,6 +167,17 @@ def create_runtime(
         feedback_adapter=feedback_adapter,
         publication_status=publication_status,
         feedback_status=feedback_status,
+        commitment_workflow=commitments,
+        commitment_anchor_status=(
+            "EIP-712 本地承诺可验证；链上锚定未提交（Validation Registry 仅启用只读接口探针）"
+        ),
+        m8_workflow=M8WorkspaceWorkflow(
+            workflow, commitments, M8ArtifactStore(project_root / "data" / "m5" / f"{session_id}.db"),
+        ),
+        revision_store=LocalRevisionStore(
+            project_root / "receipts" / "private" / "m5" / session_id / "revisions"
+        ),
+        upload_directory=project_root / "receipts" / "private" / "m5" / session_id / "uploads",
     )
 
 

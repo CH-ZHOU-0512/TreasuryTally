@@ -44,3 +44,9 @@ class ReportService(Protocol):
         *,
         attempt: int,
     ) -> ReportDelivery: ...
+
+    def accept_task(self, task_commitment, *, attempt, accepted_at): ...
+
+    def create_delivery_commitment(
+        self, task_commitment, submission, *, accepted_at, submitted_at, acceptance_signature=None,
+    ): ...
