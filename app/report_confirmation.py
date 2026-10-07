@@ -26,6 +26,17 @@ def conversion_identity(
 
 def clear_approval(state: MutableMapping, namespace: str) -> None:
     state.pop(f"{namespace}:approved", None)
+    previous = state.pop(f"{namespace}:identity", None)
+    if previous is not None:
+        state.pop(f"{namespace}:confirm:{previous}", None)
+
+
+def track_identity(state: MutableMapping, namespace: str, identity: str) -> None:
+    """Forget the old checkbox too, so returning to old settings needs a new consent."""
+    if state.get(f"{namespace}:identity") != identity:
+        clear_approval(state, namespace)
+        state.pop(f"{namespace}:confirm:{identity}", None)
+        state[f"{namespace}:identity"] = identity
 
 
 def approved_payload(state: MutableMapping, namespace: str, identity: str) -> bytes | None:

@@ -36,6 +36,7 @@ from app.report_experience import (
     reference_decimals,
     strict_template_bytes,
 )
+from app.report_intake import render_report_intake
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.service_history import render_workspace_history
 from app.styles import APP_CSS
@@ -269,6 +270,7 @@ def _run_attempt(runtime: AppRuntime, status) -> None:
     executions = st.session_state.get("executions", [])
     view = attempt_view(status)
     can_run = view.next_attempt is not None
+    repair_blocked = False
     if not can_run:
         st.caption("本任务已结束。核对记录已保留，不会被后续操作覆盖。")
         return
@@ -296,18 +298,34 @@ def _run_attempt(runtime: AppRuntime, status) -> None:
                 service_label = st.radio("选择要核对的报表", choices, horizontal=True, key="report-service")
             if executions:
                 repaired = st.file_uploader(
-                    "上传修正版报表（JSON，最后一次）", type=("json",), max_upload_size=1, key="repair-upload",
+                    "上传修正版报表（JSON / CSV / XLSX，最后一次）",
+                    type=("json", "csv", "xlsx"), max_upload_size=1, key="repair-upload",
                 )
                 if repaired is not None:
-                    try:
-                        uploaded_service = UploadedReportService(
-                            repaired.getvalue(), private_directory=runtime.upload_directory,
-                        )
-                        st.caption("本次将验收上传的修复报表；本地接收签名不证明原作者身份。")
-                    except ValueError:
-                        st.error("修复报表不符合 JSON 契约；请检查字段、金额整数与记录上限。")
-                        return
-                if restoring_upload and uploaded_service is None:
+                    repair_payload = render_report_intake(
+                        st, repaired, directory=runtime.upload_directory,
+                        namespace=f"{st.session_state.workspace_id}:repair:{task.task_id}",
+                    )
+                    # A selected but invalid/unadopted repair must not fall back to the original.
+                    uploaded_service = None
+                    can_run = repair_payload is not None
+                    repair_blocked = not can_run
+                    if repair_payload is not None:
+                        try:
+                            uploaded_service = UploadedReportService(
+                                repair_payload, private_directory=runtime.upload_directory,
+                            )
+                            st.caption("本次将验收上传的修复报表；本地接收签名不证明原作者身份。")
+                        except (ValueError, OSError):
+                            st.error("修复报表未通过严格 JSON 校验或私有留档；请检查字段、金额整数与记录上限。")
+                            can_run = False
+                            repair_blocked = True
+                else:
+                    render_report_intake(
+                        st, None, directory=runtime.upload_directory,
+                        namespace=f"{st.session_state.workspace_id}:repair:{task.task_id}",
+                    )
+                if restoring_upload and uploaded_service is None and repaired is None:
                     st.info("原上传任务已恢复。请上传修复报表后再提交；不会替换成演示服务报表。")
                     can_run = False
                 if (
@@ -320,7 +338,10 @@ def _run_attempt(runtime: AppRuntime, status) -> None:
             st.caption("服务提交的是待验报告；最终金额与结论仍由独立证据和确定性引擎产生。")
         with right:
             button_label = "开始核对" if view.next_attempt == 1 else "核对修正版（最后一次）"
-            if st.button(button_label, type="primary", disabled=not can_run, use_container_width=True):
+            if st.button(
+                button_label, type="secondary" if repair_blocked else "primary",
+                disabled=not can_run, use_container_width=True,
+            ):
                 try:
                     fresh = runtime.m8_workflow.get_attempt_status(task.task_id)
                     if fresh.next_attempt != view.next_attempt:
@@ -642,7 +663,7 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
 
 
 def _draft_task(runtime: AppRuntime) -> bool:
-    _section("上传报表", "准备服务商交付的 JSON 报表。没有报表？可先用案例了解流程。")
+    _section("上传报表", "上传 JSON，或把 CSV / 单工作表 XLSX 转换成可检查的 JSON。没有报表？可先用案例。")
     panel = (
         st.expander("已读取的报表与原范围说明", expanded=False)
         if "candidate" in st.session_state else st.container(border=True, key="panel-input")
@@ -677,13 +698,16 @@ def _draft_task(runtime: AppRuntime) -> bool:
         )
         uploaded = st.file_uploader(
             "服务商报表",
-            type=("json",),
+            type=("json", "csv", "xlsx"),
             accept_multiple_files=False,
             max_upload_size=1,
             disabled=input_mode != "上传自己的 JSON",
         )
         upload_valid = True
         with st.expander("查看上传格式与身份说明"):
+            st.caption("表格限制：1 MB、200 行、64 列；XLSX 仅单工作表，金额为文本，不支持公式、宏或外部链接。")
+            st.caption("合并单元格也不支持；请把表头和明细整理为逐行逐列的原始值。")
+            st.caption("CSV / XLSX 先预览并明确采用；这只整理格式，不认证作者，也不代表链上通过。")
             st.caption("必填字段：schema_version、claimed_total_base_units、claimed_count、transfers。")
             st.json(UploadedReport.model_json_schema())
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
@@ -700,8 +724,16 @@ def _draft_task(runtime: AppRuntime) -> bool:
             payload = contract_example_bytes(PROJECT_ROOT)
             report_name = "契约测试示例（人工标注合成数据，非 M11 真实案例）"
         elif uploaded is not None:
-            payload = uploaded.getvalue()
+            payload = render_report_intake(
+                st, uploaded, directory=runtime.upload_directory,
+                namespace=f"{st.session_state.workspace_id}:first",
+            )
             report_name = uploaded.name
+        else:
+            render_report_intake(
+                st, None, directory=runtime.upload_directory,
+                namespace=f"{st.session_state.workspace_id}:first",
+            )
         candidate_source = (input_mode, content_hash(payload) if payload else None)
         if st.session_state.get("candidate_source") != candidate_source:
             st.session_state.pop("candidate", None)
@@ -720,18 +752,20 @@ def _draft_task(runtime: AppRuntime) -> bool:
                 st.success(f"已读取：{report_name}")
                 with st.expander("查看报表留档指纹"):
                     st.code(digest, language=None)
-                st.caption("原始字节已私有留档；接下来核验这份报表的原始金额和记录声明。")
-            except ValueError:
+                st.caption("采用的 JSON 字节已私有留档；接下来核验其声明，表格原文件与派生汇总来源仍可检查。")
+            except (ValueError, OSError):
                 upload_valid = False
                 st.session_state.pop("uploaded_service", None)
                 st.session_state.pop("uploaded_report_hash", None)
-                st.error("无法解析报表：需要严格 UTF-8 JSON、完整字段、整数金额、service 来源与最多 200 条记录。")
+                st.error(
+                    "报表未通过严格 JSON 校验或私有留档：请检查完整字段、整数金额、service 来源与最多 200 条记录。"
+                )
         else:
             st.session_state.pop("uploaded_service", None)
             st.session_state.pop("uploaded_report_hash", None)
             if input_mode == "上传自己的 JSON":
                 upload_valid = False
-                st.caption("请先上传报表；不会在缺少文件时替你生成一份演示报表。")
+                st.caption("请先上传合规 JSON，或完成表格预览与明确采纳；不会替你生成演示报表。")
         request = st.text_area(
             "说明要核对的范围",
             value=(
@@ -749,7 +783,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
         st.caption("下一步会展示结构化字段供你逐项确认，不会自动冻结或执行。")
         if st.button(
             "整理核对范围",
-            type="secondary" if "candidate" in st.session_state else "primary",
+            type="secondary" if "candidate" in st.session_state or not upload_valid else "primary",
             disabled=not upload_valid or (input_mode == "上传自己的 JSON" and not request.strip()),
             use_container_width=True,
         ):
