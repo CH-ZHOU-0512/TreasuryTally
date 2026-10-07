@@ -22,11 +22,33 @@ M13 已提交专属材料及 M14 技术验收交付；不纳入 M13 未提交浏
 
 ### M9–M14 发布与部署（2026-10-07）
 
+#### 页面启动事故已恢复
+
+- 修复提交 `b5f2bcf` 与调用方式修正 `bdc705cff5ed073451ddf21cacb0d5df0ef1b51b` 已分别通过
+  [PR #10](https://github.com/CH-ZHOU-0512/xinjv/pull/10)、[PR #11](https://github.com/CH-ZHOU-0512/xinjv/pull/11)
+  合并；修复主线为 `050a8527068e2b3e516ebdc0baf93c1ebf891ceb`，分支、PR、合并主线 CI 均通过。
+- 当前线上镜像为 `trust-receipt:recovery-bdc705cff5ed073451ddf21cacb0d5df0ef1b51b`，revision label 对应同名完整源码提交，
+  其应用/部署树与 PR #11 合并主线一致。98 个 Python 文件与已安装 wheel 一致（只归一化换行）。
+- 旧故障镜像运行新增一致性门明确失败；恢复镜像在构建、隔离运行和切换前均通过真实 `/app/app/streamlit_app.py`
+  AppTest：零 exception、产品标题渲染、实际导入 `/app/src/trust_receipt/__init__.py`。无网络、无生产挂载、无密钥，未用 PYTHONPATH。
+  检查器初版直接从 `/opt` 启动的路径差异也被门拦截；修正为匹配生产模块启动的 `/app` 工作目录调用后才放行。
+- 主控独立 `root-release-recovery` 浏览器在切换后实际显示工作台、产品标题、Logo、自定义黑金样式、运行配置、服务历史、
+  示例/严格 JSON 模板与任务候选入口。最终 DOM 为 header=true、logoLoaded=true、moduleError=false、stException=0，console error=0。
+  完整首页截图为主控工作区 `.playwright-cli/page-2026-10-07T09-00-19-212Z.png`（UTC 工具文件名，仅首页呈现证据）。
+  初始灰色占位为尚未完成的异步加载，后续自行完成；未测速，不推导稳定加载耗时。本发布会话两个超时/空快照不冒计通过。
+- 应用 running/healthy，公网 health 为 200/ok，镜像 pip check 通过。只替换应用容器，原配置及三个数据/回执挂载保持不变，
+  Blockscout 仍为 `trust-receipt-blockscout:d0cf46a`，`M6_ENABLE_WRITES=false`，未触发业务上传、公开发布或写链。
+- 已准备可用的 M8 回滚镜像 `trust-receipt:recovery-rollback-bdc705cff5ed073451ddf21cacb0d5df0ef1b51b`，
+  同时保留原 M8 源码备份；故障现场源码保存在
+  `/opt/trust-receipt-backups/recovery-bdc705cff5ed073451ddf21cacb0d5df0ef1b51b/source.tar.gz`，不把故障镜像当作健康回滚。
+- 本地修复全量门为 326 passed、14 external deselected，新增 7 项发布回归通过；后续调用小修正的 9 项专属/治理检查通过，
+  CI 重新运行完整门。Ruff、pip check、21 份 Schema、文件规模检查均通过。真人测试不要求；M14 六项待验收及 M13 中断边界不变。
+
 **发布事故纠正：** 下列 healthy/200/WebSocket 仅证明服务连接，不代表业务页面成功渲染。用户截图与真实镜像隔离 AppTest
 已复现 `streamlit_app.py:23 → m9_components.py:10 → ModuleNotFoundError: trust_receipt.m9`。
 新 wheel 含 M9/history，但快捷发布漏复制 src，页面优先导入继承的 M8 `/app/src`。此前 `/release` 目录演示掩盖了旧源码覆盖，
 “网页正常”结论撤回。当前按用户继续发布授权修复：永久 Dockerfile 同源复制 src，并新增真实入口及源码/wheel 一致性门。
-修复部署结果另行记录；健康检查不补记 M13/M14 缺失验收。
+修复部署结果见上方恢复记录；健康检查不补记 M13/M14 缺失验收。
 
 - 发布分支已提交并推送，[PR #8](https://github.com/CH-ZHOU-0512/xinjv/pull/8) 已合并；
   主线部署提交为 `cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`，分支、PR 与合并主线 CI 均通过。
