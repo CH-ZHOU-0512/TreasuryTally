@@ -399,6 +399,23 @@ receipt_refs: [hash]
 所有计数必须能由 `receipt_refs` 重算；不同任务类型不得合并成永久综合评分，`INCONCLUSIVE` 不进入负面计数，AI 文本不得
 成为任何计数的权威来源。
 
+M10 当前读模型通过 `ReceiptHistoryInput` 接收现有 `Receipt`、显式 `task_type` 与可选来源引用。`task_type` 不从地址、报告文本
+或 AI 解释猜测；只有 `receipt_hash`、`spec_hash`、对象链接和确定性三态重放全部有效的回执才进入统计。实现中的投影另保留
+`service_name`、`latest_delivery_at`、`latest_verified_at`、完整 `ReceiptSourceRef[]` 与按任务分组的 `ServiceTaskFact[]`，以便每个
+计数直接下钻和重算；这些字段属于 M10 只读模型，尚不增加 `schemas/v1/` 的公共回执 schema。
+
+计数按 `(service_id, task_type, task_id)` 归类，每个已核验任务只进入以下一种类别：
+
+- 最新已核验回执为 `PASS`，且没有更早的非 PASS 回执或 M9 修复关系时，计为 `first_pass_count`。
+- 最新已核验回执为 `PASS`，且存在更早的 `FAIL` / `INCONCLUSIVE`，或 M9 关系标记为 `FIXED` / `RESUBMITTED` 时，计为
+  `fixed_pass_count`；来源下钻保留修复前后的全部已核验回执。
+- 没有后续 PASS 且最新已核验结论为 `FAIL` 时，计为 `fail_count`。
+- 没有后续 PASS 且最新已核验结论为 `INCONCLUSIVE` 时，只计为 `inconclusive_count`，不增加 `fail_count`。
+
+`verified_task_count` 是上述任务事实数量，`verifiable_receipt_count` 是其唯一有效回执哈希数量。M9 版本关系只通过
+`ReceiptRevisionPort` 读取；M10 不修改关系、不覆盖原回执，也不从缺失或无效关系推导负面事实。两服务对比必须限定同一
+`task_type`，最终服务选择由用户显式确认，投影不输出排名或综合分。
+
 ## M1 fixture 契约
 
 M1 人工标注数据放在：
