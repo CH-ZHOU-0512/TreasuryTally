@@ -1,14 +1,19 @@
 import json
 from pathlib import Path
 
+from streamlit.testing.v1 import AppTest
+
+from app.case_intake import load_real_case
 from app.report_experience import (
     amount_summary,
     contract_example_bytes,
     finding_copy,
     format_token_amount,
+    reference_decimals,
     strict_template_bytes,
 )
 from trust_receipt.models import FindingType
+from trust_receipt.orchestration import evidence_from_fixture, load_vertical_demo_fixture
 from trust_receipt.services.upload import parse_report
 
 PROJECT_ROOT = Path(__file__).parents[2]
@@ -54,9 +59,41 @@ def test_every_finding_type_has_business_copy_and_next_action():
 
 def test_page_exposes_example_template_and_evidence_drilldown():
     source = (PROJECT_ROOT / "app" / "streamlit_app.py").read_text(encoding="utf-8")
-    assert '"上传自己的 JSON", "加载契约测试示例"' in source
+    assert '"上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"' in source
     assert '"真实 Sepolia RPC"' in source
     assert "加载契约测试示例" in source
-    assert "非 M11 真实案例" in source
+    assert "团队构造报表" in source
     assert "下载严格 JSON 空白模板" in source
     assert "查看差异 {finding_number} 的交易与判定依据" in source
+
+
+def test_real_case_input_preserves_reports_and_requires_new_confirmation():
+    case = load_real_case(PROJECT_ROOT)
+    assert case.candidate.ready_for_confirmation
+    assert case.candidate.start_block == case.candidate.end_block == 11855664
+    assert parse_report(case.error_report).claimed_total_base_units == "0"
+    assert parse_report(case.corrected_report).claimed_total_base_units == "180674489737"
+    assert "confirmed_at" not in case.candidate.model_dump()
+    assert "spec_hash" not in case.candidate.model_dump()
+
+
+def test_summary_precision_comes_from_reference_not_service():
+    fixture = load_vertical_demo_fixture(PROJECT_ROOT)
+    assert reference_decimals(evidence_from_fixture(fixture), fixture.task_spec.token_address) == 6
+    assert reference_decimals(None, fixture.task_spec.token_address) is None
+    assert reference_decimals(evidence_from_fixture(fixture), "0x" + "f" * 40) is None
+
+
+def test_real_case_does_not_execute_with_fixture_and_prefills_editable_scope(monkeypatch):
+    monkeypatch.setenv("ETH_RPC_URL", "https://unused.invalid")
+    page = AppTest.from_file(str(PROJECT_ROOT / "app" / "streamlit_app.py"), default_timeout=20).run()
+    next(widget for widget in page.selectbox if widget.label == "报表输入方式").set_value(
+        "加载真实 Sepolia 案例"
+    ).run()
+    assert next(button for button in page.button if button.label == "生成可核对的任务候选").disabled
+    next(widget for widget in page.radio if widget.label == "独立证据").set_value("真实 Sepolia RPC").run()
+    next(button for button in page.button if button.label == "生成可核对的任务候选").click().run()
+    assert not page.exception
+    assert next(widget for widget in page.number_input if widget.label.startswith("起始区块")).value == 11855664
+    assert "task" not in page.session_state
+    assert not any("Attempt 1" in button.label for button in page.button)
