@@ -84,3 +84,17 @@ def format_token_amount(base_units: str, decimals: int | None) -> str:
 
 def finding_copy(finding_type: FindingType) -> tuple[str, str]:
     return FINDING_LABELS[finding_type]
+
+
+def reference_decimals(evidence, token_address: str) -> int | None:
+    """Use independent records only, never an uploaded report's decimal claim."""
+    if evidence is None:
+        return None
+    scales = {
+        record.token_decimals
+        for stream in evidence.streams
+        for page in stream.pages
+        for record in page.transfers
+        if record.token_address.lower() == token_address.lower()
+    }
+    return next(iter(scales)) if len(scales) == 1 else None

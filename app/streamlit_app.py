@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from app.branding import LOGO_PATH, logo_static_url
+from app.case_intake import load_real_case
 from app.commitments import render_commitments
 from app.fund_flow import render_fund_flow
 from app.m9_components import (
@@ -30,6 +31,7 @@ from app.report_experience import (
     contract_example_bytes,
     finding_copy,
     format_token_amount,
+    reference_decimals,
     strict_template_bytes,
 )
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
@@ -115,6 +117,7 @@ def _runtime() -> AppRuntime | None:
             "draft_error",
             "commitment_pairs",
             "uploaded_service",
+            "uploaded_report_hash",
             "m10-next-service",
             "report-service",
         ):
@@ -453,11 +456,7 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 f'{execution.receipt.publication.chain_status.value}</span></div></div>',
                 unsafe_allow_html=True,
             )
-            token_decimals = (
-                execution.submission.transfers[0].token_decimals
-                if execution.submission.transfers
-                else None
-            )
+            token_decimals = reference_decimals(execution.evidence, st.session_state.task.token_address)
             summary = amount_summary(
                 execution.submission.claimed_total_base_units,
                 result.calculated_total_base_units,
@@ -514,7 +513,7 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 st.markdown("**需要处理的差异**")
                 for finding_number, finding in enumerate(result.findings, start=1):
                     title, action = finding_copy(finding.finding_type)
-                    refs = ", ".join(escape(ref) for ref in finding.evidence_refs)
+                    refs = ", ".join(finding.evidence_refs)
                     st.markdown(
                         f'<div class="finding-card"><strong>{finding_number}. {escape(title)}</strong>'
                         f'<p>{escape(action)}</p><small>{escape(finding.status.value)} · '
@@ -583,14 +582,23 @@ def _render_attempts(runtime: AppRuntime) -> None:
     render_public_history(st, runtime, m9_artifacts.receipts)
 
 
-def _draft_task(runtime: AppRuntime) -> None:
+def _draft_task(runtime: AppRuntime) -> bool:
     _section("上传报表", "上传约定格式的 JSON 报表；演示模式也可直接使用固定样例。")
     with st.container(border=True, key="panel-input"):
         input_mode = st.selectbox(
             "报表输入方式",
-            ("上传自己的 JSON", "加载契约测试示例"),
-            help="测试示例来自既有人工标注契约样例，不是真实 M11 案例。",
+            ("上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"),
+            help="真实案例使用团队构造报表与公开 Sepolia 交易；契约测试示例为合成数据。",
         )
+        real_case = load_real_case(PROJECT_ROOT)
+        with st.expander("下载示例报表与核验范围"):
+            st.caption("团队为演示构造报表，引用真实公开 Sepolia 交易；账户角色为演示设定。")
+            for report_label, report_data, filename in (
+                ("下载真实案例错误版 JSON", real_case.error_report, "error-missing-transfer.json"),
+                ("下载真实案例修正版 JSON", real_case.corrected_report, "corrected-complete.json"),
+            ):
+                st.download_button(report_label, report_data, filename, "application/json")
+            st.json(real_case.candidate.model_dump(mode="json"))
         st.download_button(
             "下载严格 JSON 空白模板",
             data=strict_template_bytes(),
@@ -603,7 +611,7 @@ def _draft_task(runtime: AppRuntime) -> None:
             type=("json",),
             accept_multiple_files=False,
             max_upload_size=1,
-            disabled=input_mode == "加载契约测试示例",
+            disabled=input_mode != "上传自己的 JSON",
         )
         upload_valid = True
         st.caption("报表格式：schema_version、claimed_total_base_units、claimed_count、transfers。")
@@ -612,16 +620,30 @@ def _draft_task(runtime: AppRuntime) -> None:
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
         payload = None
         report_name = None
-        if input_mode == "加载契约测试示例":
+        if input_mode == "加载真实 Sepolia 案例":
+            payload = real_case.error_report
+            report_name = "真实 Sepolia 案例错误版（团队构造报表）"
+            st.caption("下一步预填案例范围供你修改和确认；实时参考证据只从 Sepolia RPC 获取。")
+            if not runtime.evidence_label.startswith("真实 Sepolia RPC"):
+                upload_valid = False
+                st.info("请在运行配置中把独立证据切换为“真实 Sepolia RPC”，再核验此案例。")
+        elif input_mode == "加载契约测试示例":
             payload = contract_example_bytes(PROJECT_ROOT)
             report_name = "契约测试示例（人工标注合成数据，非 M11 真实案例）"
         elif uploaded is not None:
             payload = uploaded.getvalue()
             report_name = uploaded.name
+        candidate_source = (input_mode, content_hash(payload) if payload else None)
+        if st.session_state.get("candidate_source") != candidate_source:
+            st.session_state.pop("candidate", None)
+            st.session_state.candidate_source = candidate_source
         if payload is not None:
             try:
                 digest = content_hash(payload)
-                if st.session_state.get("uploaded_report_hash") != digest:
+                if (
+                    st.session_state.get("uploaded_report_hash") != digest
+                    or "uploaded_service" not in st.session_state
+                ):
                     st.session_state.uploaded_service = UploadedReportService(
                         payload, private_directory=runtime.upload_directory,
                     )
@@ -650,7 +672,11 @@ def _draft_task(runtime: AppRuntime) -> None:
             use_container_width=True,
         ):
             try:
-                st.session_state.candidate = runtime.workflow.draft_task(request)
+                st.session_state.candidate = (
+                    real_case.candidate
+                    if input_mode == "加载真实 Sepolia 案例"
+                    else runtime.workflow.draft_task(request)
+                )
                 st.session_state.pop("draft_error", None)
             except Exception as error:
                 if _live_only():
@@ -662,6 +688,7 @@ def _draft_task(runtime: AppRuntime) -> None:
     if "draft_error" in st.session_state:
         st.error("模型输出被拒绝：" + st.session_state.draft_error)
         st.info("请修正请求或模型配置后重新生成；不会自动确认或执行。")
+    return upload_valid
 
 
 def main() -> None:
@@ -685,8 +712,8 @@ def main() -> None:
     render_workspace_history(st, runtime)
 
     if "task" not in st.session_state:
-        _draft_task(runtime)
-        if "candidate" in st.session_state:
+        input_valid = _draft_task(runtime)
+        if input_valid and "candidate" in st.session_state:
             _section("确认核验范围", "核对链、资产、账户与区块范围后，再开始验收。")
             _candidate_editor(runtime)
         return
@@ -702,7 +729,9 @@ def main() -> None:
         and (len(executions) == 2 or executions[-1].result.outcome is VerificationOutcome.PASS)
         and st.button("开始下一次报表验收", key="m10-next-task")
     ):
-        for key in ("task", "candidate", "executions", "commitment_pairs", "uploaded_service"):
+        for key in (
+            "task", "candidate", "executions", "commitment_pairs", "uploaded_service", "uploaded_report_hash",
+        ):
             st.session_state.pop(key, None)
         st.rerun()
 
