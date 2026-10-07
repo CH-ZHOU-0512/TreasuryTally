@@ -87,6 +87,7 @@ def echarts_flow_option(
                     "itemStyle": {"color": surface, "borderWidth": 0},
                 }
             )
+    node_y = {node["id"]: node["y"] for node in nodes}
     links = []
     pairs = {}
     for row in rows:
@@ -108,6 +109,12 @@ def echarts_flow_option(
                 "finding_ids": list(row.finding_ids),
                 "label": {
                     "rotate": 0,
+                    # Keep lower-row labels below the line, leaving the lane
+                    # between cards free for internal-transfer amount/status.
+                    "position": "insideMiddleBottom"
+                    if node_y[source] > 0 and node_y[target] > 0
+                    and (source in treasuries) != (target in treasuries)
+                    else "insideMiddleTop",
                     **({"align": "left", "verticalAlign": "middle", "offset": [112, 0]}
                        if (source in treasuries) == (target in treasuries) else {}),
                     "formatter": "{amount|"
@@ -189,11 +196,14 @@ def echarts_component_html(view: BusinessReportView, **kwargs) -> str:
     data = json.dumps(option, ensure_ascii=True, separators=(",", ":"))
     data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     runtime = echarts_javascript().replace("</script", "<\\/script")
-    boot = (
+    geometry = files("trust_receipt.reporting").joinpath("assets/echarts/card-edge-geometry.js").read_text("utf-8")
+    boot = geometry + (
         'const root=document.getElementById("flow");'
         'const chart=echarts.init(root,null,{renderer:"svg"});'
         'chart.setOption(JSON.parse(document.getElementById("flow-data").textContent));'
-        'new ResizeObserver(()=>chart.resize()).observe(root);'
+        'const attach=()=>{treasuryTallyAttachCardEdges(chart);chart.getZr().refreshImmediately();};'
+        'attach();chart.on("graphRoam",attach);'
+        'new ResizeObserver(()=>{chart.resize();attach();}).observe(root);'
     )
     policy = (
         "default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; "

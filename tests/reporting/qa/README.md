@@ -47,3 +47,11 @@ The original JSON receipt is independent of these document dependencies.
 Static diagrams preview at most four rows, or one if repeated account pairs would overlap. The complete appendix
 preserves every saved event. These print limits do not replace the web graph's 12-row explicit pagination.
 Native total-memory and egress enforcement belongs to deployment, not the JavaScript heap flag.
+
+## Card-contact regression
+
+`node check_card_geometry.cjs <saved-echarts-option.json>` uses the actual pinned ECharts runtime, not a drawing mock.
+It checks rendered card bounds, line endpoints and arrow positions for straight/curved/reversed edges, resize, zoom
+and pan, and asserts the input option remains unchanged. The fixed geometry adapter is shared by SSR and the web
+component. It relies on ECharts 6.0.0 graphic internals: rerun and review it before any upstream version upgrade.
+Inspect long amount/status/unit labels too; geometric contact alone is not visual approval.

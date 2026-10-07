@@ -68,6 +68,7 @@ async function main() {
   const chart = echarts.init(null, null, {renderer: 'svg', ssr: true, width, height});
   try {
     chart.setOption(option);
+    require('../echarts/card-edge-geometry.js')(chart);
     const svg = chart.renderToSVGString();
     if (Buffer.byteLength(svg) > 512000 || /<script|<image|<foreignObject|<!DOCTYPE/i.test(svg)) throw Error('svg');
     const png = await sharp(Buffer.from(svg), {density: 144, limitInputPixels: 2600000}).png().toBuffer();

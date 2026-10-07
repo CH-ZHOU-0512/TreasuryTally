@@ -75,6 +75,9 @@ def test_html_component_has_local_runtime_and_no_data_script_injection(failing_i
     assert "script src=" not in html
     assert "connect-src &#x27;none&#x27;" in html
     assert 'renderer:"svg"' in html
+    assert 'treasuryTallyAttachCardEdges(chart)' in html
+    assert 'chart.on("graphRoam",attach)' in html
+    assert 'chart.resize();attach();' in html
     data = re.search(r'<script id="flow-data" type="application/json">(.*?)</script>', html).group(1)
     assert "<" not in data
     assert payload in json.loads(data)["series"][0]["links"][0]["name"]
@@ -122,3 +125,12 @@ def test_single_row_does_not_stretch_nodes_or_line_strokes(failing_input):
     graph = echarts_flow_option(view)["series"][0]
     assert graph["height"] == 2
     assert len(graph["data"]) == 2
+
+
+def test_lower_row_label_leaves_internal_transfer_lane_clear(failing_input):
+    graph = echarts_flow_option(view_for(failing_input))["series"][0]
+    positions = {node["id"]: node["y"] for node in graph["data"]}
+    lower = [edge for edge in graph["links"]
+             if positions[edge["source"]] > 0 and positions[edge["target"]] > 0]
+    assert lower
+    assert all(edge["label"]["position"] == "insideMiddleBottom" for edge in lower)
