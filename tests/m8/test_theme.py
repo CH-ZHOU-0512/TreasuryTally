@@ -101,3 +101,10 @@ def test_logo_is_static_and_preserves_reverse_proxy_prefix():
     assert logo_static_url("/trust-receipt/") == "/trust-receipt/app/static/logo.png"
     source = (root / "app" / "streamlit_app.py").read_text(encoding="utf-8")
     assert "logo_data_url(" not in source
+
+
+def test_mobile_fields_and_cards_keep_sixteen_pixel_spacing():
+    assert '.signal-grid,.task-summary { grid-template-columns:1fr; gap:16px; }' in APP_CSS
+    assert 'flex-direction:column !important; gap:16px !important;' in APP_CSS
+    assert '.block-container { padding:12px 24px 64px; }' in APP_CSS
+    assert '.attempt-card { padding:20px; margin:0 0 16px;' in APP_CSS

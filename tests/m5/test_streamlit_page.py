@@ -10,7 +10,7 @@ def test_responsive_css_forces_narrow_layout_to_single_column() -> None:
     assert 'div[data-testid="stHorizontalBlock"] { flex-direction:column !important' in APP_CSS
     assert 'div[data-testid="column"] { width:100% !important' in APP_CSS
     assert "overflow-wrap:anywhere" in APP_CSS
-    assert "padding:.7rem 24px 4rem" in APP_CSS
+    assert "padding:12px 24px 64px" in APP_CSS
     assert "--tr-gold-primary:#D4AF37" in APP_CSS
     assert "border-radius:12px" in APP_CSS
 

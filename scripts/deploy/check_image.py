@@ -47,7 +47,8 @@ def main() -> None:
     page = AppTest.from_file(str(root / "app" / "streamlit_app.py"), default_timeout=30).run()
     if len(page.exception):
         raise RuntimeError(f"Real app entrypoint raised {len(page.exception)} exception(s)")
-    header = any("核对服务商报表与链上资金流" in item.value for item in page.markdown)
+    html_bodies = [item.proto.body for item in page.get("html")]
+    header = any("核对服务商报表与链上资金流" in body for body in html_bodies)
     if not header:
         raise RuntimeError("Real app entrypoint did not render its product header")
     origin = Path(sys.modules["trust_receipt"].__file__).resolve()

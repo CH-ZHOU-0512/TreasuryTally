@@ -16,7 +16,7 @@ from pydantic import ValidationError
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from app.branding import LOGO_PATH, logo_static_url
+from app.branding import LOGO_PATH, logo_display_url
 from app.case_intake import load_real_case
 from app.commitments import render_commitments
 from app.fund_flow import render_fund_flow
@@ -68,23 +68,23 @@ def _section(title: str, subtitle: str) -> None:
 
 
 def _product_header() -> None:
-    logo_url = escape(logo_static_url(st.get_option("server.baseUrlPath")), quote=True)
+    logo_url = escape(logo_display_url(st.get_option("server.baseUrlPath")), quote=True)
     environment = "样例演示 · 非真实链上证据"
     if _live_only() or st.session_state.get("evidence_label") == "真实 Sepolia RPC":
         environment = "Sepolia · 真实只读核验"
-    st.markdown(
+    st.html(
         '<div class="product-bar"><div class="brand">'
-        f'<img class="brand-logo" src="{logo_url}" alt="信据品牌 Logo" width="52" height="52">'
+        f'<img class="brand-logo" src="{logo_url}" alt="信据品牌 Logo" width="52" height="52" '
+        'loading="eager" decoding="async">'
         f'<span>信据 Agent</span></div><span class="env-chip"><i class="env-dot"></i>{escape(environment)}</span></div>'
         '<section class="hero-main"><div class="hero-copy"><div class="eyebrow">链上报表验收工具</div>'
         '<h1>核对服务商报表与链上资金流</h1>'
         '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></div>'
         '<div class="hero-emblem" aria-hidden="true">'
-        f'<img src="{logo_url}" alt="" width="144" height="144"></div></section>'
+        f'<img src="{logo_url}" alt="" width="144" height="144" loading="eager" decoding="async"></div></section>'
         '<nav class="workflow-steps" aria-label="验收流程">'
         '<span><b>1</b> 上传报表</span><i>→</i><span><b>2</b> 确认范围</span><i>→</i>'
         '<span><b>3</b> 链上核验</span></nav>',
-        unsafe_allow_html=True,
     )
 
 
@@ -703,7 +703,8 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    st.markdown(APP_CSS, unsafe_allow_html=True)
+    # Pure CSS/HTML must not wait for the Markdown component's parsing dependency.
+    st.html(APP_CSS)
     _product_header()
     if st.query_params.get("verify") == "1":
         render_public_explorer(st, PROJECT_ROOT)
