@@ -20,11 +20,14 @@ last-reviewed: 2026-10-07
 用户最新需求替代旧转换/采纳界面：正常路径统一 CSV / `.xlsx` / JSON 上传，模型只识别表头，
 用户不手动转换或采纳 JSON。旧 `9fd663c` 手动界面不发布；下面 ADR-031 各项作为历史本地证据保留。
 M14 从 `9fd663c` 切 `codex/automatic-report-recognition`，单写受限核心与技术文档；
-M12 从同一基线独立单写 app/PRODUCT/FRONTEND/ADR-032，尚待消费核心并接线最终页面。
+M12 从同一基线独立单写 app/PRODUCT/FRONTEND/ADR-032；核心提交已交接，最终页面接线仍由 M12 完成。
 核心 `header_recognition` / `report_recognition` 已实现安全表头、真实列绑定、严格 JSON bypass、
 单位/整表条件局部问题、原声明不修正、失败脱敏/无 fixture fallback、自动私有留档与缓存原件/模型绑定。
 没有模型行值、文件名、私有备注外发，没有新增依赖或修改公共 Schema/签名/金额/attempt 规则。
-专项 33 项离线 mock 测试与全仓 Ruff 已实跑通过；完整非 external 门正在运行，后续记录实际结果。
+核心提交为 `f275825902ad3058f644b6139dab3e9234fc7a6c` 与增量
+`ac2015f5c0f96bd227698f2b7f1f55c39a3a755e`，新增 35 项离线 mock 识别测试通过；
+最终完整非 external 门实际完成 490 passed / 14 deselected / 1 条既有 websockets warning。
+全仓 Ruff、主环境 pip check、21 Schema 重生成检查、1000 物理行限制与 diff check 通过。
 真实模型 API 识别未测试，不将 mock 或工厂构造测试记为外部成功；未推送、主线合并、部署或操作用户任务。
 
 ### 表格转换独立集成验收（2026-10-07，本地通过，未发布）
