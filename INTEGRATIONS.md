@@ -217,6 +217,12 @@ Finding、三态结论、数据库、发布或写链权限。
 - 详细原始响应放在 `.tmp/` 并在验证后清理；可提交内容只保留必要的脱敏摘要。
 - M0 全部完成后，在 [STATUS.md](STATUS.md) 更新总体阶段；架构或范围变化追加到 [DECISIONS.md](DECISIONS.md)。
 
+M9 独立验证公共读取限定为配置的 `PUBLIC_RECEIPT_BASE_URL`、项目现有 HTTPS 公共目录及配置的 Pinata gateway；
+每次最多 4 MB、10 秒，禁止重定向，IPFS 仅接受规范 CID。反馈交易只读解析配置的 Reputation Registry，必须核验
+chain ID、bytecode、交易成功、canonical block、至少两次确认、事件发出地址、reviewer、结果标签/值和公开内容哈希。
+未找到交易、确认不足或公开 parent 不可用返回 INCONCLUSIVE；内容或已观察到的对象关系冲突返回 INVALID。
+该入口没有广播方法，不需要 Reviewer 私钥。
+
 ## M0 验收命令
 
 ```powershell

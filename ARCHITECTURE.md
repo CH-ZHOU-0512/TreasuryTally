@@ -50,13 +50,25 @@ Service History Projection    ── verified receipts → traceable facts
 M8 已实现承诺端口和资金流投影：`commitments` 负责 EIP-712 创建/恢复校验及只读 Registry 能力探针，`projections` 只从
 已有 submission、reference evidence 与 Finding 生成视觉读模型。当前没有可用写入 adapter；`CommitmentAnchorPort` 只冻结
 边界，页面必须显示 `NOT_SUBMITTED`。`DedicatedAnchorReader` 与 `contracts/CommitmentAnchor.sol` 是未接入页面的候选，
-只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。Receipt Verification Explorer 与
-Service History Projection 仍分别属于 M9、M10。
+只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。
 
 `services.upload` 严格解析原始 JSON 声明并私有留档，以独立 local-upload-intake 身份签名；这不认证原始作者。
 `M8WorkspaceWorkflow` 在生成交付之前取得接单签名，进入 M5 持久化之前验证交付签名，随后将承诺和 reference evidence
 追加到 `M8ArtifactStore`。恢复不重调 AI 或重新取链上快照，而是验证签名、receipt manifest 和确定性结果后重建图。
 旧任务缺少快照时不伪造资金流；M5 和 M8 附加存储之间尚无跨事务提交，崩溃可能产生缺少附加快照的旧格式记录。
+
+M9 不修改冻结的 `Receipt 1.0`：`ReceiptRevision` 以外置自哈希记录追加 parent/supersedes 关系，
+`LocalRevisionStore` 一个 attempt 只创建一个文件。`ReceiptCommitmentVerifier` 是稳定适配端口；M8 承诺快照可用时，
+M9 通过实际 EIP-712 校验给出 `VERIFIED`，缺少快照时保留 `UNVERIFIED` 而不阻塞 v1 回执重放。
+`PublicReceiptResolver` 只能返回公开字节、内容哈希和公开关系，不允许回查 SQLite 私有工作区。
+`PublicVerificationBundle` 将授权公开快照与重新绑定的公开版本链一起移交；`PublicBundleResolver` 校验完整历史后定位
+公开回执。M9 用例位于 `orchestration.m9`，公开下载采用配置限定、禁重定向、限时限体积的 `PublicArtifactReader`。
+`ERC8004PublicResolver` 只读 canonical 交易和 Registry 事件，核验 reviewer、URI、内容哈希与结果标签；独立页面不加载
+原任务工作区或模型运行时。完整历史发布单独授权，由 `PublicBundleStore` 保存只追加元数据，恢复不重复上传。
+`orchestration.m10.M10Workflow` 通过 repository 端口读取当前工作区任务与原始 attempt 回执；`history.m9_adapter`
+核验实际 M9 父版本链，`history.projection` 生成可重算事实。发布快照不参与交付计数，缺失/冲突证据只生成中性诊断。
+`app.service_history` 只消费该读模型，提供来源/父回执下钻和显式人工选择；页面将已确认选择带入下一任务，不自动推荐。
+默认不读取历史，只有用户打开历史开关才进行扫描与重放。
 
 M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名
 `ServiceSubmission`。故障注入状态保存在独立 `ReportDelivery.fault_injection` 元数据中，不写入参考证据，也不伪装为
@@ -73,6 +85,7 @@ src/trust_receipt/
 ├─ agents/          # LangChain 提取和计划适配器
 ├─ receipts/        # 回执构建、哈希、重放
 ├─ reputation/      # Agent0/ERC-8004 适配器
+├─ m9/              # 确定性返工、外置版本链、对比与公开重放
 ├─ storage/         # SQLite repository
 └─ orchestration/   # 用例编排，不包含 UI 逻辑
 ```

@@ -52,6 +52,8 @@ def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
         "110000",
         "0",
         "0",
+        "FAIL",
+        "PASS",
     ]
     assert not page.exception
 

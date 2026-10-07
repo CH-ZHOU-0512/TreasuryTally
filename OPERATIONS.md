@@ -132,6 +132,11 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 
 ### Linux 容器部署
 
+页面 Logo 保持用户原始 PNG，存放于 `app/static/logo.png`；`.streamlit/config.toml` 启用
+`server.enableStaticServing`，页面使用兼容 `server.baseUrlPath` 的同源 URL，使浏览器复用静态资源，避免每次重跑
+重复发送大段 base64。OpenAI/Agent0 SDK 仅在对应 adapter 实际使用时加载。生产接入这些改动须经授权重建镜像，
+随后检查 `/trust-receipt/app/static/logo.png`、页面 Logo 与 WebSocket；本地优化不代表生产已经更新。
+
 生产服务器使用 `deploy/docker-compose.prod.yml` 构建两个相互隔离的容器：Streamlit 主应用与
 Blockscout MCP。两者只加入既有反向代理网络，不直接向公网发布容器端口；`data/` 和
 `receipts/private/` 通过宿主机目录持久化。Compose 固定设置 `APP_REQUIRE_LIVE=true`，因此生产页面只能使用真实
@@ -202,6 +207,35 @@ M4 离线门槛与真实模型探针分别运行：
 ```
 
 命令以 JSON 输出回执哈希、任务哈希、对象链接和三态结果复算状态；任一检查失败时退出码非零。
+
+M9 公开回执验证不读取 SQLite 或私有工作区。可对本地下载的公开 JSON 或 HTTP(S) URI 执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli `
+  path\to\public-receipt.json `
+  --kind RECEIPT_HASH `
+  --value 0x<receipt-hash> `
+  --attempt 1 `
+  --expected-content-hash 0x<published-byte-sha256>
+```
+
+`--kind` 还支持 `URI`、`TASK_HASH` 和 `FEEDBACK_TRANSACTION`。单 Receipt attempt 2 必须使用 `--revision`、
+`--parent-revision` 和 `--parent-receipt` 提供公开父回执与关系。完整历史包可直接验证最新 attempt：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli public-history.json --bundle --kind URI
+```
+
+哈希定位加 `--kind RECEIPT_HASH --value 0x<public-receipt-hash>` 或 `--kind TASK_HASH --value 0x<spec-hash>`。
+反馈入口从配置 `ETH_RPC_URL` 和 `ERC8004_REPUTATION_REGISTRY_ADDRESS` 只读真实交易：
+
+```powershell
+.\.venv\Scripts\python.exe -m trust_receipt.m9.cli --kind FEEDBACK_TRANSACTION --value 0x<tx-hash> --attempt 2 --public-history public-history.json
+```
+
+未提供可验证公开父回执时返回 INCONCLUSIVE；未提供公开承诺时 `commitment_status=UNVERIFIED`。
+页面的 `?verify=1` 为独立入口，支持文件、配置公共目录 HTTPS/IPFS 和反馈交易，不需要原工作区或模型密钥。
+“分享完整验收历史”分别授权历史导出与公共上传，元数据保存在私有 `public-history/`，恢复后复用已有发布引用。
 
 M0 真实探针使用：
 

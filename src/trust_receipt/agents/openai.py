@@ -6,10 +6,16 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 from trust_receipt.agents.ports import StructuredArtifact
+
+
+def ChatOpenAI(**kwargs):
+    """Load the vendor SDK only when a live model adapter is constructed."""
+    from langchain_openai import ChatOpenAI as model_class
+
+    return model_class(**kwargs)
 
 
 class OpenAIStructuredOutputAdapter:
