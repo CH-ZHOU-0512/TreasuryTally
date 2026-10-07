@@ -15,6 +15,33 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
+### 表格转换独立集成验收（2026-10-07，本地通过，未发布）
+
+M14 新建 `m14-report-conversion-integration/HACKTHON`、`codex/report-conversion-integration`，
+实际重试 fetch 核实 `origin/main=e2cfbe24d0e95999057870433956e97310694928`；整条分支 fast-forward 至
+M12 `2c645ba067c47b28679a3d4754f7111965a830b0`，没有重复摘取转换核心。仅补充 M14 的 STATUS-only
+`095040e` 证据（本地映射 `ef3df38`）、恢复/私有来源集成测试及 TEST_PLAN/本状态记录，不改 app。
+M12 浏览器证据属于下项负责人实测；不写成 M14 重做了完整浏览器矩阵。
+
+- M14 独立全量非 external：455 passed / 14 deselected / 1 条既有第三方 warning（包括新增 1 项转换恢复测试）。
+  全仓 Ruff、主环境 pip check、21 Schema 可复现、1000 物理行和 diff check 通过。
+  无凭据 MVP 演示 FAIL→PASS、两份回执重放与新会话恢复 valid=true。
+- 同源归档/wheel 的隔离 Linux 镜像构建门及独立 `--network none` 运行门通过：101 个源码文件匹配安装 wheel，
+  实际入口导入 `/app/src/trust_receipt`、页面 exception 0、TreasuryTally 产品区存在。没有生产环境、真实密钥或用户数据挂载。
+  该门只证明真实初始页面可运行，不代表外部核验或生产部署。
+- 额外 Linux 测试使用只读测试源码挂载：21 项转换 UI 加 1 项恢复/私有来源测试全部通过。
+  首次挂载包含 Windows 字节码缓存，导致 11 项 inspect 源路径失败；容器独立缓存并原样重跑后 22 passed。
+  不跳过失败断言，不将缓存问题改成应用修复。
+- 新增测试证明采纳不创建任务/attempt，原声明和 local-upload-intake 身份保留；新 workflow 从持久化证据与签名恢复，
+  不重新取证。原 CSV 私有备注、文件名及转换 provenance 不进入本地构造的授权公开包；未授权导出拒绝。
+  只测试序列化，不调用 publisher 或写链。
+- 审查未发现阻断本地合流的新增问题。私有输入使用内容哈希文件名，位于工作区 `receipts/private/.../uploads`，
+  不在 `app/static` 或公共回执目录；签名、Receipt/Schema、发布器、确定性规则和品牌资产与基线无差异。
+  confirmed 参数不是授权令牌，provenance 不是原作者签名；跨文件留档非事务，失败可能留下私有孤立文件。
+  原型不提供多租户访问控制，不适合真实敏感报表；这些限制没有因转换入口而解除。
+- 未进行真实模型/RPC/外部服务核验、真人测试、线上任务恢复、760px 两侧/原生 200% 全状态视觉矩阵，
+  未推送、合并 main、部署、公开上传或写链；生产仍保留既有品牌版本。
+
 ### 原始报表转换 UI（2026-10-07，本地完成，未部署）
 
 M12 在独立 `m12-report-intake/HACKTHON` 工作树、`codex/report-intake-ui` 分支从已发布主线
@@ -30,6 +57,7 @@ Ruff、pip check、21 Schema、1000 物理行和 diff 检查通过；离线 MVP 
 缺日志身份、Excel 数字金额和公式实际阻塞；共用链编号由用户明确填写，格式转换不认证作者、不代表 PASS。
 1440/390px 输入和结果页无页面横向溢出；完整刷新重开引导，普通 rerun 不重开。
 未执行外部服务、真实链上核验、真人可用性测试、用户线上工作区操作、公开上传、写链、推送、main 合并或部署。
+
 ### 首步表格转 JSON（2026-10-07，本地实现，未发布）
 
 M14 核心 `611523d`、结构拒绝增量 `de776dc`、有界解压增量 `dc52a718de7e6802cc48c307608b9f65a2205e94`
@@ -37,7 +65,7 @@ M14 核心 `611523d`、结构拒绝增量 `de776dc`、有界解压增量 `dc52a7
 UploadedReport 的确定性转换候选与确认后私有留档。原始声明、重复行及来源边界不变，不调用 AI/RPC，不创建参考证据。
 最终核心实际验证：转换专项 66 passed；全量非 external 433 passed / 14 deselected / 1 条既有 warning；
 全仓 ruff、pip check、21 Schema 可复现与 diff check 通过。新增代码与测试的物理行数均低于 1000 行。
-M12 正在独立接入首步映射/预览/明确采用 UI，并单写 PRODUCT/FRONTEND_SPEC/ADR031。
+核心阶段由 M12 独立接入 UI 并单写 PRODUCT/FRONTEND_SPEC/ADR031；现已完成，界面证据见前项。
 未进行真实用户测试、外部网络核验、推送、合并或部署；生产仍是下述品牌版本，不将本地候选称为上线能力。
 
 ### TreasuryTally 品牌统一（2026-10-07，已合并并部署）
