@@ -32,10 +32,11 @@ Ruff、pip check、21 Schema、1000 物理行和 diff 检查通过；离线 MVP 
 未执行外部服务、真实链上核验、真人可用性测试、用户线上工作区操作、公开上传、写链、推送、main 合并或部署。
 ### 首步表格转 JSON（2026-10-07，本地实现，未发布）
 
-M14 核心提交 `611523d5e7d9585fb81cd213e4d0fa4ea74897f5` 基于 `e2cfbe2`，支持受限 CSV/单工作表 XLSX 到既有
+M14 核心 `611523d`、结构拒绝增量 `de776dc`、有界解压增量 `dc52a718de7e6802cc48c307608b9f65a2205e94`
+基于 `e2cfbe2`，支持受限 CSV/单工作表 XLSX 到既有
 UploadedReport 的确定性转换候选与确认后私有留档。原始声明、重复行及来源边界不变，不调用 AI/RPC，不创建参考证据。
-该提交实际验证：转换专项 55 passed；全量非 external 422 passed / 14 deselected / 1 条既有 warning；
-全仓 ruff、pip check、diff check 通过。后续结构边界增量专项 65 passed、ruff 通过；全量待最终增量后重跑。
+最终核心实际验证：转换专项 66 passed；全量非 external 433 passed / 14 deselected / 1 条既有 warning；
+全仓 ruff、pip check、21 Schema 可复现与 diff check 通过。新增代码与测试的物理行数均低于 1000 行。
 M12 正在独立接入首步映射/预览/明确采用 UI，并单写 PRODUCT/FRONTEND_SPEC/ADR031。
 未进行真实用户测试、外部网络核验、推送、合并或部署；生产仍是下述品牌版本，不将本地候选称为上线能力。
 
