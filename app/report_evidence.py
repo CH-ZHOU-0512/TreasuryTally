@@ -3,6 +3,7 @@
 from app.commitments import render_commitments
 from app.m9_components import render_repair_comparison, render_rework_package
 from app.m9_public import render_public_history
+from app.report_exports import render_additional_exports
 
 
 def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions, publish, report=None):
@@ -14,7 +15,7 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
         execution = executions[attempt - 1]
         section = st.selectbox(
             "查看依据类别", ("核验范围与来源", "交易与差异依据", "AI 说明", "任务与签名",
-                              "回执与修复历史", "分享与公开验证"), key="report-evidence-section",
+                              "回执与修复历史", "其他格式下载", "分享与公开验证"), key="report-evidence-section",
         )
         if section == "核验范围与来源":
             st.json(st.session_state.task.model_dump(mode="json"))
@@ -70,6 +71,11 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
                 render_rework_package(st, artifacts.rework_package)
             if artifacts.comparison is not None:
                 render_repair_comparison(st, artifacts.comparison)
+        elif section == "其他格式下载":
+            if report is None:
+                st.info("没有已绑定的业务报告；请保留原回执。")
+            else:
+                render_additional_exports(st, report)
         elif allow_actions:
             publish(runtime, execution, attempt - 1, artifacts)
             render_public_history(st, runtime, artifacts.receipts)

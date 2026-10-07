@@ -442,6 +442,9 @@ renderer/adapters 与运行环境接线由各自负责人实施，app 只消费�
 后果：AI 全文、来源诊断、签名、manifest、JSON 集中一个验证依据入口；PASS 不显示重复空问题卡。
 小金额保持非零精确表达，未知不显示零；完整地址、事件与两次历史仍可追溯。INCONCLUSIVE 不负面评价服务。
 Word/PDF 下载属于本地输出，不自动公开、写链或增加 attempt；Receipt Schema、旧签名和发布授权不变。
+HTML/PNG/SVG 仅在唯一技术入口按需生成；每种缓存绑定完整报告视图。组合层以应用级单实例复用 renderer，
+仅受信进程环境 REPORT_RENDERER_NODE / REPORT_RENDERER_MODULES 指定部署隔离启动器与依赖目录，
+缺配置使用固定部署路径，不通过 PATH 发现裸 Node。路径不接受报表字段或页面输入；变更配置须重启应用。
 报告/导出引擎在 reporting 边界，app 只消费端口；导出须验证中文、长地址、上限记录及图表分页。
 
 ## 新增决定模板

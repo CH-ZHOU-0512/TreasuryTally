@@ -2,7 +2,7 @@
 
 from html import escape
 
-from trust_receipt.hashing import content_hash
+from app.report_exports import render_export_download
 
 
 def render_business_report(st, report, *, graph=None, exports=None, receipt_json: str):
@@ -89,20 +89,7 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
             (buttons[2], "PDF 报告", "pdf", "application/pdf", exports[1]),
         ):
             with column:
-                key = f"report-export:{content_hash(report.model_dump_json().encode())}:{suffix}"
-                if key not in st.session_state:
-                    if st.button(f"生成{label}", key=key + ":create", use_container_width=True):
-                        try:
-                            with st.spinner(f"正在生成{label}…"):
-                                st.session_state[key] = export(report)
-                            st.rerun()
-                        except (ValueError, OSError, RuntimeError):
-                            st.error(f"{label}暂时无法生成；原回执已保留，请联系维护者。")
-                else:
-                    st.download_button(
-                        label, st.session_state[key], f"treasury-report-{current.attempt}.{suffix}", mime,
-                        key=key + ":download", use_container_width=True,
-                    )
+                render_export_download(st, report, label=label, suffix=suffix, mime=mime, export=export)
     for limitation in report.limitations:
         st.caption(limitation)
     st.caption(report.notice)

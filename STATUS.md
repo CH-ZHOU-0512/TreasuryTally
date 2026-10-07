@@ -6,14 +6,35 @@ authority-for:
   - current-status
   - active-work
   - known-blockers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-08
 ---
 
 # 当前项目状态
 
-更新时间：2026-10-07
+更新时间：2026-10-08
 
 ## 当前阶段
+
+### M12 业务报告导出页面本地接线（2026-10-08）
+
+- 独立 `codex/report-intake-ui` 消费 M13 导出提交 `0a0883a4a963124348823977121d8522164f6f67`
+  为本地 `329b174`。主业务面按需提供真实 Word/PDF 与独立原 JSON；唯一技术入口中的“其他格式下载”
+  提供 HTML/PNG/SVG。页面不公开、写链、调用模型/RPC 或增加 attempt；缓存绑定完整业务 view 与格式。
+- 按 M14 约定以无参数 `st.cache_resource` 共享单应用 renderer，显式传给全部格式；仅读取受信进程环境
+  `REPORT_RENDERER_NODE` / `REPORT_RENDERER_MODULES`，缺失或空配置用固定 `/opt/trust-receipt-renderer/` 路径，
+  不发现 PATH 裸 Node、不硬编码个人 bundle 路径、不接用户配置输入。缺依赖/繁忙/失败提示导出不可用且原 JSON 保留。
+  M14 隔离启动器、Docker 与运维配置仍在独立集成，本页面接线不等于生产运行边界已通过。
+- M12 本次实际执行 `python -m pytest -m 'not external' -q`：**571 通过、16 排除、1 条既有第三方弃用 warning**。
+  新增导出页面测试 8 通过；完整 Ruff、pip check、21 份 schema 可重复检查、1000 物理行限制与 diff 检查通过。
+  离线 MVP 再次 FAIL→PASS，两份独立回执重放与冷恢复有效；未执行外部服务或密钥检查。
+- 根工作区主环境未被本任务安装/修改；只读核验其中 python-docx 1.2.0、reportlab 4.4.9、Pillow 12.3.0。
+  用 loader-selected bundled Python/Node 与 M13 独立 sharp 0.34.5 的只读依赖目录生成一份合成 PASS 的真实
+  DOCX/PDF/HTML/PNG/SVG，AppTest 注册五种真实文件 payload 加独立 JSON 六个下载入口、完整 view 缓存字节一致。
+  此 smoke 使用预先由 bundled 作者生成的真实文件；不是页面实际生产 renderer 执行、HTTP 下载或浏览器验收。
+- M12 实际以原始分辨率查看该 PASS 资金流 PNG 与 PDF 全部 3 页：中文、金额、明细完整，但发现纵向内部互转
+  箭头提前终止、未接下方账户卡片，已交 M13 引擎负责人复查；本轮不能记为视觉完全通过。
+  M12 未重新渲染 DOCX（Windows bundle 缺 canonical LibreOffice），没有交付 QA 文件；M13 的 86 页记录仍只算其独立证据。
+  浏览器自动化继续暂停，未 push、merge、部署、公开上传或写链，未改 Docker/Node 包与锁/共享主环境。
 
 ### 自动上传与单一业务报告页面（2026-10-07，本地联调中，未发布）
 
