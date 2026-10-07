@@ -86,3 +86,30 @@ def test_html_component_has_local_runtime_and_no_data_script_injection(failing_i
 def test_pinned_component_available():
     assert ECHARTS_VERSION == "6.0.0"
     assert "Apache Software Foundation" in echarts_javascript()
+
+
+def test_readable_cards_and_amount_labels_keep_complete_tooltips(failing_input):
+    view = view_for(failing_input)
+    option = echarts_flow_option(view)
+    graph = option["series"][0]
+    assert all(node["symbolSize"] == 176 and node["symbolKeepAspect"] for node in graph["data"])
+    assert all(node["label"]["position"] == "inside" for node in graph["data"])
+    for row, edge in zip(view.current.flow_rows, graph["links"], strict=True):
+        assert row.amount.display in edge["label"]["formatter"]
+        assert row.status_label in edge["label"]["formatter"]
+        assert edge["lineStyle"]["color"] == "#b8b8bd"
+    html = echarts_component_html(view)
+    assert "min-width:720px" in html
+    assert 'class="flow-scroll" tabindex="0"' in html
+
+
+def test_long_amount_abbreviates_only_visual_label(failing_input):
+    view = view_for(failing_input)
+    row = view.current.flow_rows[0]
+    amount = row.amount.model_copy(update={"display": "0." + "0" * 253 + "1"})
+    row = row.model_copy(update={"amount": amount})
+    view = view.model_copy(update={"current": view.current.model_copy(update={"flow_rows": (row,)})})
+    edge = echarts_flow_option(view)["series"][0]["links"][0]
+    assert "…" in edge["label"]["formatter"]
+    assert amount.display in edge["name"]
+    assert edge["amount_base_units"] == amount.base_units

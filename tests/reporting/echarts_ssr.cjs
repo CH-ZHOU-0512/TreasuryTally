@@ -10,7 +10,11 @@ let count = 0;
 for (const name of fs.readdirSync(directory).filter(name => name.endsWith('.option.json'))) {
   const option = JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8'));
   for (const width of [390, 1440]) {
-    const chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width, height: 480 });
+    // Same minimum canvas as the scrollable component, not a squeezed mobile graph.
+    const nodes = option.series[0].data;
+    const columns = [0, 500].map(x => nodes.filter(node => node.x === x).length);
+    const height = Math.max(480, Math.max(...columns) * 160 + 240);
+    const chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: Math.max(720, width), height });
     try {
       chart.setOption(option);
       const svg = chart.renderToSVGString();

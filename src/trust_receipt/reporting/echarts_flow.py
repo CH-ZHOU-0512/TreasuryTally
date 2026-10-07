@@ -49,8 +49,9 @@ def echarts_flow_option(
         raise ValueError("offset outside saved events")
     rows = report.flow_rows[offset : offset + limit]
     dark = theme == "dark"
-    foreground, background = ("#f5f5f5", "#191b20") if dark else ("#111111", "#ffffff")
-    accent, muted = ("#d9c08a", "#c8c8cc") if dark else ("#887044", "#444444")
+    foreground, background = ("#f5f5f5", "#141414") if dark else ("#111111", "#ffffff")
+    accent, muted = ("#b8b8bd", "#c8c8cc") if dark else ("#555555", "#444444")
+    surface = "#252528" if dark else "#eeeeef"
     treasuries = {a.full.lower() for a in view.scope.treasuries}
     recipients = {a.full.lower() for a in view.scope.recipients}
     addresses = {}
@@ -69,11 +70,21 @@ def echarts_flow_option(
                     "id": key,
                     "name": f"{role}\n{address.full}",
                     "x": 0 if column == 0 else 500,
-                    "y": (index + 1) * 500 // (len(group) + 1),
-                    "symbol": "roundRect" if key in treasuries else "circle",
-                    "symbolSize": 36,
-                    "label": {"formatter": f"{role}\n{address.short}"},
-                    "itemStyle": {"color": background, "borderColor": accent, "borderWidth": 2},
+                    "y": index * 160,
+                    "symbol": "path://M12 0H164Q176 0 176 12V68Q176 80 164 80H12Q0 80 0 68V12Q0 0 12 0Z",
+                    "symbolSize": 176,
+                    "symbolKeepAspect": True,
+                    "label": {
+                        "position": "inside",
+                        "formatter": "{icon|" + ("▣" if key in treasuries else "◎")
+                        + "}  {role|" + role + "}\n{address|" + address.short + "}",
+                        "rich": {
+                            "icon": {"fontSize": 24, "color": foreground, "lineHeight": 32},
+                            "role": {"fontSize": 14, "fontWeight": 600, "color": foreground},
+                            "address": {"fontSize": 12, "color": muted, "lineHeight": 24},
+                        },
+                    },
+                    "itemStyle": {"color": surface, "borderWidth": 0},
                 }
             )
     links = []
@@ -95,12 +106,28 @@ def echarts_flow_option(
                 "status": row.status,
                 "amount_base_units": row.amount.base_units,
                 "finding_ids": list(row.finding_ids),
-                "label": {"formatter": row.status_label},
+                "label": {
+                    "rotate": 0,
+                    **({"align": "left", "verticalAlign": "middle", "offset": [16, 40]}
+                       if (source in treasuries) == (target in treasuries) else {}),
+                    "formatter": "{amount|"
+                    + (row.amount.display if len(row.amount.display) <= 24 else row.amount.display[:21] + "…")
+                    + "}\n{state|" + row.status_label + "}\n{unit|"
+                    + (row.amount.unit if len(row.amount.unit) <= 16 else row.amount.unit[:13] + "…") + "}",
+                    "backgroundColor": background,
+                    "padding": [8, 12],
+                    "borderRadius": 8,
+                    "rich": {
+                        "amount": {"fontSize": 20, "fontWeight": 600, "color": foreground, "lineHeight": 28},
+                        "state": {"fontSize": 12, "color": muted, "lineHeight": 20},
+                        "unit": {"fontSize": 12, "color": muted, "lineHeight": 20},
+                    },
+                },
                 "lineStyle": {
                     "color": accent,
                     "width": 2,
                     "type": "solid" if row.status == "MATCHED" else "dashed",
-                    "curveness": (ordinal % 4 + 1) / 10,
+                    "curveness": 0 if source != target and ordinal == 0 else (ordinal % 4 + 1) / 8,
                     "opacity": 1,
                 },
             }
@@ -113,10 +140,10 @@ def echarts_flow_option(
         "title": {
             "text": f"资金流向 · 第 {report.attempt} 次核验",
             "subtext": f"{range_text} · {report.outcome_label}\n{view.source_mode_label}",
-            "textStyle": {"color": foreground, "fontSize": 16},
-            "subtextStyle": {"color": muted, "fontSize": 12},
-            "left": 12,
-            "top": 12,
+            "textStyle": {"color": foreground, "fontSize": 20, "fontWeight": 700},
+            "subtextStyle": {"color": muted, "fontSize": 12, "lineHeight": 18},
+            "left": 24,
+            "top": 24,
         },
         "tooltip": {"trigger": "item", "renderMode": "richText", "formatter": "{b}", "confine": True},
         "aria": {"enabled": True, "label": {"description": f"资金流向。{range_text}。{view.conclusion}"}},
@@ -124,17 +151,17 @@ def echarts_flow_option(
             {
                 "type": "graph",
                 "layout": "none",
-                "left": "16%",
-                "right": "16%",
-                "top": 116,
-                "bottom": 56,
+                "left": "center",
+                "width": 500,
+                "height": max(1, max(map(len, groups)) - 1) * 160,
+                "top": 168,
                 "roam": True,
                 "scaleLimit": {"min": 1, "max": 4},
                 "data": nodes,
                 "links": links,
                 "edgeSymbol": ["none", "arrow"],
                 "edgeSymbolSize": [0, 10],
-                "label": {"show": True, "position": "bottom", "color": foreground, "fontSize": 12},
+                "label": {"show": True, "color": foreground, "fontSize": 12},
                 "edgeLabel": {"show": True, "color": foreground, "fontSize": 12},
                 "emphasis": {"focus": "adjacency"},
             }
@@ -153,6 +180,9 @@ def echarts_component_html(view: BusinessReportView, **kwargs) -> str:
     Recreate it for each requested pagination/attempt selection in the UI.
     """
     option = echarts_flow_option(view, **kwargs)
+    nodes = option["series"][0]["data"]
+    column_count = max((sum(node["x"] == x for node in nodes) for x in (0, 500)), default=0)
+    height = max(480, column_count * 160 + 240)
     # Script-element escaping is separate from HTML escaping. Never interpolate
     # a user-controlled field into executable JavaScript or its formatter.
     data = json.dumps(option, ensure_ascii=True, separators=(",", ":"))
@@ -176,8 +206,10 @@ def echarts_component_html(view: BusinessReportView, **kwargs) -> str:
         f'<meta http-equiv="Content-Security-Policy" content="{escape(policy, quote=True)}">'
         '<title>资金流向图</title><style>'
         f'body{{margin:0;background:{background};color:{text_color};font:12px sans-serif}}'
-        '#flow{width:100%;height:480px}p{padding:0 12px;line-height:1.6;margin:0}'
-        '</style></head><body><div id="flow" role="img" aria-label="已保存证据的资金流向图"></div>'
+        f'#flow{{width:100%;min-width:720px;height:{height}px}}'
+        '.flow-scroll{width:100%;overflow:auto}p{padding:16px 24px;line-height:1.6;margin:0}'
+        '</style></head><body><div class="flow-scroll" tabindex="0" aria-label="资金流图，可横向滚动">'
+        '<div id="flow" role="img" aria-label="已保存证据的资金流向图"></div></div>'
         '<p>箭头表示转账方向；线宽不表示金额。点击连线查看精确金额、来源和事件引用。'
         '本图按页展示，完整事件仍以报告明细为准；不重新访问链上或生成新结论。</p>'
         f'<script id="flow-data" type="application/json">{data}</script>'

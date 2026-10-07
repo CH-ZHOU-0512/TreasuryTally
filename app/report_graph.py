@@ -42,5 +42,6 @@ def render_report_graph(st, report, *, embed=None):
     except (ValueError, OSError):
         st.error("资金流组件暂时无法读取；原回执已保留，不会生成替代证据。")
     st.caption("拖动或缩放只改变视图。点击连线查看金额与来源；线宽不表示金额。")
+    st.caption("图内可横向或纵向滚动；长标签的省略号只缩略展示，完整精确值仍在详情与事件表。")
     st.caption("图例：" + "；".join(f"{item.label} — {item.meaning}" for item in report.legend))
     st.caption("完整事件与引用可在「验证依据 / 技术详情 → 交易与差异依据」查看。")
