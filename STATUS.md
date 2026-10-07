@@ -15,14 +15,41 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
-### TreasuryTally 品牌统一（本地已验证，待发布）
+### TreasuryTally 品牌统一（2026-10-07，已合并并部署）
 
 用户确认产品与品牌名称统一为 `TreasuryTally`。网页标题、品牌文字、Logo 替代文本、README、产品与前端规范、
 自助说明、立项材料、包描述及回执 CLI 帮助已修改；受维护主线文本扫描无旧品牌或 AGNET 拼写残留。
 兼容性技术标识与历史签名/回执保持不变，边界见 ADR-030；不重命名仓库、生产路径或协议标识。
 主控实跑非 external pytest 为 367 passed / 14 deselected / 1 条既有 warning；pip check、21 Schema 与文件规模门通过。
 Skill 品牌增量 `1b6e525` 与 MCP 品牌增量 `808ff86` 已由各负责人在独立分支验证；不将其新增实现混入网页发布。
-Skill 独立公开仓库品牌同步提交 `be53ac0`，URL 保持不变。本条不表示网页品牌已经部署。
+Skill 独立公开仓库品牌同步提交 `be53ac0`，URL 保持不变。
+
+- 品牌提交 `3c6ad8815b0b75fdd3f7c81123f5a43bf471f2bc` 经
+  [PR #17](https://github.com/CH-ZHOU-0512/xinjv/pull/17) 合并为 `5fb7f753fb7c72ecd65e68e45e2024c35832c8a0`，
+  并完成首次品牌镜像切换。随后主控补充 app 包 docstring，完整品牌提交为
+  `935dc82e60d48b2612f04f1c2af00b51efb78059`，经
+  [PR #18](https://github.com/CH-ZHOU-0512/xinjv/pull/18) 合并为 `5872c8922a0760035a340c0f46c39dff5d8faad8`，
+  两者源码树相同；两次 PR/分支及合并主线 CI 均通过。不是把首次镜像改标为补漏后的源码。
+- 当前生产镜像 `trust-receipt:brand-935dc82e60d48b2612f04f1c2af00b51efb78059`，revision 为完整品牌提交，
+  image ID `sha256:5357c9fb6562072cf761d8f3306f1883437bd46724edb610e32a7a72bb4c1a01`。
+  同源归档/wheel 上传 SHA-256 校验通过；构建、独立无网络运行和切换前真实 `/app` 入口均为
+  98 源文件匹配 wheel、exception 0、TreasuryTally 品牌区存在；镜像 pip check 通过。
+- 只替换 app，两次切换均核验 `.env` 哈希、三个数据/回执挂载、Blockscout ID/启动时间不变；当前 healthy、公网 health 200/ok，
+  `APP_REQUIRE_LIVE=true`、`M6_ENABLE_WRITES=false`。未动 Nginx、用户任务或历史回执，无公开上传/写链。
+- 最新回滚 `trust-receipt:brand-rollback-935dc82e60d48b2612f04f1c2af00b51efb78059` 指向前一健康品牌镜像 `brand-3c6ad88…`，
+  原业务版本回滚 `trust-receipt:brand-rollback-3c6ad8815b0b75fdd3f7c81123f5a43bf471f2bc` 指向 `ui-002b8e1…`；
+  均按旧镜像自身入口门验证，不用新品牌要求否决旧版本。两次源码备份分别在
+  `/opt/trust-receipt-backups/brand-935dc82e60d48b2612f04f1c2af00b51efb78059/` 与
+  `/opt/trust-receipt-backups/brand-3c6ad8815b0b75fdd3f7c81123f5a43bf471f2bc/`。
+- 发布者独立 `m14-brand-release` 在最终镜像切换后刷新并实测 1440×1000 / 390×844 首页：标题与可见品牌为 TreasuryTally，
+  Logo alt 为 TreasuryTally Logo，可见页面无旧中文品牌，exception 0、无页面水平溢出，黑金 CSS 就绪；
+  名称完整显示。两处 Logo 实际复用 `.../media/fcec295ccbc208d821452279307d79e9.png`，自然宽 288px，
+  桌面显示 52/144px、手机 44px/大图按规范隐藏；不能仅由 image_id 更名推断 URL 必变。
+  原 PNG SHA-256 仍为 `875de454…0610c`。截图位于发布者工作树忽略目录
+  `output/playwright/treasurytally-final-1440.png` 和 `treasurytally-final-390.png`。
+- 发布者复跑品牌/文档 4 项通过，补漏 docstring Ruff/diff check 通过；完整 367 项质量门由主控实际执行并由各轮 CI 复验。
+  发布浏览器记录包含容器切换期间 WebSocket close 与短暂 502，最终页面与健康恢复；不声称全会话 console 0。
+  未做本轮真实核验、上传、用户故障任务恢复或性能改善验证，未纳 M15/M16 实现；原有多状态视觉与冷加载待验收项仍保留。
 
 ### 网页集成修复发布（2026-10-07，已合并并部署）
 
