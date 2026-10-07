@@ -19,6 +19,13 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from app.branding import LOGO_PATH, logo_data_url
 from app.commitments import render_commitments
 from app.fund_flow import render_fund_flow
+from app.report_experience import (
+    amount_summary,
+    contract_example_bytes,
+    finding_copy,
+    format_token_amount,
+    strict_template_bytes,
+)
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
@@ -399,16 +406,34 @@ def _render_attempts(runtime: AppRuntime) -> None:
                 f'{execution.receipt.publication.chain_status.value}</span></div></div>',
                 unsafe_allow_html=True,
             )
+            token_decimals = (
+                execution.submission.transfers[0].token_decimals
+                if execution.submission.transfers
+                else None
+            )
+            summary = amount_summary(
+                execution.submission.claimed_total_base_units,
+                result.calculated_total_base_units,
+                decimals=token_decimals,
+            )
+            verified_display = (
+                format_token_amount(summary.verified, summary.decimals)
+                if result.calculated_total_base_units is not None
+                else "无法确定"
+            )
+            st.markdown(
+                '<div class="business-summary"><strong>金额核对结论</strong>'
+                f'<p>{escape(summary.direction)}</p>'
+                f'<small>报表：{escape(format_token_amount(summary.claimed, summary.decimals))}</small>'
+                f'<small>链上有效：{escape(verified_display)}</small>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
             claimed, actual, difference, findings = st.columns(4)
             claimed.metric("服务声称 · 最小单位", execution.submission.claimed_total_base_units)
             with actual, st.container(key=f"metric-actual-{index}"):
                 st.metric("链上有效 · 最小单位", result.calculated_total_base_units or "无法确定")
-            delta = (
-                str(int(execution.submission.claimed_total_base_units) - int(result.calculated_total_base_units))
-                if result.calculated_total_base_units is not None
-                else "无法确定"
-            )
-            difference.metric("差异 · 声称 − 链上", delta)
+            difference.metric("精确差额 · 报表 − 链上", summary.difference)
             findings.metric("问题数量", len(result.findings))
             if result.outcome is VerificationOutcome.INCONCLUSIVE:
                 st.warning(f"证据不足，不能形成服务负面结论：{result.inconclusive_reason}")
@@ -439,15 +464,23 @@ def _render_attempts(runtime: AppRuntime) -> None:
                             f"retrieved_at={source.retrieved_at.isoformat()}"
                         )
             if result.findings:
-                st.markdown("**需要关注的 Finding**")
-                for finding in result.findings:
+                st.markdown("**需要处理的差异**")
+                for finding_number, finding in enumerate(result.findings, start=1):
+                    title, action = finding_copy(finding.finding_type)
                     refs = ", ".join(escape(ref) for ref in finding.evidence_refs)
                     st.markdown(
-                        f'<div class="finding-card"><strong>{escape(finding.finding_type.value)}</strong> · '
-                        f'{escape(finding.severity.value)} / {escape(finding.status.value)}<br>'
-                        f'{escape(finding.explanation)}<br><span class="mono">证据：{refs}</span></div>',
+                        f'<div class="finding-card"><strong>{finding_number}. {escape(title)}</strong>'
+                        f'<p>{escape(action)}</p><small>{escape(finding.status.value)} · '
+                        f'{escape(finding.finding_type.value)}</small></div>',
                         unsafe_allow_html=True,
                     )
+                    with st.expander(f"查看差异 {finding_number} 的交易与判定依据"):
+                        st.write("处理建议：", action)
+                        st.write("确定性说明：", finding.explanation)
+                        st.write("判定规则：", finding.violated_rule)
+                        st.write("证据引用：", list(finding.evidence_refs))
+                        st.json({"链上预期": finding.expected, "报表实际": finding.actual})
+                        st.caption(f"完整证据索引：{refs}")
             pairs = st.session_state.get("commitment_pairs", [])
             task_commitment = delivery_commitment = expected_signer = None
             if index <= len(pairs) and pairs[index - 1] is not None:
@@ -498,31 +531,56 @@ def _render_attempts(runtime: AppRuntime) -> None:
 def _draft_task(runtime: AppRuntime) -> None:
     _section("上传报表", "上传约定格式的 JSON 报表；演示模式也可直接使用固定样例。")
     with st.container(border=True, key="panel-input"):
+        input_mode = st.selectbox(
+            "报表输入方式",
+            ("上传自己的 JSON", "加载契约测试示例"),
+            help="测试示例来自既有人工标注契约样例，不是真实 M11 案例。",
+        )
+        st.download_button(
+            "下载严格 JSON 空白模板",
+            data=strict_template_bytes(),
+            file_name="uploaded-report-template.json",
+            mime="application/json",
+            use_container_width=True,
+        )
         uploaded = st.file_uploader(
             "服务商报表",
             type=("json",),
             accept_multiple_files=False,
             max_upload_size=1,
+            disabled=input_mode == "加载契约测试示例",
         )
         upload_valid = True
         st.caption("报表格式：schema_version、claimed_total_base_units、claimed_count、transfers。")
         with st.expander("查看上传格式与身份说明"):
             st.json(UploadedReport.model_json_schema())
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
-        if uploaded is not None:
+        payload = None
+        report_name = None
+        if input_mode == "加载契约测试示例":
+            payload = contract_example_bytes(PROJECT_ROOT)
+            report_name = "契约测试示例（人工标注合成数据，非 M11 真实案例）"
+        elif uploaded is not None:
             payload = uploaded.getvalue()
+            report_name = uploaded.name
+        if payload is not None:
             try:
-                st.session_state.uploaded_service = UploadedReportService(
-                    payload, private_directory=runtime.upload_directory,
-                )
-                st.success(f"已读取 {uploaded.name} · SHA-256 {content_hash(payload)}")
+                digest = content_hash(payload)
+                if st.session_state.get("uploaded_report_hash") != digest:
+                    st.session_state.uploaded_service = UploadedReportService(
+                        payload, private_directory=runtime.upload_directory,
+                    )
+                    st.session_state.uploaded_report_hash = digest
+                st.success(f"已读取 {report_name} · SHA-256 {digest}")
                 st.caption("原始字节已私有留档；接下来核验这份报表的原始金额和记录声明。")
             except ValueError:
                 upload_valid = False
                 st.session_state.pop("uploaded_service", None)
+                st.session_state.pop("uploaded_report_hash", None)
                 st.error("无法解析报表：需要严格 UTF-8 JSON、完整字段、整数金额、service 来源与最多 200 条记录。")
         else:
             st.session_state.pop("uploaded_service", None)
+            st.session_state.pop("uploaded_report_hash", None)
         request = st.text_area(
             "核验范围说明",
             value="核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。",

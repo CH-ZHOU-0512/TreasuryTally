@@ -1,0 +1,62 @@
+import json
+from pathlib import Path
+
+from app.report_experience import (
+    amount_summary,
+    contract_example_bytes,
+    finding_copy,
+    format_token_amount,
+    strict_template_bytes,
+)
+from trust_receipt.models import FindingType
+from trust_receipt.services.upload import parse_report
+
+PROJECT_ROOT = Path(__file__).parents[2]
+
+
+def test_downloaded_template_is_a_valid_strict_uploaded_report():
+    payload = strict_template_bytes()
+    assert parse_report(payload).model_dump(mode="json") == json.loads(payload)
+    assert json.loads(payload)["claimed_total_base_units"] == "0"
+
+
+def test_contract_example_loads_existing_synthetic_fixture_without_relabelling_it_real():
+    payload = contract_example_bytes(PROJECT_ROOT)
+    report = parse_report(payload)
+    assert report.claimed_total_base_units == "120000"
+    assert report.claimed_count == 2
+    assert all(record.source.value == "service" for record in report.transfers)
+
+
+def test_amount_summary_keeps_exact_integer_direction_and_token_formatting():
+    summary = amount_summary("120000", "110000", decimals=6)
+    assert summary.difference == "10000"
+    assert summary.direction == "报表比链上有效金额多计 10000 个最小单位。"
+    assert format_token_amount(summary.claimed, summary.decimals) == (
+        "0.12 代币单位 (120000 最小单位, decimals=6)"
+    )
+    assert amount_summary("90000", "110000", decimals=6).difference == "-20000"
+
+
+def test_unknown_verified_amount_is_not_rendered_as_zero_or_failure():
+    summary = amount_summary("120000", None, decimals=6)
+    assert summary.verified == "无法确定"
+    assert summary.difference == "无法确定"
+    assert "证据不足" in summary.direction
+
+
+def test_every_finding_type_has_business_copy_and_next_action():
+    for finding_type in FindingType:
+        title, action = finding_copy(finding_type)
+        assert title
+        assert action.endswith("。")
+
+
+def test_page_exposes_example_template_and_evidence_drilldown():
+    source = (PROJECT_ROOT / "app" / "streamlit_app.py").read_text(encoding="utf-8")
+    assert '"上传自己的 JSON", "加载契约测试示例"' in source
+    assert '"真实 Sepolia RPC"' in source
+    assert "加载契约测试示例" in source
+    assert "非 M11 真实案例" in source
+    assert "下载严格 JSON 空白模板" in source
+    assert "查看差异 {finding_number} 的交易与判定依据" in source
