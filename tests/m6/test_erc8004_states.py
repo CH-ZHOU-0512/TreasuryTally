@@ -14,14 +14,24 @@ from trust_receipt.reputation import ERC8004ReceiptFeedback, FeedbackPreflight
 
 
 class _Call:
+    def __init__(self):
+        self.estimated_with = None
+        self.built_with = None
+
+    def estimate_gas(self, transaction):
+        self.estimated_with = transaction
+        return 400_000
+
     def build_transaction(self, transaction):
+        self.built_with = transaction
         return {**transaction, "to": "0x" + "33" * 20, "data": "0x", "value": 0}
 
 
 class _Functions:
     def giveFeedback(self, *args):
         self.args = args
-        return _Call()
+        self.call = _Call()
+        return self.call
 
 
 class _Contract:
@@ -40,9 +50,10 @@ class _Eth:
     def __init__(self):
         self.account = _Account()
         self.send_calls = 0
+        self.feedback_contract = _Contract()
 
     def contract(self, address, abi):
-        return _Contract()
+        return self.feedback_contract
 
     def get_block(self, block):
         return {"baseFeePerGas": 2}
@@ -89,6 +100,10 @@ def test_ambiguous_broadcast_stays_submitted_and_is_never_auto_resent(tmp_path):
     assert submitted.publication.transaction_nonce == 9
     assert submitted.publication.transaction_hash == "0x" + "44" * 32
     assert submitted.publication.error_code == "TRANSACTION_UNKNOWN"
+    call = adapter._web3.eth.feedback_contract.functions.call
+    assert call.estimated_with["nonce"] == 9
+    assert "gas" not in call.estimated_with
+    assert call.built_with["gas"] == 480_000
     assert adapter._web3.eth.send_calls == 1
     assert adapter.reconcile(submitted) == submitted
     assert adapter._web3.eth.send_calls == 1

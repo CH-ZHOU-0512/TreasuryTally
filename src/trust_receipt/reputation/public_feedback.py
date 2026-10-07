@@ -117,7 +117,7 @@ class ERC8004ReceiptFeedback:
             latest = self._web3.eth.get_block("latest")
             priority = int(self._web3.eth.max_priority_fee)
             base_fee = int(latest.get("baseFeePerGas", 0))
-            transaction = contract.functions.giveFeedback(
+            feedback_call = contract.functions.giveFeedback(
                 _numeric_service_id(self._service_id),
                 value,
                 0,
@@ -126,15 +126,20 @@ class ERC8004ReceiptFeedback:
                 publication.uri,
                 publication.uri,
                 bytes.fromhex(publication.content_hash.removeprefix("0x")),
-            ).build_transaction(
-                {
-                    "chainId": self._chain_id,
-                    "from": self._reviewer,
-                    "nonce": preflight.nonce,
-                    "gas": 350_000,
-                    "maxPriorityFeePerGas": priority,
-                    "maxFeePerGas": base_fee * 2 + priority,
-                }
+            )
+            transaction_base = {
+                "chainId": self._chain_id,
+                "from": self._reviewer,
+                "nonce": preflight.nonce,
+                "maxPriorityFeePerGas": priority,
+                "maxFeePerGas": base_fee * 2 + priority,
+            }
+            estimated_gas = int(feedback_call.estimate_gas(transaction_base))
+            if estimated_gas <= 0 or estimated_gas > 2_000_000:
+                raise ValueError("ERC-8004 gas estimate is outside the allowed range")
+            gas_limit = estimated_gas + max(50_000, estimated_gas // 5)
+            transaction = feedback_call.build_transaction(
+                {**transaction_base, "gas": gas_limit}
             )
             signed = self._web3.eth.account.sign_transaction(
                 transaction, private_key=self._private_key.get_secret_value()

@@ -77,7 +77,8 @@ Blockscout 只做可选抽样诊断，不能把失败的 RPC 提升为完整证�
 M6 通过独立 `ContentPublisher` 与 `M6Workflow` 接入页面。公开上传前从私有回执构造不含报告正文、签名和凭据字段的授权快照；
 publisher 返回 URI 后必须重新下载并按实际字节做 SHA-256 核验。SQLite 使用只追加 `publication_events` 保存每次状态快照。
 ERC-8004 adapter 在写入前核对 Sepolia chain ID、受控 service owner、Reviewer、余额和 pending nonce；每次只广播一次，随后只按
-已保存的 nonce/交易哈希读回，禁止把未知状态自动重发。
+已保存的 nonce/交易哈希读回，禁止把未知状态自动重发。交易 Gas 使用同参数链上估算值并增加 20%（至少 50,000）缓冲，
+不使用无法覆盖动态字符串成本的固定上限。
 
 生产 publisher 优先 Pinata/IPFS；未配置 JWT 时可使用内容寻址 HTTPS 目录。后者由应用容器只写公共目录、Nginx 只读公开，
 仍执行公网下载哈希核验，但不把 HTTPS 文件表述为 IPFS 固定内容。

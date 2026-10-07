@@ -139,14 +139,19 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - 已用真实 DeepSeek + Sepolia RPC + Blockscout 生成一份 `PASS` 回执并公开至
   `https://creatoros.top/trust-receipt/public/3b922f5825fe7127c0fa5da6c3664a2e93e7381db49579cc992d85b4292fa26e-receipt-e593dcc8-dc29-4db9-829c-31802a7de630.json`；
   公网下载返回 `200 application/json`，精确字节 SHA-256 为 `0x3b922f…a26e`，独立进程复核 receipt/task/link 与三态重放均有效。
-  SQLite 已保存授权发布事件，链上状态正确保持 `NOT_SUBMITTED`。
+  SQLite 已保存授权发布事件。
+- Reviewer 专用测试钱包、0.1 Sepolia ETH、service `11155111:10691` owner 与两份 Registry 合约均已完成真实预检。首次交易
+  `0xd8e556abeecdd5cee7b77865cdca5d145770a8dc135cbaee47dd8a03405d5f2d` 仅广播一次并确定性回执失败；诊断确认固定
+  350,000 Gas 上限不足（实际消耗 345,000，同调用只读回放成功）。状态已落库为 `FAILED`，未自动重发。
+- ERC-8004 adapter 已改为链上估算 Gas 后增加 20%（至少 50,000）缓冲并部署；当前相同调用估算 746,334、计划上限
+  895,600。生产应用健康，写链开关继续为 `false`，等待用户再次授权后才允许恢复失败状态并重试。
 - 最新非 external 质量门为 148 项通过、8 项 external 明确排除；Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制通过。
 
 ## 待外部配置验证
 
 - Pinata/IPFS 是优先 adapter，但当前缺少 `PINATA_JWT`；MVP 已按计划使用真实 HTTPS 公共文件 fallback 完成发布验收。
-- 在显式启用 `M6_ENABLE_WRITES` 前恢复并复核团队控制 service、Reviewer 测试钱包、Sepolia 余额与 nonce；随后只提交一笔 M6
-  测试反馈并完成链上读回。现有 M0 历史确认反馈仅用于只读重放，不替代新的 M6 写入。
+- 首笔 M6 交易已确定性失败并完成 Gas 修复；必须取得新的显式授权，才能从 `FAILED` 恢复并以 nonce 1 提交一次修复后交易，
+  随后完成 `NewFeedback` 事件读回。现有 M0 历史确认反馈仅用于只读重放，不替代新的 M6 写入。
 
 ## 后续阶段外部配置待办
 
@@ -165,8 +170,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-完成 M6 最后一项外部验收：取得团队控制的 ERC-8004 service 配置与有 Sepolia 测试币的 Reviewer 测试钱包后，执行一次
-明确授权的反馈提交和链上读回；未知广播状态仍禁止自动重发。
+完成 M6 最后一项外部验收：在用户再次明确授权后恢复首笔确定性失败状态，以修复后的动态 Gas 上限提交 nonce 1，并完成
+`NewFeedback` 事件读回；未知广播状态仍禁止自动重发。
 
 ## 状态更新规则
 
