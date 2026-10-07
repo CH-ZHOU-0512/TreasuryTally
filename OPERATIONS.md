@@ -117,7 +117,8 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 
 生产服务器使用 `deploy/docker-compose.prod.yml` 构建两个相互隔离的容器：Streamlit 主应用与
 Blockscout MCP。两者只加入既有反向代理网络，不直接向公网发布容器端口；`data/` 和
-`receipts/private/` 通过宿主机目录持久化。
+`receipts/private/` 通过宿主机目录持久化。Compose 固定设置 `APP_REQUIRE_LIVE=true`，因此生产页面只能使用真实
+DeepSeek 与真实 Sepolia RPC；缺少任一必要配置时直接阻塞，不会回退 fixture。
 
 ```bash
 cd /opt/trust-receipt
@@ -136,7 +137,7 @@ docker compose -f deploy/docker-compose.prod.yml ps
 明确显示 `RPC-only`。此时必须单独验证 `ETH_RPC_URL` 的真实 Sepolia 读取；不得保留已配置提示并让每次操作等待
 Blockscout 超时，也不得把 RPC 结果伪装成 Blockscout 抽样成功。
 
-首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
+本地首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面
 显示阻塞。工作区 ID 对应独立本地数据库、私有回执目录和运行时生成的无资产签名账户；进程重启后输入同一 ID 可恢复最新任务
 及两个 attempt，历史 AI 文本不会重新生成。页面不会执行公共上传、ERC-8004 写入或其他 M6 动作，回执 publication 状态保持

@@ -6,7 +6,7 @@ authority-for:
   - product-scope
   - product-non-goals
   - product-acceptance
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 产品范围与验收标准
@@ -65,6 +65,9 @@ last-reviewed: 2026-10-06
 8. 系统保存每一次交付，生成脱敏回执。
 9. 经授权后发布文件并关联 ERC-8004 反馈。
 10. 新会话可在没有原聊天历史时重放确定性检查。
+
+生产部署必须使用真实 DeepSeek 结构化模型与真实 Sepolia RPC。离线 fixture 仅用于本地演示和自动化测试；生产配置缺失时
+页面应明确阻塞，不得静默回退或把 fixture 表述为真实调用。
 
 ## 非目标
 

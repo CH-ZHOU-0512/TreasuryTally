@@ -9,6 +9,7 @@ services:
     env_file:
       - ../.env
     environment:
+      APP_REQUIRE_LIVE: "true"
       BLOCKSCOUT_MCP_URL: http://trust-receipt-blockscout:8000
     volumes:
       - ../data:/app/data
@@ -35,4 +36,3 @@ networks:
   campus-net:
     external: true
     name: campus-creator_campus-net
-

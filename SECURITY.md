@@ -6,7 +6,7 @@ authority-for:
   - secret-handling
   - privacy-boundary
   - security-invariants
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 安全、隐私与密钥规则
@@ -75,6 +75,8 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
 - 地址默认可显示缩略形式；需要完整地址时明确标记其为链上公共数据。
 - 禁止记录请求头、环境变量全集、私钥、JWT 和完整模型认证信息。
 - 外部响应正文仅在必要时保存，并采用大小限制和访问边界。
+- `APP_REQUIRE_LIVE` 只控制生产能力开关，不包含凭据；DeepSeek、RPC 与 Blockscout 凭据仍只通过受限 `.env` 注入，禁止进入
+  镜像、仓库、页面或日志。
 
 ## 依赖与供应链
 
