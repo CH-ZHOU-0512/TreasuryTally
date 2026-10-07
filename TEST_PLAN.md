@@ -76,6 +76,9 @@ last-reviewed: 2026-10-07
   完整事件键和证据引用，图的颜色不能是唯一信息载体。
 - M8：任务、接单和交付签名被篡改、签名者不属于服务或链上锚定读回不一致时必须拒绝；提交未知时保持 `SUBMITTED`，
   不得自动重发。
+- M8：上传原文件声明参与核验，不能改写为 fixture；修复报表可以使用第二个 attempt，原文件和原 FAIL 不覆盖。
+  JSON 重复 key、错误编码、浮点金额和超限输入必须拒绝。恢复必须重验完整 task digest、微秒时间戳、签名、manifest 与结果，
+  私有证据被篡改时停止恢复。专用锚候选的本地合约测试不等于真实部署验收。
 - M9：首次 FAIL 自动形成只包含已确认 Finding 的返工包；第二次 PASS 与首次结果并排存在，父回执和 supersedes 链可重放。
 - M9：独立验证入口从 URI、receipt hash、task hash 或 feedback transaction 进入时得到一致对象关系；缺失任何必要证据返回
   `INCONCLUSIVE`，不能显示绿色有效。

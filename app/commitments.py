@@ -14,6 +14,7 @@ def render_commitments(task, task_commitment, delivery_commitment, submission, e
             return
         task_valid = verify_task_commitment(task_commitment, task)
         st.write(f"任务承诺签名：{'有效' if task_valid else '无效'}")
+        st.caption("任务签名使用本地临时 requester 密钥，不是 Reviewer 钱包，也不证明真实委托方身份。")
         st.code(task_commitment.spec_hash, language=None)
         st.caption(anchor_status)
         st.write(f"锚定状态：`{task_commitment.anchor.status.value}`")

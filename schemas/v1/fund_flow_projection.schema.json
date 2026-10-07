@@ -1,5 +1,14 @@
 {
   "$defs": {
+    "EvidenceSource": {
+      "enum": [
+        "rpc",
+        "blockscout",
+        "service"
+      ],
+      "title": "EvidenceSource",
+      "type": "string"
+    },
     "FundFlowEdge": {
       "additionalProperties": false,
       "properties": {
@@ -49,6 +58,14 @@
           "title": "From Node Id",
           "type": "string"
         },
+        "reference_records": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TransferRecord"
+          },
+          "title": "Reference Records",
+          "type": "array"
+        },
         "reference_refs": {
           "items": {
             "maxLength": 200,
@@ -56,6 +73,14 @@
             "type": "string"
           },
           "title": "Reference Refs",
+          "type": "array"
+        },
+        "service_records": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TransferRecord"
+          },
+          "title": "Service Records",
           "type": "array"
         },
         "service_refs": {
@@ -147,10 +172,93 @@
         "NOT_FOUND_ON_CHAIN",
         "INTERNAL_TRANSFER",
         "DUPLICATE",
-        "INCONCLUSIVE"
+        "INCONCLUSIVE",
+        "MISMATCH",
+        "INVALID_SCOPE"
       ],
       "title": "FundFlowVisualStatus",
       "type": "string"
+    },
+    "TransferRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "amount_base_units": {
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "title": "Amount Base Units",
+          "type": "string"
+        },
+        "block_hash": {
+          "anyOf": [
+            {
+              "pattern": "^0x[0-9a-fA-F]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Block Hash"
+        },
+        "block_number": {
+          "minimum": 0,
+          "title": "Block Number",
+          "type": "integer"
+        },
+        "chain_id": {
+          "exclusiveMinimum": 0,
+          "title": "Chain Id",
+          "type": "integer"
+        },
+        "from_address": {
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "title": "From Address",
+          "type": "string"
+        },
+        "log_index": {
+          "minimum": 0,
+          "title": "Log Index",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/EvidenceSource"
+        },
+        "to_address": {
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "title": "To Address",
+          "type": "string"
+        },
+        "token_address": {
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "title": "Token Address",
+          "type": "string"
+        },
+        "token_decimals": {
+          "maximum": 255,
+          "minimum": 0,
+          "title": "Token Decimals",
+          "type": "integer"
+        },
+        "transaction_hash": {
+          "pattern": "^0x[0-9a-fA-F]{64}$",
+          "title": "Transaction Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chain_id",
+        "token_address",
+        "transaction_hash",
+        "log_index",
+        "block_number",
+        "block_hash",
+        "from_address",
+        "to_address",
+        "amount_base_units",
+        "token_decimals",
+        "source"
+      ],
+      "title": "TransferRecord",
+      "type": "object"
     },
     "VerificationOutcome": {
       "enum": [

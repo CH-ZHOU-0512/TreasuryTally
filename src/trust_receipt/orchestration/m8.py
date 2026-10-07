@@ -42,13 +42,17 @@ class M8CommitmentWorkflow:
         task_commitment: TaskCommitment,
         submission: ServiceSubmission,
         service: ReportService,
+        *,
+        accepted_at: datetime | None = None,
+        acceptance_signature: str | None = None,
     ) -> DeliveryCommitment:
-        accepted_at = self._clock()
+        accepted_at = accepted_at or self._clock()
         commitment = service.create_delivery_commitment(
             task_commitment,
             submission,
             accepted_at=accepted_at,
             submitted_at=max(accepted_at, submission.created_at),
+            acceptance_signature=acceptance_signature,
         )
         if not verify_delivery_commitment(
             commitment,

@@ -98,6 +98,11 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
 
 ## 依赖与供应链
 
+M8 上传在解析前按 SHA-256 私有留档，不使用上传文件名构造路径；拒绝重复 JSON key、浮点金额、错误来源和超限输入。
+`local-upload-intake` 只认证本地接收封装，不认证原报表作者。Requester 与 service 采用独立临时密钥，均不复用 Reviewer；
+密钥不进入 SQLite、公开回执或日志。恢复必须重验签名与 reference manifest；默认未配置链锚读回的存储不能恢复
+自称已提交或已确认的 task anchor。专用合约候选无付款、外部调用、owner 升级能力，不作为已审查/已部署服务宣传。
+
 - 主应用使用 `requirements.txt` 声明范围，`requirements.lock.txt` 保存当前解析结果。
 - Blockscout MCP 运行在 `.venv-blockscout` 隔离环境。
 - `references/` 是上游参考副本，不在其中运行自动依赖修复。

@@ -273,6 +273,24 @@ validator，面向交付验证请求，不是任意 requester 的通用任务承
 后果：M8 可以证明 task/spec、service/attempt 与 report hash 的签名绑定，但不能宣称承诺已上链。后续若实现专用最小锚定
 adapter，必须单独完成合约审查、部署地址/bytecode 记录、写入授权、提交/确认状态机和真实读回探针，再追加 ADR。
 
+## ADR-022：M8 严格上传与私有快照恢复，专用锚仅提供待部署候选
+
+- 状态：Accepted（上传与恢复）；Proposed（专用锚部署）
+- 日期：2026-10-07
+
+决定：上传 UTF-8 JSON 按 `UploadedReport` 接收，不自动修正金额和事件来源；原字节按内容哈希私有留档。
+本地 intake 签名与真实报表作者身份分开显示。接单绑定完整 task commitment digest、spec hash 和微秒时间戳，
+并在报表生成之前签名。承诺和证据只追加保存；恢复必须重新验证签名、manifest 与确定性结果。
+
+决定：为后续审查提供无资金操作的 `CommitmentAnchor.sol` 和只读 `DedicatedAnchorReader`；页面仍保持
+`NOT_SUBMITTED`。候选合约不认证 ERC-8004 owner、不验证报表、不替代 EIP-712，也不提供主网付款能力。
+正式部署、生产接入和真实写入须另行明确授权，记录地址、runtime bytecode hash 并通过外部读回验收。
+
+理由：上传按钮必须核验用户实际提交的内容；重启恢复不能用新证据或新签名冒充原验收。Validation Registry
+依然不具备通用 requester 任务锚权限，不能借用其接口改变协议语义。
+
+后果：既有 M5/M6 回执格式不变；无 M8 快照的历史回执不显示虚构图。服务作者认证和真实任务锚仍有明确外部边界。
+
 ## 新增决定模板
 
 ```markdown

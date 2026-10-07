@@ -8,7 +8,7 @@ from uuid import uuid4
 from eth_account import Account
 from eth_account.messages import encode_typed_data
 
-from trust_receipt.hashing import verify_submission_hash, verify_task_spec_hash
+from trust_receipt.hashing import stable_hash, verify_submission_hash, verify_task_spec_hash
 from trust_receipt.models import (
     CommitmentAnchor,
     CommitmentAnchorStatus,
@@ -23,8 +23,8 @@ DOMAIN_VERSION = "1"
 EMPTY_SIGNATURE = "0x" + "00" * 65
 
 
-def _timestamp(value: datetime) -> int:
-    return int(value.timestamp())
+def _timestamp(value: datetime) -> str:
+    return value.isoformat()
 
 
 def _domain(chain_id: int) -> dict[str, object]:
@@ -74,22 +74,24 @@ TASK_FIELDS = [
     {"name": "specHash", "type": "bytes32"},
     {"name": "requester", "type": "address"},
     {"name": "serviceId", "type": "string"},
-    {"name": "createdAt", "type": "uint256"},
-    {"name": "expiresAt", "type": "uint256"},
+    {"name": "createdAt", "type": "string"},
+    {"name": "expiresAt", "type": "string"},
 ]
 
 ACCEPTANCE_FIELDS = [
     {"name": "taskCommitmentId", "type": "string"},
+    {"name": "taskCommitmentHash", "type": "bytes32"},
+    {"name": "specHash", "type": "bytes32"},
     {"name": "serviceId", "type": "string"},
     {"name": "attempt", "type": "uint256"},
-    {"name": "acceptedAt", "type": "uint256"},
+    {"name": "acceptedAt", "type": "string"},
 ]
 
 DELIVERY_FIELDS = [
     *ACCEPTANCE_FIELDS,
     {"name": "submissionId", "type": "string"},
     {"name": "reportHash", "type": "bytes32"},
-    {"name": "submittedAt", "type": "uint256"},
+    {"name": "submittedAt", "type": "string"},
 ]
 
 
@@ -101,13 +103,15 @@ def _task_message(commitment: TaskCommitment) -> dict[str, object]:
         "requester": commitment.requester_address,
         "serviceId": commitment.service_id,
         "createdAt": _timestamp(commitment.created_at),
-        "expiresAt": _timestamp(commitment.expires_at) if commitment.expires_at else 0,
+        "expiresAt": _timestamp(commitment.expires_at) if commitment.expires_at else "",
     }
 
 
 def _acceptance_message(commitment: DeliveryCommitment) -> dict[str, object]:
     return {
         "taskCommitmentId": commitment.task_commitment_id,
+        "taskCommitmentHash": commitment.task_commitment_hash,
+        "specHash": commitment.spec_hash,
         "serviceId": commitment.service_id,
         "attempt": commitment.attempt,
         "acceptedAt": _timestamp(commitment.accepted_at),
@@ -180,6 +184,7 @@ def create_delivery_commitment(
     service_private_key: str,
     accepted_at: datetime,
     submitted_at: datetime,
+    acceptance_signature: str | None = None,
 ) -> DeliveryCommitment:
     if submission.task_id != task_commitment.task_id or submission.service_id != task_commitment.service_id:
         raise ValueError("submission does not match the task commitment")
@@ -189,6 +194,8 @@ def create_delivery_commitment(
     unsigned = DeliveryCommitment(
         commitment_version="1.0",
         task_commitment_id=task_commitment.commitment_id,
+        task_commitment_hash=task_commitment_hash(task_commitment),
+        spec_hash=task_commitment.spec_hash,
         submission_id=submission.submission_id,
         service_id=submission.service_id,
         attempt=submission.attempt,
@@ -200,12 +207,9 @@ def create_delivery_commitment(
         acceptance_signature=EMPTY_SIGNATURE,
         signature=EMPTY_SIGNATURE,
     )
-    acceptance = _sign(
-        service_private_key,
-        chain_id=task_commitment.anchor.chain_id,
-        primary_type="DeliveryAcceptance",
-        fields=ACCEPTANCE_FIELDS,
-        message=_acceptance_message(unsigned),
+    acceptance = acceptance_signature or create_acceptance_signature(
+        task_commitment, attempt=submission.attempt,
+        service_private_key=service_private_key, accepted_at=accepted_at,
     )
     delivery = _sign(
         service_private_key,
@@ -226,13 +230,26 @@ def verify_delivery_commitment(
 ) -> bool:
     if (
         commitment.task_commitment_id != task_commitment.commitment_id
+        or commitment.task_commitment_hash != task_commitment_hash(task_commitment)
+        or commitment.spec_hash != task_commitment.spec_hash
+        or submission.task_id != task_commitment.task_id
+        or submission.service_id != task_commitment.service_id
         or commitment.submission_id != submission.submission_id
         or commitment.service_id != submission.service_id
         or commitment.attempt != submission.attempt
         or commitment.report_hash != submission.report_hash
         or commitment.signer_address.lower() != expected_signer.lower()
+        or commitment.accepted_at < task_commitment.created_at
+        or commitment.submitted_at < commitment.accepted_at
+        or (task_commitment.expires_at is not None and commitment.accepted_at >= task_commitment.expires_at)
         or not verify_submission_hash(submission)
     ):
+        return False
+    requester = _recover(
+        task_commitment.signature, chain_id=task_commitment.anchor.chain_id,
+        primary_type="TaskCommitment", fields=TASK_FIELDS, message=_task_message(task_commitment),
+    )
+    if requester is None or requester.lower() != task_commitment.requester_address.lower():
         return False
     acceptance = _recover(
         commitment.acceptance_signature,
@@ -251,4 +268,34 @@ def verify_delivery_commitment(
     return all(
         recovered is not None and recovered.lower() == expected_signer.lower()
         for recovered in (acceptance, delivery)
+    )
+
+
+def task_commitment_hash(commitment: TaskCommitment) -> str:
+    return stable_hash({
+        "message": _task_message(commitment),
+        "chain_id": commitment.anchor.chain_id,
+        "signature": commitment.signature,
+    })
+
+
+def create_acceptance_signature(
+    task_commitment: TaskCommitment, *, attempt: int, service_private_key: str, accepted_at: datetime,
+) -> str:
+    """Sign the full task binding before acquiring or generating a report."""
+    if attempt not in (1, 2) or accepted_at < task_commitment.created_at:
+        raise ValueError("invalid task acceptance attempt or time")
+    if task_commitment.expires_at is not None and accepted_at >= task_commitment.expires_at:
+        raise ValueError("task commitment has expired")
+    return _sign(
+        service_private_key, chain_id=task_commitment.anchor.chain_id,
+        primary_type="DeliveryAcceptance", fields=ACCEPTANCE_FIELDS,
+        message={
+            "taskCommitmentId": task_commitment.commitment_id,
+            "taskCommitmentHash": task_commitment_hash(task_commitment),
+            "specHash": task_commitment.spec_hash,
+            "serviceId": task_commitment.service_id,
+            "attempt": attempt,
+            "acceptedAt": _timestamp(accepted_at),
+        },
     )

@@ -51,6 +51,11 @@
       "title": "Signer Address",
       "type": "string"
     },
+    "spec_hash": {
+      "pattern": "^0x[0-9a-fA-F]{64}$",
+      "title": "Spec Hash",
+      "type": "string"
+    },
     "submission_id": {
       "maxLength": 200,
       "minLength": 1,
@@ -63,6 +68,11 @@
       "title": "Submitted At",
       "type": "string"
     },
+    "task_commitment_hash": {
+      "pattern": "^0x[0-9a-fA-F]{64}$",
+      "title": "Task Commitment Hash",
+      "type": "string"
+    },
     "task_commitment_id": {
       "maxLength": 200,
       "minLength": 1,
@@ -73,6 +83,8 @@
   "required": [
     "commitment_version",
     "task_commitment_id",
+    "task_commitment_hash",
+    "spec_hash",
     "submission_id",
     "service_id",
     "attempt",

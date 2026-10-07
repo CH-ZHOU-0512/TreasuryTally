@@ -68,12 +68,17 @@ def _status(
     if scope_violation(task, record) is FindingType.EXCLUDED_INTERNAL_TRANSFER:
         return FundFlowVisualStatus.INTERNAL_TRANSFER
     finding_types = {finding.finding_type for finding in findings}
-    if FindingType.DUPLICATE_TRANSFER in finding_types:
-        return FundFlowVisualStatus.DUPLICATE
+    if finding_types & {FindingType.WRONG_TOKEN, FindingType.OUT_OF_RANGE} or any(
+        finding.violated_rule == "submitted transfers must satisfy the confirmed task scope"
+        for finding in findings
+    ):
+        return FundFlowVisualStatus.INVALID_SCOPE
+    if any(finding.violated_rule == "complete_event_set" for finding in findings) and not in_reference:
+        return FundFlowVisualStatus.NOT_FOUND_ON_CHAIN
     if not in_service and in_reference:
         return FundFlowVisualStatus.MISSING_FROM_REPORT
     if in_service and not in_reference:
-        return FundFlowVisualStatus.NOT_FOUND_ON_CHAIN
+        return FundFlowVisualStatus.INCONCLUSIVE
     if finding_types & {
         FindingType.EXTRA_TRANSFER,
         FindingType.WRONG_DIRECTION,
@@ -82,7 +87,7 @@ def _status(
         FindingType.WRONG_TOKEN,
         FindingType.OUT_OF_RANGE,
     }:
-        return FundFlowVisualStatus.NOT_FOUND_ON_CHAIN
+        return FundFlowVisualStatus.MISMATCH
     return FundFlowVisualStatus.MATCHED
 
 
@@ -93,7 +98,10 @@ def project_fund_flow(
     evidence: ReferenceEvidence | None,
 ) -> FundFlowProjection:
     """Create a stable visual read model while preserving source provenance."""
-    if submission.task_id != task.task_id or result.submission_id != submission.submission_id:
+    if (
+        submission.task_id != task.task_id or result.task_id != task.task_id
+        or result.submission_id != submission.submission_id
+    ):
         raise ValueError("task, submission, and result must describe the same attempt")
     reference_records = collect_reference(evidence).transfers if evidence is not None else ()
     service_by_key: dict[tuple[int, str, int], list[TransferRecord]] = defaultdict(list)
@@ -111,7 +119,7 @@ def project_fund_flow(
         reference_matches = reference_by_key[key]
         occurrences = max(len(service_records), 1)
         for occurrence in range(occurrences):
-            record = service_records[occurrence] if occurrence < len(service_records) else reference_matches[0]
+            record = reference_matches[0] if reference_matches else service_records[occurrence]
             for address in (record.from_address, record.to_address):
                 normalized = address_key(address)
                 if normalized not in nodes_by_address:
@@ -141,9 +149,14 @@ def project_fund_flow(
                     amount_base_units=record.amount_base_units,
                     token_decimals=record.token_decimals,
                     status=status,
-                    service_refs=tuple(_record_ref(item) for item in service_records),
+                    service_refs=tuple(
+                        f"submission:{submission.submission_id}:{index}"
+                        for index, item in enumerate(submission.transfers) if event_key(item) == key
+                    ),
                     reference_refs=tuple(_record_ref(item) for item in reference_matches),
                     finding_ids=tuple(dict.fromkeys(finding.finding_id for finding in findings)),
+                    service_records=tuple(service_records),
+                    reference_records=tuple(reference_matches),
                 )
             )
     return FundFlowProjection(

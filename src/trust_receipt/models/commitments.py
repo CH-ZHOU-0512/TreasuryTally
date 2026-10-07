@@ -53,6 +53,8 @@ class TaskCommitment(DomainModel):
 class DeliveryCommitment(DomainModel):
     commitment_version: Literal["1.0"]
     task_commitment_id: Identifier
+    task_commitment_hash: Hex32
+    spec_hash: Hex32
     submission_id: Identifier
     service_id: Identifier
     attempt: StrictInt = Field(ge=1, le=2)

@@ -97,10 +97,13 @@ class M5Workflow:
         service: ReportService,
         *,
         pre_persist_validator: Callable[[ServiceSubmission], None] | None = None,
+        pre_submit: Callable[[int], None] | None = None,
     ) -> AttemptExecution:
         stored = self._repository.get_task(task_id)
         attempt = self._repository.request_attempt(task_id)
         try:
+            if pre_submit is not None:
+                pre_submit(attempt)
             delivery = service.submit(stored.task, attempt=attempt)
             submission = delivery.submission
             self._validate_delivery(service, submission)
@@ -136,8 +139,8 @@ class M5Workflow:
             submission=submission,
             service_identity=ServiceIdentity(
                 service_id=submission.service_id,
-                name=f"Team-controlled {submission.service_id}",
-                identity_scheme="local-demo-signer",
+                name=getattr(service, "identity_name", f"Team-controlled {submission.service_id}"),
+                identity_scheme=getattr(service, "identity_scheme", "local-demo-signer"),
                 identity_reference=service.signer_address,
             ),
             plan=plan,

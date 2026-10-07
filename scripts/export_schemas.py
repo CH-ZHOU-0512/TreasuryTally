@@ -36,6 +36,7 @@ from trust_receipt.models import (  # noqa: E402
     VerificationPlan,
     VerificationResult,
 )
+from trust_receipt.services.upload import UploadedReport  # noqa: E402
 
 SCHEMA_VERSION = "1.0"
 SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -58,6 +59,7 @@ SCHEMA_MODELS: tuple[tuple[str, str, type[BaseModel]], ...] = (
     ("task_commitment.schema.json", "task-commitment", TaskCommitment),
     ("delivery_commitment.schema.json", "delivery-commitment", DeliveryCommitment),
     ("fund_flow_projection.schema.json", "fund-flow-projection", FundFlowProjection),
+    ("uploaded_report.schema.json", "uploaded-report", UploadedReport),
 )
 
 MODEL_INVARIANTS: Mapping[str, tuple[str, ...]] = {

@@ -12,6 +12,7 @@ from trust_receipt.models.base import (
     Identifier,
 )
 from trust_receipt.models.enums import FundFlowNodeRole, FundFlowVisualStatus, VerificationOutcome
+from trust_receipt.models.transfers import TransferRecord
 
 
 class FundFlowNode(DomainModel):
@@ -32,6 +33,8 @@ class FundFlowEdge(DomainModel):
     service_refs: tuple[Identifier, ...]
     reference_refs: tuple[Identifier, ...]
     finding_ids: tuple[Identifier, ...]
+    service_records: tuple[TransferRecord, ...] = ()
+    reference_records: tuple[TransferRecord, ...] = ()
 
 
 class FundFlowProjection(DomainModel):

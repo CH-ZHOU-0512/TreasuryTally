@@ -22,6 +22,7 @@ def test_page_starts_without_execution_controls_before_confirmation() -> None:
     assert not page.exception
     assert any(button.label == "生成可核对的任务候选" for button in page.button)
     assert not any("Attempt" in button.label for button in page.button)
+    assert not any('class="signal-grid"' in markdown.value for markdown in page.markdown)
 
 
 def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
