@@ -108,13 +108,13 @@ def echarts_flow_option(
                 "finding_ids": list(row.finding_ids),
                 "label": {
                     "rotate": 0,
-                    **({"align": "left", "verticalAlign": "middle", "offset": [16, 56]}
+                    **({"align": "left", "verticalAlign": "middle", "offset": [112, 0]}
                        if (source in treasuries) == (target in treasuries) else {}),
                     "formatter": "{amount|"
                     + (row.amount.display if len(row.amount.display) <= 24 else row.amount.display[:21] + "…")
                     + "}\n{state|" + row.status_label + "}\n{unit|"
                     + ("最小单位（精度未确认）" if row.amount.decimals is None
-                       else row.amount.unit if len(row.amount.unit) <= 16 else "代币单位见完整明细") + "}",
+                       else row.amount.unit if len(row.amount.unit) <= 16 else "单位见完整明细") + "}",
                     "backgroundColor": background,
                     "padding": [8, 12],
                     "borderRadius": 8,
