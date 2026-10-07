@@ -74,6 +74,11 @@ M5 页面通过 `M5Workflow` 用例组合上述端口。页面不直接调用供
 Blockscout 只做可选抽样诊断，不能把失败的 RPC 提升为完整证据。页面以工作区 ID 隔离 SQLite 和私有回执，重启后从两者恢复
 已确认任务与完成的 attempt，不重新生成历史 AI 文本。
 
+M6 通过独立 `ContentPublisher` 与 `M6Workflow` 接入页面。公开上传前从私有回执构造不含报告正文、签名和凭据字段的授权快照；
+publisher 返回 URI 后必须重新下载并按实际字节做 SHA-256 核验。SQLite 使用只追加 `publication_events` 保存每次状态快照。
+ERC-8004 adapter 在写入前核对 Sepolia chain ID、受控 service owner、Reviewer、余额和 pending nonce；每次只广播一次，随后只按
+已保存的 nonce/交易哈希读回，禁止把未知状态自动重发。
+
 ## 模块与文件约束
 
 - 模块按领域能力组织，一个模块只拥有一个主要变化原因。
@@ -126,7 +131,8 @@ DRAFT → CONFIRMED → REQUESTED → SUBMITTED → VERIFYING
                                       │
                               SUBMITTED(attempt=2)
 
-terminal result → RECEIPT_CREATED → PUBLISHING → PUBLISHED → ONCHAIN_CONFIRMED
+terminal result → RECEIPT_CREATED → PUBLISHING → PUBLISHED(NOT_SUBMITTED)
+                                               → SUBMITTED → CONFIRMED | FAILED
 ```
 
 失败重试不得覆盖旧 attempt；发布失败也不得改变验收结论。

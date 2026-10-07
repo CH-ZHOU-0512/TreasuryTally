@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from dataclasses import replace
 from html import escape
 from pathlib import Path
 from uuid import uuid4
@@ -18,7 +19,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
-from trust_receipt.models import ExclusionRule, ExclusionRuleType, VerificationOutcome
+from trust_receipt.models import (
+    ExclusionRule,
+    ExclusionRuleType,
+    PublicationChainStatus,
+    VerificationOutcome,
+)
 
 PROVIDERS = ("离线 fixture 演示", "OpenAI 真实模型", "DeepSeek 真实模型")
 EVIDENCE_MODES = ("完整 fixture 证据", "模拟证据不可用", "真实 Sepolia RPC")
@@ -239,7 +245,106 @@ def _run_attempt(runtime: AppRuntime) -> None:
         st.caption("当前任务已通过，或两个 attempt 已用完。历史记录保持只追加，不会被覆盖。")
 
 
-def _render_attempts() -> None:
+def _replace_execution_receipt(index: int, receipt) -> None:
+    executions = list(st.session_state.executions)
+    executions[index] = replace(executions[index], receipt=receipt)
+    st.session_state.executions = executions
+
+
+def _render_publication(runtime: AppRuntime, execution, index: int) -> None:
+    publication = execution.receipt.publication
+    st.caption(runtime.publication_status)
+    if publication.uri:
+        st.code(publication.uri, language=None)
+        st.caption(f"公开内容 SHA-256：{publication.content_hash}")
+    if publication.chain_status is PublicationChainStatus.FAILED:
+        st.error(f"发布/链上状态 FAILED：{publication.error_code} · {publication.error_message or ''}")
+        authorized = st.checkbox("我已核对失败原因并授权重新准备", key=f"recover-{index}")
+        if st.button(
+            "恢复为 NOT_SUBMITTED",
+            key=f"recover-button-{index}",
+            disabled=not authorized,
+            use_container_width=True,
+        ):
+            try:
+                recovered = runtime.publication_workflow.recover_failed(
+                    execution.receipt, authorized=authorized
+                )
+                _replace_execution_receipt(index, recovered)
+                st.rerun()
+            except Exception as error:
+                st.error(f"失败状态不能恢复：{error}")
+        return
+    if publication.uri is None:
+        authorized = st.checkbox(
+            "我授权公开这份脱敏 JSON 回执",
+            key=f"publish-authorized-{index}",
+        )
+        if st.button(
+            "发布到 Pinata / IPFS",
+            key=f"publish-{index}",
+            disabled=runtime.publisher is None or not authorized,
+            use_container_width=True,
+        ):
+            try:
+                published, _ = runtime.publication_workflow.publish(
+                    execution.receipt,
+                    runtime.publisher,
+                    authorized=authorized,
+                )
+                _replace_execution_receipt(index, published)
+                st.rerun()
+            except Exception as error:
+                st.error(f"公共发布失败：{error}")
+        return
+    st.caption(runtime.feedback_status)
+    if publication.chain_status is PublicationChainStatus.NOT_SUBMITTED:
+        authorized = st.checkbox(
+            "我授权向 Sepolia ERC-8004 提交此 URI 与内容哈希",
+            key=f"chain-authorized-{index}",
+        )
+        if st.button(
+            "提交 ERC-8004 反馈",
+            key=f"chain-submit-{index}",
+            disabled=runtime.feedback_adapter is None or not authorized,
+            use_container_width=True,
+        ):
+            try:
+                submitted = runtime.publication_workflow.submit_feedback(
+                    execution.receipt,
+                    runtime.feedback_adapter,
+                    authorized=authorized,
+                )
+                _replace_execution_receipt(index, submitted)
+                st.rerun()
+            except Exception as error:
+                st.error(f"链上提交被安全边界拒绝：{error}")
+    elif publication.chain_status is PublicationChainStatus.SUBMITTED:
+        st.warning("交易已提交或广播结果未知；系统不会自动重发。请只执行读回核验。")
+        if publication.transaction_hash:
+            st.code(publication.transaction_hash, language=None)
+        if st.button(
+            "从链上读回并核验",
+            key=f"chain-reconcile-{index}",
+            disabled=runtime.feedback_adapter is None,
+            use_container_width=True,
+        ):
+            try:
+                reconciled = runtime.publication_workflow.reconcile_feedback(
+                    execution.receipt, runtime.feedback_adapter
+                )
+                _replace_execution_receipt(index, reconciled)
+                st.rerun()
+            except Exception as error:
+                st.error(f"链上读回失败：{error}")
+    elif publication.chain_status is PublicationChainStatus.CONFIRMED:
+        st.success(
+            f"ERC-8004 已确认并读回一致 · block {publication.block_number} · "
+            f"feedback #{publication.feedback_index}"
+        )
+
+
+def _render_attempts(runtime: AppRuntime) -> None:
     executions = st.session_state.get("executions", [])
     if not executions:
         return
@@ -251,7 +356,8 @@ def _render_attempts() -> None:
                 f'<div class="attempt-card outcome-{result.outcome.value}"><div><small>Attempt {index}</small>'
                 f'<div class="attempt-title">{result.outcome.value}</div></div><div>'
                 '<span class="badge badge-submitted">服务交付 · SUBMITTED</span>'
-                '<span class="badge badge-not-submitted">公共发布 · NOT_SUBMITTED</span></div></div>',
+                f'<span class="badge badge-not-submitted">公共发布 · '
+                f'{execution.receipt.publication.chain_status.value}</span></div></div>',
                 unsafe_allow_html=True,
             )
             total, count, findings = st.columns(3)
@@ -298,7 +404,7 @@ def _render_attempts() -> None:
                         st.write(f"{suggestion.action.value} — {suggestion.rationale}")
             with st.expander("本地回执与下载", expanded=index == len(executions)):
                 receipt_json = execution.receipt.model_dump(mode="json")
-                st.caption("M6 公共发布与写链未执行；publication.chain_status 保持 NOT_SUBMITTED。")
+                st.caption("本地回执保留完整发布状态；公开文件只包含脱敏、可重放字段。")
                 st.json(receipt_json)
                 st.download_button(
                     "下载本地 JSON 回执",
@@ -307,6 +413,8 @@ def _render_attempts() -> None:
                     mime="application/json",
                     key=f"download-{index}",
                 )
+            with st.expander("公共回执与 ERC-8004", expanded=index == len(executions)):
+                _render_publication(runtime, execution, index - 1)
 
 
 def _draft_task(runtime: AppRuntime) -> None:
@@ -359,7 +467,7 @@ def main() -> None:
     _task_summary()
     _section("03 · VERIFY", "选择交付并执行", "最多两个 attempt；签名或计划校验失败不会消耗次数。")
     _run_attempt(runtime)
-    _render_attempts()
+    _render_attempts(runtime)
 
 
 if __name__ == "__main__":

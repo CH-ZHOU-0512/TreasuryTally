@@ -56,8 +56,9 @@ streamlit run app\streamlit_app.py
 默认选择“离线 fixture 演示”，不需要模型密钥，并在页面中明确标注为非真实模型调用。也可以选择 OpenAI 或
 DeepSeek 真实模型，并把独立证据切换为真实 Sepolia RPC；缺少对应 key、固定模型名或 RPC URL 时页面会显示配置阻塞，
 不会用 mock 冒充。页面支持任务候选修改与确认、服务 A/B、一次补交或换源、独立 attempt 历史、三态结果、证据来源诊断、
-Finding、受限解释与本地回执预览。工作区 ID 可在进程重启后恢复 SQLite 与本地回执历史。M6 公共发布和写链未执行，页面
-固定显示 `NOT_SUBMITTED`。实际进展请查看 [STATUS.md](STATUS.md)。
+Finding、受限解释与本地回执预览。工作区 ID 可在进程重启后恢复 SQLite、本地回执和发布状态。M6 页面支持经显式授权发布
+脱敏回执到 Pinata/IPFS，并在另一次显式授权后提交 ERC-8004；缺少配置时保持 `NOT_SUBMITTED`，不会用本地 mock 冒充公开发布。
+实际进展请查看 [STATUS.md](STATUS.md)。
 
 ## 仓库边界
 

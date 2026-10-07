@@ -50,6 +50,11 @@ def stable_hash(value: Any) -> str:
     return "0x" + hashlib.sha256(canonical_json_bytes(value)).hexdigest()
 
 
+def content_hash(payload: bytes) -> str:
+    """Return the tagged SHA-256 digest of exact published bytes."""
+    return "0x" + hashlib.sha256(payload).hexdigest()
+
+
 def hash_model(model: BaseModel, *, exclude: frozenset[str] = frozenset()) -> str:
     return stable_hash(model.model_dump(mode="json", exclude=exclude))
 

@@ -5,12 +5,16 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import closing
+from datetime import UTC, datetime
 from pathlib import Path
 
 from trust_receipt.hashing import canonical_json_bytes
+from trust_receipt.models.enums import PublicationChainStatus
+from trust_receipt.models.receipts import Receipt
 from trust_receipt.models.submissions import ServiceSubmission
 from trust_receipt.models.tasks import TaskSpec
 from trust_receipt.models.verification import VerificationResult
+from trust_receipt.publishing.models import PublicationEvent
 from trust_receipt.services.ports import FaultInjection, ReportDelivery
 from trust_receipt.storage.models import AttemptRecord, StoredTask, TaskState
 
@@ -57,6 +61,15 @@ class SQLiteRepository:
                     task_id TEXT NOT NULL,
                     result_json TEXT NOT NULL,
                     FOREIGN KEY (submission_id) REFERENCES attempts(submission_id),
+                    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+                );
+                CREATE TABLE IF NOT EXISTS publication_events (
+                    receipt_id TEXT NOT NULL,
+                    sequence INTEGER NOT NULL CHECK (sequence > 0),
+                    task_id TEXT NOT NULL,
+                    receipt_json TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
+                    PRIMARY KEY (receipt_id, sequence),
                     FOREIGN KEY (task_id) REFERENCES tasks(task_id)
                 );
                 """
@@ -237,3 +250,72 @@ class SQLiteRepository:
                 "SELECT attempt FROM attempts WHERE task_id = ? ORDER BY attempt", (task_id,)
             ).fetchall()
         return tuple(self.get_attempt(task_id, int(row["attempt"])) for row in numbers)
+
+    def append_publication(self, receipt: Receipt) -> PublicationEvent:
+        """Append one publication lifecycle snapshot without overwriting history."""
+        with closing(self._connect()) as connection, connection:
+            rows = connection.execute(
+                "SELECT sequence, receipt_json FROM publication_events WHERE receipt_id = ? ORDER BY sequence",
+                (receipt.receipt_id,),
+            ).fetchall()
+            if rows:
+                previous = Receipt.model_validate_json(rows[-1]["receipt_json"])
+                if (
+                    previous.task_spec.task_id != receipt.task_spec.task_id
+                    or previous.submission_hash != receipt.submission_hash
+                ):
+                    raise RepositoryStateError("publication snapshots must refer to the same receipt attempt")
+                allowed = {
+                    PublicationChainStatus.NOT_SUBMITTED: {
+                        PublicationChainStatus.SUBMITTED,
+                        PublicationChainStatus.FAILED,
+                    },
+                    PublicationChainStatus.SUBMITTED: {
+                        PublicationChainStatus.SUBMITTED,
+                        PublicationChainStatus.CONFIRMED,
+                        PublicationChainStatus.FAILED,
+                    },
+                    PublicationChainStatus.CONFIRMED: set(),
+                    PublicationChainStatus.FAILED: {PublicationChainStatus.NOT_SUBMITTED},
+                }
+                if receipt.publication.chain_status not in allowed[previous.publication.chain_status]:
+                    raise RepositoryStateError("invalid publication state transition")
+            elif not receipt.publication.authorized or receipt.publication.uri is None:
+                raise RepositoryStateError("first publication snapshot must contain an authorized public URI")
+            sequence = len(rows) + 1
+            recorded_at = datetime.now(UTC)
+            connection.execute(
+                """INSERT INTO publication_events(
+                       receipt_id, sequence, task_id, receipt_json, recorded_at
+                   ) VALUES (?, ?, ?, ?, ?)""",
+                (
+                    receipt.receipt_id,
+                    sequence,
+                    receipt.task_spec.task_id,
+                    self._dump(receipt),
+                    recorded_at.isoformat(),
+                ),
+            )
+        return PublicationEvent(
+            receipt_id=receipt.receipt_id,
+            sequence=sequence,
+            recorded_at=recorded_at,
+            receipt=receipt,
+        )
+
+    def list_publications(self, receipt_id: str) -> tuple[PublicationEvent, ...]:
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """SELECT sequence, receipt_json, recorded_at
+                   FROM publication_events WHERE receipt_id = ? ORDER BY sequence""",
+                (receipt_id,),
+            ).fetchall()
+        return tuple(
+            PublicationEvent(
+                receipt_id=receipt_id,
+                sequence=int(row["sequence"]),
+                recorded_at=datetime.fromisoformat(row["recorded_at"]),
+                receipt=Receipt.model_validate_json(row["receipt_json"]),
+            )
+            for row in rows
+        )

@@ -60,6 +60,9 @@ SERVICE_A_PRIVATE_KEY=
 SERVICE_B_PRIVATE_KEY=
 REVIEWER_PRIVATE_KEY=
 PINATA_JWT=
+PINATA_API_URL=https://uploads.pinata.cloud/v3/files
+PINATA_GATEWAY_URL=https://gateway.pinata.cloud/ipfs
+M6_ENABLE_WRITES=false
 DATABASE_URL=sqlite:///data/trust_receipt.db
 ```
 
@@ -72,7 +75,12 @@ ERC-8004 写探针默认关闭；只有完成地址、身份、余额和测试�
 `M0_ENABLE_WRITES=true`。该探针只提交值为 0、带有 `trust-receipt-m0` 标签的中性测试反馈。
 
 公开合约地址和测试代币地址需与 [INTEGRATIONS.md](INTEGRATIONS.md) 的已核实记录一致；不要从未知来源复制地址。
-OpenAI 或 DeepSeek 真实 M4 探针分别要求对应 API key 与固定模型名；只跑离线测试时可以留空。`PINATA_JWT` 在 M6 前可以留空。
+OpenAI 或 DeepSeek 真实 M4 探针分别要求对应 API key 与固定模型名；只跑离线测试时可以留空。`PINATA_JWT` 留空时只禁用
+M6 的真实公共上传，不影响本地回执与离线 M6 测试。
+
+M6 缺少 `PINATA_JWT` 时页面明确阻塞公共上传，但本地测试仍使用隔离目录 adapter 完整验证脱敏、上传后哈希核验与新进程重放。
+只有核对 Sepolia chain ID、受控 service owner、Reviewer 地址、余额和 pending nonce 后，才可临时设置
+`M6_ENABLE_WRITES=true`；页面仍要求二次显式授权。`SUBMITTED` 或广播结果未知时只执行链上读回，不重新点击提交。
 
 ## 激活主环境
 
@@ -127,12 +135,11 @@ docker compose -f deploy/docker-compose.prod.yml up -d --build
 docker compose -f deploy/docker-compose.prod.yml ps
 ```
 
-反向代理使用 `deploy/nginx-location.conf` 中的路径规则，入口为 `/trust-receipt/`。规则包含 WebSocket、
-长连接和 HTTP Basic Auth；Basic Auth 只能放在有效 HTTPS 证书之后，明文 HTTP 入口必须重定向到 HTTPS。
-认证文件必须位于反向代理容器可读取、但不可公开下载的位置。如果 Nginx 配置使用单文件 bind mount，宿主机
-原子替换配置后应重建代理容器，使新 inode 被重新挂载。部署后分别检查容器内健康端点、经认证的公网入口以及
+反向代理使用 `deploy/nginx-location.conf` 中的路径规则，入口为 `/trust-receipt/`。规则包含 WebSocket 和长连接，
+公开入口不要求 HTTP Basic Auth；明文 HTTP 入口仍必须重定向到 HTTPS。如果 Nginx 配置使用单文件 bind mount，宿主机
+原子替换配置后应重建代理容器，使新 inode 被重新挂载。部署后分别检查容器内健康端点、匿名公网入口以及
 一次页面 WebSocket 会话。Streamlit 的内联启动脚本和运行时样式需要路径级 CSP 例外；必须使用
-`deploy/nginx-location.conf` 中受认证且仅限该路径的安全头，不能放宽整个域名。`.env`、访问口令和 PEM 私钥不得进入镜像。
+`deploy/nginx-location.conf` 中仅限该路径的安全头，不能放宽整个域名。`.env` 和 PEM 私钥不得进入镜像。
 
 若部署地域无法连接 `api.blockscout.com`，清空部署环境的 `BLOCKSCOUT_PRO_API_KEY` 并重建主应用容器，页面会
 明确显示 `RPC-only`。此时必须单独验证 `ETH_RPC_URL` 的真实 Sepolia 读取；不得保留已配置提示并让每次操作等待

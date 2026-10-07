@@ -25,6 +25,7 @@ last-reviewed: 2026-10-07
 - 团队控制报表服务使用测试钱包对 canonical `report_hash` 签名；repository 接收前必须恢复并比对预配置签名者地址。
   自动化测试只在运行时生成临时无资产账户，不得把测试或真实私钥提交到仓库。
 - ERC-8004 写探针还必须显式设置 `M0_ENABLE_WRITES=true`；默认值为 `false`，未知提交状态禁止自动重发。
+- M6 产品写入另由 `M6_ENABLE_WRITES=true` 显式开启；页面还必须分别取得公开文件与 ERC-8004 写入授权。匿名访问不赋予写权限。
 - `AGENT0_SERVICE_ID` 必须配合公开的 `AGENT0_EXPECTED_OWNER` 校验，避免向非团队控制身份写入测试反馈。
 - 禁止使用持有主网资产的钱包、个人常用钱包或复用助记词。
 - 不在日志、异常、截图、回执、测试 fixture 或模型 prompt 中输出密钥。
@@ -77,7 +78,9 @@ Python 或写链工具。未知操作、额外字段、任务参数漂移以及�
 - 外部响应正文仅在必要时保存，并采用大小限制和访问边界。
 - `APP_REQUIRE_LIVE` 只控制生产能力开关，不包含凭据；DeepSeek、RPC 与 Blockscout 凭据仍只通过受限 `.env` 注入，禁止进入
   镜像、仓库、页面或日志。
-- Streamlit 需要内联启动脚本和运行时样式；生产反向代理仅在受 Basic Auth 保护的 `/trust-receipt/` 路径放开
+- `PINATA_JWT` 与 `REVIEWER_PRIVATE_KEY` 只能由 `.env` 注入 publisher/reputation adapter；公共回执扫描禁止
+  `private_key`、`signature`、`jwt`、`authorization`、`api_key`、`secret` 和原始 `report_text` 字段。
+- Streamlit 需要内联启动脚本和运行时样式；生产反向代理仅在公开的 `/trust-receipt/` 路径放开
   `script-src/style-src 'unsafe-inline'`，其余站点继续使用更严格的全局 CSP，并保留 HSTS、同源 frame、MIME 嗅探防护和权限策略。
 
 ## 依赖与供应链

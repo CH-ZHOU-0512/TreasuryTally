@@ -20,12 +20,15 @@ from trust_receipt.chain import RpcReferenceEvidenceProvider
 from trust_receipt.integrations.config import M0Settings
 from trust_receipt.orchestration import (
     M5Workflow,
+    M6Workflow,
     StaticEvidenceProvider,
     candidate_from_fixture,
     eligible_records,
     evidence_from_fixture,
     load_vertical_demo_fixture,
 )
+from trust_receipt.publishing import M6Settings, PinataPublisher
+from trust_receipt.reputation import ERC8004ReceiptFeedback
 from trust_receipt.services import FaultMode, TeamControlledReportService
 from trust_receipt.storage.sqlite import SQLiteRepository
 from trust_receipt.verification.scope import scope_violation
@@ -42,6 +45,11 @@ class AppRuntime:
     mode_label: str
     editable_seed: TaskSpecCandidate
     evidence_label: str
+    publication_workflow: M6Workflow
+    publisher: PinataPublisher | None
+    feedback_adapter: ERC8004ReceiptFeedback | None
+    publication_status: str
+    feedback_status: str
 
 
 def create_runtime(
@@ -90,12 +98,55 @@ def create_runtime(
             records_provider=records_provider,
         ),
     }
+    m6_settings = M6Settings.load(project_root / ".env")
+    publisher = (
+        PinataPublisher(
+            m6_settings.pinata_jwt,
+            api_url=m6_settings.pinata_api_url,
+            gateway_url=m6_settings.pinata_gateway_url,
+        )
+        if m6_settings.pinata_jwt is not None
+        else None
+    )
+    publication_status = "Pinata/IPFS 已配置" if publisher else "缺少 PINATA_JWT，公共发布暂不可用"
+    feedback_adapter = None
+    feedback_status = "M6_ENABLE_WRITES=false，ERC-8004 写入已关闭"
+    settings = M0Settings.load(project_root / ".env")
+    write_requirements = {
+        "ETH_RPC_URL": settings.rpc_url,
+        "AGENT0_SERVICE_ID": settings.agent0_service_id,
+        "AGENT0_EXPECTED_OWNER": settings.agent0_expected_owner,
+        "ERC8004_IDENTITY_REGISTRY_ADDRESS": settings.identity_registry_address,
+        "ERC8004_REPUTATION_REGISTRY_ADDRESS": settings.reputation_registry_address,
+        "REVIEWER_PRIVATE_KEY": settings.reviewer_private_key,
+    }
+    missing_write = [name for name, value in write_requirements.items() if value is None]
+    if m6_settings.enable_writes and not missing_write:
+        feedback_adapter = ERC8004ReceiptFeedback(
+            rpc_url=settings.rpc_url_value(),
+            chain_id=settings.chain_id,
+            service_id=settings.agent0_service_id or "",
+            expected_service_owner=settings.agent0_expected_owner or "",
+            identity_registry=settings.identity_registry_address or "",
+            reputation_registry=settings.reputation_registry_address or "",
+            reviewer_private_key=settings.reviewer_private_key,
+            expected_reviewer=settings.reviewer_address,
+            request_timeout_seconds=settings.rpc_timeout_seconds,
+        )
+        feedback_status = "ERC-8004 写入已显式启用；提交前仍需页面二次授权"
+    elif m6_settings.enable_writes:
+        feedback_status = "ERC-8004 配置阻塞：缺少 " + ", ".join(missing_write)
     return AppRuntime(
         workflow=workflow,
         services=services,
         mode_label=mode_label,
         editable_seed=candidate,
         evidence_label=evidence_label,
+        publication_workflow=M6Workflow(repository),
+        publisher=publisher,
+        feedback_adapter=feedback_adapter,
+        publication_status=publication_status,
+        feedback_status=feedback_status,
     )
 
 

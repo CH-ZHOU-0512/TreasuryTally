@@ -156,6 +156,11 @@ class M5Workflow:
             if not path.is_file():
                 continue
             receipt = load_receipt(path)
+            list_publications = getattr(self._repository, "list_publications", None)
+            if list_publications is not None:
+                events = list_publications(receipt.receipt_id)
+                if events:
+                    receipt = events[-1].receipt
             executions.append(
                 AttemptExecution(
                     plan=receipt.verification_plan,

@@ -6,7 +6,7 @@ authority-for:
   - external-integration-contracts
   - external-probe-acceptance
   - external-fallback-policy
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 外部集成与 M0 连通性规格
@@ -121,6 +121,17 @@ MCP `get_transaction_info` 返回结构化结果且分页完整，产品证据�
 成功条件：至少一笔测试交易确认，并从链上读回一致记录。
 
 失败降级：保留本地回执与 publication adapter 状态，不显示为已上链；不得向真实第三方服务写入负面测试反馈。
+
+M6 产品 adapter 直接调用 Reputation Registry 的 `giveFeedback`，将公共回执 URI 同时写入 endpoint/feedbackURI，并将公共文件
+精确字节的 SHA-256 写入 `feedbackHash`。结果标签为 `PASS`、`FAIL` 或 `INCONCLUSIVE`；后者使用中性值，不映射为负面信誉。
+写前必须核对 Sepolia、团队控制 service owner、Reviewer、余额和 pending nonce。广播超时仍保存已签名交易哈希与 nonce 为
+`SUBMITTED`，禁止自动重发；确认后从 `NewFeedback` 事件读回服务、Reviewer、URI、哈希和标签。
+
+## Pinata / IPFS 公共文件
+
+Pinata adapter 使用 `POST https://uploads.pinata.cloud/v3/files`，multipart 明确设置 `network=public`，JWT 只放在 Bearer header。
+返回 CID 后生成 `ipfs://` URI，并经配置的公开 gateway 重新下载；只有下载字节 SHA-256 与上传前一致才记录发布成功。超时、认证
+失败、CID 缺失或哈希不一致都保留为未提交，不触发 ERC-8004 写入。
 
 ## M0 执行矩阵
 

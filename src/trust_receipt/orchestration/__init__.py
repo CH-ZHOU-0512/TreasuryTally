@@ -9,6 +9,7 @@ from trust_receipt.orchestration.m5 import (
     evidence_from_fixture,
     load_vertical_demo_fixture,
 )
+from trust_receipt.orchestration.m6 import M6Workflow
 from trust_receipt.orchestration.workflow import (
     ReferenceEvidenceProvider,
     VerificationOrchestrator,
@@ -18,6 +19,7 @@ from trust_receipt.orchestration.workflow import (
 __all__ = [
     "AttemptExecution",
     "M5Workflow",
+    "M6Workflow",
     "ReferenceEvidenceProvider",
     "StaticEvidenceProvider",
     "VerificationOrchestrator",

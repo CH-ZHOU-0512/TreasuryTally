@@ -7,7 +7,7 @@ authority-for:
   - event-identity
   - amount-arithmetic
   - receipt-contract
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 数据契约与计算不变量
@@ -275,9 +275,26 @@ publication:
   content_hash: hash | null
   transaction_hash: hash | null
   chain_status: NOT_SUBMITTED | SUBMITTED | CONFIRMED | FAILED
+  chain_id: integer | null
+  reviewer_address: address | null
+  transaction_nonce: integer | null
+  feedback_index: integer | null
+  block_number: integer | null
+  error_code: string | null
+  error_message: string | null
 ```
 
 公开回执不得包含私钥、API 密钥、未授权个人信息或未脱敏的私有报告正文。
+
+公开上传对象是 `authorized=true`、尚未绑定 URI 的不可变回执快照。上传后以实际下载字节的 SHA-256 作为
+`publication.content_hash`，重新下载并验证一致后，本地发布状态才绑定 URI 与内容哈希。这样避免让文件自带的 URI/内容哈希
+形成循环哈希，同时公共文件本身仍可独立校验 `receipt_hash` 并重放确定性结论。
+
+链上状态不把广播等同于确认：`NOT_SUBMITTED` 可表示已公开但未写链；`SUBMITTED` 必须记录 chain、Reviewer 和 nonce，
+交易哈希在广播结果未知时可以为空；`CONFIRMED` 还必须包含交易哈希、feedback index 和区块，并已从 `NewFeedback` 事件读回
+服务 ID、Reviewer、URI、内容哈希及结果标签；`FAILED` 必须记录脱敏错误码。`SUBMITTED` 的未知写入禁止自动重发。
+`FAILED` 只有在用户核对原因并显式授权后才能清除交易字段回到 `NOT_SUBMITTED`；该恢复路径不得接受
+`TRANSACTION_UNKNOWN`。
 
 `receipt_hash` 覆盖除 `receipt_hash` 自身外的完整 canonical `Receipt`。publication 状态变化会产生新的回执内容和
 新哈希，不得沿用旧哈希。
