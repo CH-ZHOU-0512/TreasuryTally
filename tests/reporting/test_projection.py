@@ -47,6 +47,26 @@ def test_decimal_error_does_not_expose_comparable_difference():
     assert "精度" in view.current.difference_reason
 
 
+def test_finding_amount_facts_use_confirmed_precision_only():
+    def transform(fixture):
+        submission = fixture.submission.model_copy(
+            update={"claimed_total_base_units": str(int(fixture.submission.claimed_total_base_units) + 1)}
+        )
+        return fixture.model_copy(update={"submission": submission})
+
+    item = report_input("correct-basic", transform=transform)
+    view = build_business_report(item.receipt, item.submission, fund_flow=item.fund_flow)
+    finding = next(f for f in view.current.findings if f.finding_type == "AMOUNT_MISMATCH")
+    assert view.current.claimed.display in finding.description
+    assert view.current.calculated.display in finding.description
+    assert view.current.claimed.unit in finding.description
+    assert "最小单位" not in finding.description
+    unknown = build_business_report(item.receipt, item.submission)
+    finding = next(f for f in unknown.current.findings if f.finding_type == "AMOUNT_MISMATCH")
+    assert "总额最小单位" in finding.description
+    assert item.submission.claimed_total_base_units in finding.description
+
+
 @pytest.mark.parametrize("mixed", (False, True))
 def test_wrong_or_mixed_token_never_labels_claim_as_confirmed_asset(mixed):
     wrong = "0x" + "f" * 40
@@ -110,7 +130,7 @@ def test_private_notes_and_ai_explanation_not_copied(failing_input):
 
 
 def test_two_attempts_keep_original_and_require_verified_relation(failing_input):
-    # Reuse the original scope and missing report; a later inconclusive retry is
+    # Reuse the original scope and missing report; another FAIL retry is
     # sufficient to exercise immutable history without inventing a PASS.
     first = failing_input
     second = report_input(attempt=2)

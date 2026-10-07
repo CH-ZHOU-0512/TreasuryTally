@@ -122,7 +122,16 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
                     and re.fullmatch(r"[0-9]+", str(expected))
                     and re.fullmatch(r"[0-9]+", str(actual))
                 ):
-                    facts.append(f"{label}：核验 {expected}，报表 {actual}。")
+                    if key in {"total_base_units", "amount_base_units"} and precision_confirmed and not wrong_asset:
+                        expected_amount = amount(str(int(expected)), verified_decimals)
+                        actual_amount = amount(str(int(actual)), verified_decimals)
+                        label = "总额" if key == "total_base_units" else "事件金额"
+                        facts.append(
+                            f"{label}：核验 {expected_amount.display} {expected_amount.unit}，"
+                            f"报表 {actual_amount.display} {actual_amount.unit}。"
+                        )
+                    else:
+                        facts.append(f"{label}：核验 {expected}，报表 {actual}。")
             description += "".join(facts)
         confirmed = finding.status.value == "confirmed"
         findings.append(
@@ -269,7 +278,7 @@ def build_business_report(
     )
     next_step = {
         "PASS": "保存报告与原 JSON 回执，按原回执引用独立复核。",
-        "FAIL": "按已确认差异修正报表，再由工作流判断是否仍可使用唯一一次补交。",
+        "FAIL": "按已确认差异修正报表，补交次数以下方可用操作为准。",
         "INCONCLUSIVE": "先检查证据来源与范围完整性，再决定是否主动重新核对。",
     }[current.outcome.value]
     if current.attempt == 2 and current.outcome.value != "PASS":
