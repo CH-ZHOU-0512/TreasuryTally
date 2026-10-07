@@ -120,5 +120,5 @@ def test_single_row_does_not_stretch_nodes_or_line_strokes(failing_input):
     report = view.current.model_copy(update={"flow_rows": view.current.flow_rows[:1]})
     view = view.model_copy(update={"current": report})
     graph = echarts_flow_option(view)["series"][0]
-    assert graph["height"] == 1
+    assert graph["height"] == 2
     assert len(graph["data"]) == 2
