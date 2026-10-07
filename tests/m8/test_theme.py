@@ -30,6 +30,8 @@ def test_native_widgets_use_dark_theme_and_accent_remains_dark_text():
     assert theme["base"] == "dark"
     assert theme["textColor"] == "#F3F1EA"
     assert theme["backgroundColor"] == "#0A0A0A"
+    assert theme["secondaryBackgroundColor"] == "#242429"
+    assert "COPY .streamlit ./.streamlit" in (root / "deploy" / "Dockerfile").read_text()
     assert "--tr-text-on-accent:#0A0A0A" in APP_CSS
     assert "opacity:1 !important" in APP_CSS
     assert ".finding-card,.badge,.flow-edge,.flow-legend { border:0; box-shadow:none; }" in APP_CSS
@@ -40,7 +42,30 @@ def test_state_decoration_is_neutral_and_emphasis_uses_structure():
     assert set(tokens.values()) == {"#C0BBAF"}
     assert "st-key-metric-actual-" in APP_CSS
     assert ".attempt-meaning" in APP_CSS
-    assert "font-size:2rem; font-weight:800" in APP_CSS
+    assert "font-size:var(--tr-font-title); font-weight:800" in APP_CSS
+
+
+def test_typography_has_exactly_five_sizes_and_uses_role_tokens():
+    tokens = dict(re.findall(r"(--tr-font-[a-z-]+):(\d+px)", APP_CSS))
+    assert tokens == {
+        "--tr-font-title": "24px", "--tr-font-subtitle": "20px",
+        "--tr-font-body": "16px", "--tr-font-helper": "14px",
+        "--tr-font-note": "12px",
+    }
+    sizes = [size.replace(" !important", "").strip()
+             for size in re.findall(r"font-size:([^;}]+)", APP_CSS)]
+    assert all(size == "16px" or size in {f"var({token})" for token in tokens}
+               for size in sizes)
+    spec = (Path(__file__).parents[2] / "FRONTEND_SPEC.md").read_text(encoding="utf-8")
+    for token, size in tokens.items():
+        assert f"| `{token}` | `{size}` |" in spec
+
+
+def test_graph_canvas_does_not_scale_node_typography_with_container():
+    source = (Path(__file__).parents[2] / "app" / "fund_flow_graph.py").read_text(encoding="utf-8")
+    assert 'font-size="12"' in source
+    assert 'width="720" style="width:720px;max-width:none"' in source
+    assert 'style="overflow-x:auto"' in source
 
 
 def test_blockchain_texture_is_local_decorative_and_not_network_loaded():
@@ -49,6 +74,15 @@ def test_blockchain_texture_is_local_decorative_and_not_network_loaded():
     assert "radial-gradient(ellipse" in APP_CSS
     assert "rgba(255,255,255,.035)" in APP_CSS
     assert "https://" not in APP_CSS
+
+
+def test_reference_style_uses_layered_panels_and_short_gold_accents():
+    assert "--tr-bg-surface:#1B1B20" in APP_CSS
+    assert "--tr-bg-raised:#242429" in APP_CSS
+    assert ".section-head h2::after" in APP_CSS
+    assert 'width:64px; height:6px' in APP_CSS
+    assert 'st-key-panel-' in APP_CSS
+    assert ".hero-emblem { display:none; }" in APP_CSS
 
 
 def test_brand_asset_is_a_real_png_and_sections_have_no_repeated_numbering():

@@ -264,6 +264,7 @@ contracts/CommitmentAnchor.sol -o .tmp/m8-solc`。不将本地模拟交易当作
 Ganache 启动输出中的默认开发密钥不是生产凭据，但日志仍应留在忽略的 `.tmp/`。
 
 页面主题由 `.streamlit/config.toml` 的原生深色主题与 `app/styles.py` 共同控制；不要只修改背景却保留原生浅色主题。
+生产 Dockerfile 必须复制 `.streamlit/` 到镜像工作目录；发布需重建应用镜像，不能只刷新浏览器或更新 CSS。
 更新导入的样式后重启开发 Streamlit，浏览器刷新并用原 workspace ID 恢复，避免缓存旧样式。
 
 - 不删除 `fixtures/`、`schemas/` 或已发布回执。

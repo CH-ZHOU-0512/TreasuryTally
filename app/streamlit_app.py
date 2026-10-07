@@ -56,9 +56,11 @@ def _product_header() -> None:
         '<div class="product-bar"><div class="brand">'
         f'<img class="brand-logo" src="{logo_data_url()}" alt="信据品牌 Logo" width="52" height="52">'
         f'<span>信据 Agent</span></div><span class="env-chip"><i class="env-dot"></i>{escape(environment)}</span></div>'
-        '<section class="hero-main"><div class="eyebrow">链上报表验收工具</div>'
+        '<section class="hero-main"><div class="hero-copy"><div class="eyebrow">链上报表验收工具</div>'
         '<h1>核对服务商报表与链上资金流</h1>'
-        '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></section>'
+        '<p>生成可复现的验收回执。金额与结论由确定性程序计算，技术依据按需展开。</p></div>'
+        '<div class="hero-emblem" aria-hidden="true">'
+        f'<img src="{logo_data_url()}" alt="" width="144" height="144"></div></section>'
         '<nav class="workflow-steps" aria-label="验收流程">'
         '<span><b>1</b> 上传报表</span><i>→</i><span><b>2</b> 确认范围</span><i>→</i>'
         '<span><b>3</b> 链上核验</span></nav>',
@@ -134,7 +136,7 @@ def _candidate_editor(runtime: AppRuntime) -> None:
     for question in candidate.clarification_questions:
         st.caption(f"待确认：{question}")
 
-    with st.container(border=True):
+    with st.container(border=True, key="panel-scope"):
         st.caption("候选内容可以修改。只有勾选确认并通过契约校验后，TaskSpec 才会冻结。")
         with st.form("task_editor"):
             left, right = st.columns(2)
@@ -231,7 +233,7 @@ def _run_attempt(runtime: AppRuntime) -> None:
     if not can_run:
         st.caption("当前任务已通过，或两个 attempt 已用完。历史记录保持只追加，不会被覆盖。")
         return
-    with st.container(border=True):
+    with st.container(border=True, key="panel-execution"):
         left, right = st.columns((1.25, 1))
         with left:
             choices = tuple(runtime.services)
@@ -495,7 +497,7 @@ def _render_attempts(runtime: AppRuntime) -> None:
 
 def _draft_task(runtime: AppRuntime) -> None:
     _section("上传报表", "上传约定格式的 JSON 报表；演示模式也可直接使用固定样例。")
-    with st.container(border=True):
+    with st.container(border=True, key="panel-input"):
         uploaded = st.file_uploader(
             "服务商报表",
             type=("json",),

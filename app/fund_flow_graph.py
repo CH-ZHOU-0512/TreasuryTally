@@ -62,7 +62,7 @@ def graph_svg(projection) -> str:
     return (
         '<div class="fund-flow-graph" style="overflow-x:auto">'
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 {height}" '
-        'width="100%" style="min-width:720px" role="img" '
+        'width="720" style="width:720px;max-width:none" role="img" '
         'aria-label="账户资金流方向；下方事件列表提供完整状态、金额和证据">'
         + "".join(edges + nodes) + "</svg></div>"
     )
