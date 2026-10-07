@@ -30,6 +30,7 @@ from app.report_experience import (
     contract_example_bytes,
     strict_template_bytes,
 )
+from app.report_graph import render_report_graph
 from app.report_intake import render_report_intake
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.service_history import render_workspace_history
@@ -507,7 +508,8 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
         st.error("报告与原回执的绑定未通过校验。请保留历史并联系维护者，不会生成新的核验结论。")
         return
     render_business_report(
-        st, report, receipt_json=json.dumps(current.receipt.model_dump(mode="json"), ensure_ascii=False, indent=2),
+        st, report, graph=render_report_graph,
+        receipt_json=json.dumps(current.receipt.model_dump(mode="json"), ensure_ascii=False, indent=2),
     )
     if (
         allow_actions and report.outcome is VerificationOutcome.PASS and current.receipt.publication.uri is None
@@ -520,7 +522,7 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
         st.session_state["show-report-evidence"] = True
         st.rerun()
     render_report_evidence(
-        st, runtime, executions, artifacts, allow_actions=allow_actions, publish=_render_publication,
+        st, runtime, executions, artifacts, allow_actions=allow_actions, publish=_render_publication, report=report,
     )
 
 

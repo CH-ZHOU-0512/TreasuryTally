@@ -5,7 +5,7 @@ from app.m9_components import render_repair_comparison, render_rework_package
 from app.m9_public import render_public_history
 
 
-def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions, publish):
+def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions, publish, report=None):
     with st.expander("验证依据 / 技术详情", expanded=st.session_state.get("show-report-evidence", False)):
         attempt = st.selectbox(
             "查看哪次核对", tuple(range(1, len(executions) + 1)), index=len(executions) - 1,
@@ -30,6 +30,17 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
             else:
                 st.json([item.model_dump(mode="json") for item in execution.result.reference_sources])
         elif section == "交易与差异依据":
+            snapshot = (
+                report.current if report is not None and report.current.attempt == attempt
+                else report.previous if report is not None else None
+            )
+            if snapshot is not None and snapshot.flow_rows:
+                st.dataframe([
+                    {"付款账户": row.sender.full, "接收账户": row.recipient.full,
+                     "金额": f"{row.amount.display} {row.amount.unit}", "状态": row.status_label,
+                     "来源": row.source_label, "事件身份": row.event_ref}
+                    for row in snapshot.flow_rows
+                ], hide_index=True, width="stretch")
             st.json([item.model_dump(mode="json") for item in execution.result.findings])
             if execution.fund_flow is not None:
                 st.json(execution.fund_flow.model_dump(mode="json"))

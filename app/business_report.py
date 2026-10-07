@@ -69,7 +69,7 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
 
     st.markdown("#### 资金流与差异")
     if graph is not None:
-        st.html(graph(report, theme="dark"))
+        graph(st, report)
     elif not current.graph_available:
         st.info("没有可重建的已保存资金流图，原回执结论仍保留。")
     else:
