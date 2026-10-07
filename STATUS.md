@@ -28,7 +28,16 @@ M12 从同一基线独立单写 app/PRODUCT/FRONTEND/ADR-032；核心提交已�
 `ac2015f5c0f96bd227698f2b7f1f55c39a3a755e`，新增 35 项离线 mock 识别测试通过；
 最终完整非 external 门实际完成 490 passed / 14 deselected / 1 条既有 websockets warning。
 全仓 Ruff、主环境 pip check、21 Schema 重生成检查、1000 物理行限制与 diff check 通过。
-真实模型 API 识别未测试，不将 mock 或工厂构造测试记为外部成功；未推送、主线合并、部署或操作用户任务。
+随后有界真实验收使用既有被忽略配置的固定 `DeepSeek:deepseek-flash`，实际 factory/provider/
+recognize_report 路径的 2 项 external 测试通过（1 条既有 warning）；请求超时上限 30 秒、自动重试 0。
+只发送合成业务表头及索引，不发送文件名、行值、金额、地址、哈希、备注或用户文件，没有切换供应商。
+正常 CSV 用时 3.469 秒，API/Schema/真实列绑定通过、ready=true；缺金额单位 CSV 用时 2.375 秒，
+API/Schema/绑定通过，ready=false 且仅提示 `amount_unit`，本地补充 base 后缓存复用 ready=true、无第三次请求。
+脱敏列绑定：0 chain_id、1 token_address、2 transaction_hash、3 log_index、4 block_number、
+5 from_address、6 to_address、7 amount_base_units（缺单位案例为 amount）、8 token_decimals、
+9 claimed_total_base_units、10 claimed_count；schema_version=1.0、所有 ambiguous=false、无 issues/missing_fields。
+只证明这两个合成 CSV 场景的模型识别，不代表完整业务、RPC、真实 XLSX/API 失败场景或生产页面已验收。
+未推送、主线合并、部署或操作用户任务。
 
 ### 表格转换独立集成验收（2026-10-07，本地通过，未发布）
 

@@ -185,6 +185,15 @@ ADR-032 识别专项 `tests/test_report_recognition.py`：模型输入仅安全�
 完整真实列绑定/索引/类型/额外字段检查、已有声明/source 不忽略、歧义/普通金额单位阻塞、显式整表条件、
 缓存文件与模型绑定、错误脱敏、不回退 fixture、自动私有留档与原件变化拒绝。mock 测试不计真实 API 识别。
 真实 OpenAI/DeepSeek 表头识别外部验收须单列，禁止自动发送真实敏感报表或私有样本。
+
+受限真实探针 `tests/external/test_report_recognition_probe.py` 仅构造合成 CSV：正常字段绑定、
+缺金额单位的局部问题两例。通过实际 factory/provider/recognize_report 路径，只发送业务表头与索引，
+不发送合成行值或文件名。读取既有被忽略配置（可用 `M14_PROBE_ENV_FILE` 指向既有文件），
+固定选择已有 DeepSeek，否则仅在 DeepSeek 未配置时选择已有 OpenAI；运行后不切换供应商重试。
+每例最多一次真实请求、超时上限 30 秒、自动 retry=0；补单位使用已绑定缓存，不增加请求。
+缺配置明确 skip、不回退 fixture；输出仅 mode/model_id、耗时、Schema/列角色与本地状态。
+该门不执行 RPC、私有留档、任务创建、公开上传或写链，不代表真实 XLSX 或完整业务验收；
+实际执行结果仅记录在 STATUS.md。
 旧采纳 UI 测试仅为 ADR-031 历史实现；ADR-032 页面需另测直接上传、必要局部问题、缓存失效、显式重试、
 非法输入不回退旧 service、范围确认和两 attempt 恢复，不继续要求采纳 JSON。
 
