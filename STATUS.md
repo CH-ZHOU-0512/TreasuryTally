@@ -20,8 +20,8 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 `d9ac1108e9a21fe0073587d4f458848ed1ac8ecd`。M3 无 UI 纵向闭环及本地回执重放已在本地实现并验证。
 M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面、
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
-M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布已完成真实 HTTPS
-内容寻址闭环，ERC-8004 产品 adapter 已完成离线实现与部署；新的链上写入仍待测试钱包和受控身份配置。
+M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
+完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。当前进入 M7 验收封装。
 
 ## 已完成
 
@@ -143,15 +143,16 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - Reviewer 专用测试钱包、0.1 Sepolia ETH、service `11155111:10691` owner 与两份 Registry 合约均已完成真实预检。首次交易
   `0xd8e556abeecdd5cee7b77865cdca5d145770a8dc135cbaee47dd8a03405d5f2d` 仅广播一次并确定性回执失败；诊断确认固定
   350,000 Gas 上限不足（实际消耗 345,000，同调用只读回放成功）。状态已落库为 `FAILED`，未自动重发。
-- ERC-8004 adapter 已改为链上估算 Gas 后增加 20%（至少 50,000）缓冲并部署；当前相同调用估算 746,334、计划上限
-  895,600。生产应用健康，写链开关继续为 `false`，等待用户再次授权后才允许恢复失败状态并重试。
+- ERC-8004 adapter 已改为链上估算 Gas 后增加 20%（至少 50,000）缓冲并部署。用户再次明确授权后，系统从 `FAILED`
+  恢复并仅广播 nonce 1：交易 `0xbf09156a706ca8a49b18606083cacd2f2d844684a0af60e65602c6167374dad9`
+  已在区块 11860021 确认，feedback index 为 1，Gas 732,373 / 895,600。
+- 独立进程已复核交易成功、数据库 `CONFIRMED`、Service ID、Reviewer、PASS 值、双标签、公共 URI、内容哈希、nonce、区块和
+  feedback index 全部一致；公网重新下载哈希亦一致。生产应用健康，持久化 `M6_ENABLE_WRITES=false` 已恢复。
 - 最新非 external 质量门为 148 项通过、8 项 external 明确排除；Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制通过。
 
 ## 待外部配置验证
 
 - Pinata/IPFS 是优先 adapter，但当前缺少 `PINATA_JWT`；MVP 已按计划使用真实 HTTPS 公共文件 fallback 完成发布验收。
-- 首笔 M6 交易已确定性失败并完成 Gas 修复；必须取得新的显式授权，才能从 `FAILED` 恢复并以 nonce 1 提交一次修复后交易，
-  随后完成 `NewFeedback` 事件读回。现有 M0 历史确认反馈仅用于只读重放，不替代新的 M6 写入。
 
 ## 后续阶段外部配置待办
 
@@ -170,8 +171,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-完成 M6 最后一项外部验收：在用户再次明确授权后恢复首笔确定性失败状态，以修复后的动态 Gas 上限提交 nonce 1，并完成
-`NewFeedback` 事件读回；未知广播状态仍禁止自动重发。
+启动 M7 验收封装：逐项核对 MVP 完成标准，补齐全量测试证据、README 运行说明与演示脚本；Pinata/IPFS 保持可选增强，
+不阻塞已完成的 HTTPS 公共发布与 ERC-8004 Sepolia 闭环。
 
 ## 状态更新规则
 
