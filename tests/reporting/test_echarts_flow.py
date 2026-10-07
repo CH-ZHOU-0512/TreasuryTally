@@ -113,3 +113,12 @@ def test_long_amount_abbreviates_only_visual_label(failing_input):
     assert "…" in edge["label"]["formatter"]
     assert amount.display in edge["name"]
     assert edge["amount_base_units"] == amount.base_units
+
+
+def test_single_row_does_not_stretch_nodes_or_line_strokes(failing_input):
+    view = view_for(failing_input)
+    report = view.current.model_copy(update={"flow_rows": view.current.flow_rows[:1]})
+    view = view.model_copy(update={"current": report})
+    graph = echarts_flow_option(view)["series"][0]
+    assert graph["height"] == 1
+    assert len(graph["data"]) == 2

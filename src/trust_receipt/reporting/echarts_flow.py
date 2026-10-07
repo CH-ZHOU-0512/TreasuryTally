@@ -154,7 +154,7 @@ def echarts_flow_option(
                 "layout": "none",
                 "left": "center",
                 "width": 500,
-                "height": max(1, max(map(len, groups)) - 1) * 160,
+                "height": max(1, (max(map(len, groups)) - 1) * 160),
                 "top": 168,
                 "roam": True,
                 "scaleLimit": {"min": 1, "max": 4},
