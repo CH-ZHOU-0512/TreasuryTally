@@ -84,3 +84,23 @@ def test_missing_snapshot_never_fabricates_a_graph():
     page, options = page_for(report)
     assert not page.exception and not options
     assert any("不补造转账" in item.value for item in page.info)
+
+
+def test_unknown_precision_stays_explicit_in_visible_graph_label():
+    def transform(fixture):
+        records = tuple(record.model_copy(update={
+            "token_address": "0x" + "f" * 40, "transaction_hash": "0x" + "d" * 64,
+        }) for record in fixture.submission.transfers)
+        return fixture.model_copy(update={"submission": fixture.submission.model_copy(update={"transfers": records})})
+
+    item = report_input("correct-basic", transform=transform)
+    report = build_business_report(item.receipt, item.submission, fund_flow=item.fund_flow)
+    page, options = page_for(report)
+    assert not page.exception
+    rows = {row.edge_id: row for row in report.current.flow_rows}
+    unknown = [edge for edge in options[-1]["series"][0]["links"] if rows[edge["edge_id"]].amount.decimals is None]
+    assert unknown
+    for edge in unknown:
+        assert "最小单位（精度未确认）" in edge["label"]["formatter"]  # noqa: RUF001
+        assert edge["amount_base_units"] == rows[edge["edge_id"]].amount.base_units
+        assert rows[edge["edge_id"]].amount.unit in edge["name"]
