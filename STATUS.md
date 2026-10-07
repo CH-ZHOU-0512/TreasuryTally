@@ -15,6 +15,18 @@ last-reviewed: 2026-10-07
 
 ## 当前阶段
 
+### 统一上传与受限模型识别（2026-10-07，本地核心，未发布）
+
+用户最新需求替代旧转换/采纳界面：正常路径统一 CSV / `.xlsx` / JSON 上传，模型只识别表头，
+用户不手动转换或采纳 JSON。旧 `9fd663c` 手动界面不发布；下面 ADR-031 各项作为历史本地证据保留。
+M14 从 `9fd663c` 切 `codex/automatic-report-recognition`，单写受限核心与技术文档；
+M12 从同一基线独立单写 app/PRODUCT/FRONTEND/ADR-032，尚待消费核心并接线最终页面。
+核心 `header_recognition` / `report_recognition` 已实现安全表头、真实列绑定、严格 JSON bypass、
+单位/整表条件局部问题、原声明不修正、失败脱敏/无 fixture fallback、自动私有留档与缓存原件/模型绑定。
+没有模型行值、文件名、私有备注外发，没有新增依赖或修改公共 Schema/签名/金额/attempt 规则。
+专项 33 项离线 mock 测试与全仓 Ruff 已实跑通过；完整非 external 门正在运行，后续记录实际结果。
+真实模型 API 识别未测试，不将 mock 或工厂构造测试记为外部成功；未推送、主线合并、部署或操作用户任务。
+
 ### 表格转换独立集成验收（2026-10-07，本地通过，未发布）
 
 M14 新建 `m14-report-conversion-integration/HACKTHON`、`codex/report-conversion-integration`，

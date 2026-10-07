@@ -53,8 +53,11 @@ M8 已实现承诺端口和资金流投影：`commitments` 负责 EIP-712 创建
 只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。
 
 `services.upload` 严格解析原始 JSON 声明并私有留档，以独立 local-upload-intake 身份签名；这不认证原始作者。
-`services.report_conversion` 及受限表格 reader 只负责 CSV/XLSX 到既有 UploadedReport 的确定性格式适配；
-不调用模型、RPC 或执行公式。页面 adapter 展示列映射/缺字段/预览并取得确认，原始输入与转换 provenance 私有留档。
+`services.report_conversion` 及受限 reader 只负责 CSV/XLSX 到 UploadedReport 的确定性格式适配，不执行公式或查询 RPC。
+ADR-032 的 `services.header_recognition` 通过既有 StructuredOutputPort 只让固定真实模型识别安全表头的列角色，
+不发送明细、文件名或私有备注；`services.report_recognition` 绑定真实列、已知字段和原数据，提供统一自动上传用例。
+页面正常路径不显示映射/JSON 采纳；只在必要时补链/代币/精度或金额单位，模型失败与歧义阻塞。
+校验成功即自动私有留原件、规范数据及识别 provenance；此阶段不确认任务或执行 attempt，后续仍显式确认范围。
 验收仍消费规范 JSON，转换不提供独立证据，也不参与 PASS/FAIL 判断。
 `M8WorkspaceWorkflow` 在生成交付之前取得接单签名，进入 M5 持久化之前验证交付签名，随后将承诺和 reference evidence
 追加到 `M8ArtifactStore`。恢复不重调 AI 或重新取链上快照，而是验证签名、receipt manifest 和确定性结果后重建图。
