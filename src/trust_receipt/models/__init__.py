@@ -1,15 +1,19 @@
 """Stable public import boundary for the frozen M1 domain contract."""
 
+from trust_receipt.models.commitments import CommitmentAnchor, DeliveryCommitment, TaskCommitment
 from trust_receipt.models.enums import (
     AggregationRuleType,
     CheckType,
     ClaimType,
+    CommitmentAnchorStatus,
     EvidenceSource,
     ExclusionRuleType,
     FilterType,
     FindingSeverity,
     FindingStatus,
     FindingType,
+    FundFlowNodeRole,
+    FundFlowVisualStatus,
     PublicationChainStatus,
     QueryType,
     VerificationOutcome,
@@ -23,6 +27,7 @@ from trust_receipt.models.fixtures import (
     FixtureReference,
     HumanReview,
 )
+from trust_receipt.models.fund_flow import FundFlowEdge, FundFlowNode, FundFlowProjection
 from trust_receipt.models.plans import (
     ApprovedAggregationRule,
     ApprovedCheck,
@@ -46,6 +51,9 @@ __all__ = [
     "CheckType",
     "Claim",
     "ClaimType",
+    "CommitmentAnchor",
+    "CommitmentAnchorStatus",
+    "DeliveryCommitment",
     "EvidenceDescriptor",
     "EvidenceSource",
     "ExclusionRule",
@@ -61,6 +69,11 @@ __all__ = [
     "FixtureManifest",
     "FixtureManifestEntry",
     "FixtureReference",
+    "FundFlowEdge",
+    "FundFlowNode",
+    "FundFlowNodeRole",
+    "FundFlowProjection",
+    "FundFlowVisualStatus",
     "HumanReview",
     "Publication",
     "PublicationChainStatus",
@@ -69,6 +82,7 @@ __all__ = [
     "ServiceIdentity",
     "ServiceSubmission",
     "SourceDescriptor",
+    "TaskCommitment",
     "TaskSpec",
     "TransferRecord",
     "VerificationOutcome",

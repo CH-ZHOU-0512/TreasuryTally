@@ -248,6 +248,25 @@ npm test
 
 ## 清理与恢复
 
+### M8 上传与工作区恢复
+
+上传只接受 `schemas/v1/uploaded_report.schema.json` 对应的 UTF-8 JSON，最多 1 MB、200 条 service 来源记录。
+原始文件保存在 `receipts/private/m5/<workspace-id>/uploads/`；不得公开该目录。SQLite 同工作区新增只追加 M8 artifact
+表，不存私钥。重启后输入原 workspace ID，系统校验承诺、证据 manifest 并重放结果；上传任务恢复后补交需重新上传文件，
+不会静默换成演示服务。缺少旧快照只保留原回执；损坏快照拒绝恢复，不自动覆盖或重拉参考证据。
+
+专用锚候选当前没有部署地址或生产配置；本地编译可用 `npx --yes --package solc@0.8.30 solcjs --bin --abi
+contracts/CommitmentAnchor.sol -o .tmp/m8-solc`。不将本地模拟交易当作 Sepolia 已提交或已确认。
+
+可在隔离开发端口启动 `npx --yes --package ganache@7.9.2 ganache --server.host 127.0.0.1 --server.port 18549 --logging.quiet --wallet.deterministic`，
+然后运行 `python scripts/check_m8_anchor_local.py`。脚本只允许 loopback HTTP 与开发 chain 1337，使用本地测试币和新生成的
+测试身份，校验授权、requester 命名空间、只追加 attempt 和 task/delivery 事件读回；不读取 `.env` 或真实密钥。
+Ganache 启动输出中的默认开发密钥不是生产凭据，但日志仍应留在忽略的 `.tmp/`。
+
+页面主题由 `.streamlit/config.toml` 的原生深色主题与 `app/styles.py` 共同控制；不要只修改背景却保留原生浅色主题。
+生产 Dockerfile 必须复制 `.streamlit/` 到镜像工作目录；发布需重建应用镜像，不能只刷新浏览器或更新 CSS。
+更新导入的样式后重启开发 Streamlit，浏览器刷新并用原 workspace ID 恢复，避免缓存旧样式。
+
 - 不删除 `fixtures/`、`schemas/` 或已发布回执。
 - 本地数据库损坏时先复制 `data/` 作为证据，再重建开发数据库。
 - 私有回执不得为了“清理”而移动到公开目录。

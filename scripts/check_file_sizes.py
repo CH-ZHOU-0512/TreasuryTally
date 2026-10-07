@@ -14,6 +14,7 @@ SCOPED_SUFFIXES = {
     ".ps1",
     ".py",
     ".sh",
+    ".sol",
     ".toml",
     ".ts",
     ".tsx",

@@ -47,6 +47,17 @@ Service History Projection    ── verified receipts → traceable facts
 资金流投影只负责把已有领域事实转换为节点、边和颜色状态，不重新计算金额或结论。服务历史投影同样只聚合已验证回执，
 不能成为新的信誉真值或覆盖原始回执。
 
+M8 已实现承诺端口和资金流投影：`commitments` 负责 EIP-712 创建/恢复校验及只读 Registry 能力探针，`projections` 只从
+已有 submission、reference evidence 与 Finding 生成视觉读模型。当前没有可用写入 adapter；`CommitmentAnchorPort` 只冻结
+边界，页面必须显示 `NOT_SUBMITTED`。`DedicatedAnchorReader` 与 `contracts/CommitmentAnchor.sol` 是未接入页面的候选，
+只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。Receipt Verification Explorer 与
+Service History Projection 仍分别属于 M9、M10。
+
+`services.upload` 严格解析原始 JSON 声明并私有留档，以独立 local-upload-intake 身份签名；这不认证原始作者。
+`M8WorkspaceWorkflow` 在生成交付之前取得接单签名，进入 M5 持久化之前验证交付签名，随后将承诺和 reference evidence
+追加到 `M8ArtifactStore`。恢复不重调 AI 或重新取链上快照，而是验证签名、receipt manifest 和确定性结果后重建图。
+旧任务缺少快照时不伪造资金流；M5 和 M8 附加存储之间尚无跨事务提交，崩溃可能产生缺少附加快照的旧格式记录。
+
 M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名
 `ServiceSubmission`。故障注入状态保存在独立 `ReportDelivery.fault_injection` 元数据中，不写入参考证据，也不伪装为
 第三方生产数据。编排层先校验 canonical report hash 和 EVM 签名，再允许交付进入 repository。

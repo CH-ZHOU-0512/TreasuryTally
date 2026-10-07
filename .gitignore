@@ -9,6 +9,7 @@ __pycache__/
 *.db
 .pytest_cache/
 .playwright-cli/
+output/playwright/
 .ruff_cache/
 .mypy_cache/
 .coverage
