@@ -92,9 +92,11 @@ def load_task_spec(path: Path) -> TaskSpec:
     return task
 
 
-def load_case_bundle(case_directory: Path = DEFAULT_CASE_DIRECTORY) -> CaseBundle:
+def load_case_bundle(
+    case_directory: Path = DEFAULT_CASE_DIRECTORY, *, manifest_filename: str = "case.json",
+) -> CaseBundle:
     directory = case_directory.resolve()
-    manifest = _load_json(directory / "case.json")
+    manifest = _load_json(_resolved_child(directory, manifest_filename))
     if not isinstance(manifest, dict):
         raise PreflightError("case.json must contain one JSON object")
 
@@ -153,11 +155,12 @@ def run_preflight(
     rpc_url: str,
     *,
     case_directory: Path = DEFAULT_CASE_DIRECTORY,
+    manifest_filename: str = "case.json",
     timeout_seconds: float = 30,
     probe: EvmRpcProbe | None = None,
 ) -> dict[str, Any]:
     """Compare the fixed case inventory with a fresh, read-only RPC query."""
-    bundle = load_case_bundle(case_directory)
+    bundle = load_case_bundle(case_directory, manifest_filename=manifest_filename)
     provenance = bundle.manifest["provenance"]
     confirmations = int(provenance["minimum_confirmations"])
     validate_read_options(timeout_seconds=timeout_seconds, confirmations=confirmations)
@@ -230,6 +233,7 @@ def _parser() -> argparse.ArgumentParser:
         help="Sepolia JSON-RPC URL; defaults to M11_RPC_URL then ETH_RPC_URL",
     )
     parser.add_argument("--case-directory", type=Path, default=DEFAULT_CASE_DIRECTORY)
+    parser.add_argument("--case-manifest", default="case.json", help="Manifest path relative to case directory")
     parser.add_argument("--timeout-seconds", type=float, default=30)
     return parser
 
@@ -247,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         result = run_preflight(
             args.rpc_url,
             case_directory=args.case_directory,
+            manifest_filename=args.case_manifest,
             timeout_seconds=args.timeout_seconds,
         )
     except Exception as error:  # CLI boundary converts all evidence failures to a non-success state.
