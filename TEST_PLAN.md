@@ -19,6 +19,9 @@ last-reviewed: 2026-10-07
 验证时设置 `--memory 2g --memory-swap 2g --pids-limit 256 --cpus 2 --cap-drop ALL --security-opt no-new-privileges`
 及 `--network none`；这证明受控本地渲染，不声称 RPC 连通、生产部署或新增逐页视觉审批。
 实际 `/app` 初始入口另由 `scripts/deploy/check_image.py` 检查源码/wheel、AppTest exception 和品牌区，不能替代下载状态矩阵。
+`scripts/deploy/check_report_downloads.py <synthetic.view.json> <synthetic.receipt.json>` 在同样隔离边界使用实际
+app 单实例 renderer，主动触发五种格式生成，断言原 JSON 加五格式共六个下载入口、正确格式和完整 view 缓存。
+它不使用预生成下载 bytes 或 mock exporter，不执行浏览器/HTTP 下载，也不声称完整真人可用性验收。
 
 ## 业务报告与导出验证
 

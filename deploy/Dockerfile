@@ -38,6 +38,7 @@ COPY .streamlit ./.streamlit
 COPY fixtures ./fixtures
 COPY scripts/deploy/check_image.py /opt/trust-receipt-smoke/check_image.py
 COPY scripts/deploy/check_report_runtime.py /opt/trust-receipt-smoke/check_report_runtime.py
+COPY scripts/deploy/check_report_downloads.py /opt/trust-receipt-smoke/check_report_downloads.py
 RUN mkdir -p /app/data /app/receipts/private && chown -R app:app /app
 
 USER app
