@@ -184,7 +184,7 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-观察 `main` 推送后的 GitHub Actions；后续仅剩可选的 OpenAI、Pinata/IPFS 扩展验证，不阻塞当前 MVP。
+M1–M7 MVP 已完成并进入 `main`；后续仅剩可选的 OpenAI、Pinata/IPFS 扩展验证，不阻塞当前 MVP。
 
 ## M7 工作区收尾
 
@@ -195,6 +195,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
   1000 行限制和无凭据演示均通过。
 - 主线首次 CI 暴露未使用的 `langchain[mcp]` extra 与固定 `mcp==1.26.0` 的解析冲突；依赖声明已收窄为普通
   LangChain，并使用现有锁定快照约束 CI 解析，避免无界回溯。
+- 修复提交对应的 GitHub Actions 主线 CI 已通过，依赖安装、非 external 测试、Ruff、`pip check`、Schema、
+  文件规模检查和无凭据演示均为绿色。
 
 ## 状态更新规则
 
