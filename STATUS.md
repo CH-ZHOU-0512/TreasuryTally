@@ -22,6 +22,12 @@ M13 已提交专属材料及 M14 技术验收交付；不纳入 M13 未提交浏
 
 ### M9–M14 发布与部署（2026-10-07）
 
+**发布事故纠正：** 下列 healthy/200/WebSocket 仅证明服务连接，不代表业务页面成功渲染。用户截图与真实镜像隔离 AppTest
+已复现 `streamlit_app.py:23 → m9_components.py:10 → ModuleNotFoundError: trust_receipt.m9`。
+新 wheel 含 M9/history，但快捷发布漏复制 src，页面优先导入继承的 M8 `/app/src`。此前 `/release` 目录演示掩盖了旧源码覆盖，
+“网页正常”结论撤回。当前按用户继续发布授权修复：永久 Dockerfile 同源复制 src，并新增真实入口及源码/wheel 一致性门。
+修复部署结果另行记录；健康检查不补记 M13/M14 缺失验收。
+
 - 发布分支已提交并推送，[PR #8](https://github.com/CH-ZHOU-0512/xinjv/pull/8) 已合并；
   主线部署提交为 `cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`，分支、PR 与合并主线 CI 均通过。
 - 广州应用镜像为 `trust-receipt:m14-cd01f8dad329ebe6b7874c56a9a9ee0c005cc2e7`，revision label 与部署提交完全一致。
