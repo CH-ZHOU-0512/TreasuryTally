@@ -15,6 +15,19 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
+### M14 报告运行集成本地依赖锁（2026-10-08，未发布）
+
+M14 独立 `codex/report-runtime-integration` 从 M12 `5f59055` 整合 M13 export `0a0883a`（映射 `d408f1c`）、
+运行接线 `2a9c90e` 与 M12 最终下载 UI `ecaa992`（映射 `2c198a5`），不修改主 checkout、共享环境或线上配置。
+主控在项目主 `D:/HACKTHON/.venv` 实际安装 python-docx 1.2.0 / reportlab 4.4.9，Pillow 12.3.0 不变，
+主控实跑 pip check 与 M13 reporting 49 项测试通过；仅新增传递依赖 lxml 6.1.3，无旧包删除或升级。
+M14 原样机械复制主环境 `pip freeze --exclude-editable` 生成产物为 requirements.lock.txt，
+源/目标 SHA-256 同为 `d82759bcdf6af75c548b41ded2dc0146aa4750b0571a7025fd6d299a30200800`。
+独立 Compare-Object 确认仅新增上述 3 条锁项，其余 Git 差异只是 freeze 排序；未手改锁条目。
+requirements.txt 同步三精确导出依赖，与 pyproject 主声明一致，避免开发安装与正式包声明分叉。
+运行接线包括 pinned Node/sharp、字体、许可证、子进程 seccomp、容器 native 总内存/pids 与缓存并发界限。
+最终 UI/锁组合验证仍在进行；纵向内部互转箭头的 M13 视觉修复待消费，不将本地格式成功计为视觉完整验收。
+
 ### M12 业务报告导出页面本地接线（2026-10-08）
 
 - 独立 `codex/report-intake-ui` 消费 M13 导出提交 `0a0883a4a963124348823977121d8522164f6f67`
