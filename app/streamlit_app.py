@@ -26,6 +26,7 @@ from app.m9_components import (
     render_rework_package,
 )
 from app.m9_public import render_public_explorer, render_public_history
+from app.onboarding import render_onboarding
 from app.report_experience import (
     amount_summary,
     contract_example_bytes,
@@ -703,6 +704,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+    render_onboarding(st)
     # Pure CSS/HTML must not wait for the Markdown component's parsing dependency.
     st.html(APP_CSS)
     _product_header()
