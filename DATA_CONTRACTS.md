@@ -306,6 +306,99 @@ publication:
 - attempt 从 1 连续增长到 2；只有第一次结果为 `FAIL` 或 `INCONCLUSIVE` 时才能请求第二次。
 - 故障注入元数据只描述团队控制模拟行为，不属于服务声明或 RPC/Blockscout 参考事实。
 
+## M8–M10 计划契约
+
+以下对象描述已接受的后续语义，但尚未进入 `schemas/v1/`，也不代表已经实现。实现前必须确定 schema 版本、链上承载方式和
+迁移策略，再生成 Pydantic 模型与 JSON Schema。
+
+### TaskCommitment
+
+```yaml
+commitment_version: string
+commitment_id: string
+task_id: string
+spec_hash: hash
+requester_address: address
+service_id: string
+created_at: datetime
+expires_at: datetime | null
+signature_scheme: EIP712
+signature: string
+anchor:
+  chain_id: integer
+  status: NOT_SUBMITTED | SUBMITTED | CONFIRMED | FAILED
+  transaction_hash: hash | null
+  block_number: integer | null
+```
+
+任务承诺只绑定已确认 `TaskSpec.spec_hash`，不得把 restricted 组织标签、私有报告正文或凭据直接写链。`CONFIRMED` 必须读回
+与 `spec_hash`、requester 和 service 一致的链上记录；链上承载 adapter 尚待 M8 接口探针确定。
+
+### DeliveryCommitment
+
+```yaml
+commitment_version: string
+task_commitment_id: string
+submission_id: string
+service_id: string
+attempt: integer
+report_hash: hash
+accepted_at: datetime
+submitted_at: datetime
+signer_address: address
+signature_scheme: EIP712
+signature: string
+```
+
+接单与交付可以是同一对象的两个签名阶段，也可以由两个对象实现，但必须分别证明服务接受了哪个任务以及提交了哪个报告。
+签名者必须解析到已确认的 ERC-8004 服务 owner 或明确授权者；`report_hash` 继续绑定原始交付而不是解析后的展示模型。
+
+### FundFlowProjection
+
+```yaml
+task_id: string
+attempt: integer
+claimed_total_base_units: integer-string
+calculated_total_base_units: integer-string | null
+outcome: PASS | FAIL | INCONCLUSIVE
+nodes: [fund_flow_node]
+edges: [fund_flow_edge]
+```
+
+每条 edge 必须保留完整事件键、服务声明引用、参考证据引用和视觉状态。视觉状态只允许 `MATCHED`、`MISSING_FROM_REPORT`、
+`NOT_FOUND_ON_CHAIN`、`INTERNAL_TRANSFER`、`DUPLICATE`、`INCONCLUSIVE`；它由确定性 Finding 投影产生，不能反向决定
+`VerificationResult`。颜色属于 UI，不进入领域权威。
+
+### ReceiptRevisionLink
+
+```yaml
+receipt_hash: hash
+parent_receipt_hash: hash | null
+supersedes_receipt_hash: hash | null
+resolution: ORIGINAL | RESUBMITTED | FIXED | UNRESOLVED
+```
+
+替代关系只能追加，不能撤销或覆盖旧回执。`FIXED` 必须引用同一任务的早期 FAIL/INCONCLUSIVE 回执以及后续 PASS 回执；
+服务切换时仍保留两个不同的 service identity。
+
+### ServiceHistoryProjection
+
+```yaml
+service_id: string
+task_type: string
+verified_task_count: integer
+first_pass_count: integer
+fixed_pass_count: integer
+fail_count: integer
+inconclusive_count: integer
+verifiable_receipt_count: integer
+latest_verified_at: datetime | null
+receipt_refs: [hash]
+```
+
+所有计数必须能由 `receipt_refs` 重算；不同任务类型不得合并成永久综合评分，`INCONCLUSIVE` 不进入负面计数，AI 文本不得
+成为任何计数的权威来源。
+
 ## M1 fixture 契约
 
 M1 人工标注数据放在：

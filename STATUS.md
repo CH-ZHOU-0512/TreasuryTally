@@ -22,7 +22,8 @@ M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek �
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
 完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 验收封装与本地收尾已完成；
-`codex/m1-integration` 已同步远端 M2 合并历史，并通过非快进合并进入 `main`，本状态提交随 `main` 推送。
+`codex/m1-integration` 已同步远端 M2 合并历史并进入 `main`，最终主线 CI 已通过。M8–M10 产品方向已经完成文档设计，
+尚未实现或部署。
 
 ## 已完成
 
@@ -184,7 +185,18 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 下一步
 
-M1–M7 MVP 已完成并进入 `main`；后续仅剩可选的 OpenAI、Pinata/IPFS 扩展验证，不阻塞当前 MVP。
+M8–M10 前端规范已建立于 [FRONTEND_SPEC.md](FRONTEND_SPEC.md)，黑金视觉与 12px 卡片圆角已由用户确认；页面代码尚未按该规范改版。
+
+启动 M8：先重构首屏为“上传报表 → 确认范围 → 链上核验”的单一主流程，实现由现有 Finding 驱动的资金流投影；随后冻结
+TaskCommitment/DeliveryCommitment schema，并对 ERC-8004 Validation Registry 或专用最小锚定 adapter 做 Sepolia 接口探针。
+在探针与 schema 完成前，不把任务承诺表述为已上链。
+
+## M8–M10 计划范围
+
+- M8：资金流对账图、任务/接单/交付承诺和可下钻链上证据；技术详情默认折叠，每个状态只有一个主操作。
+- M9：确认 Finding 生成返工包、修复前后并排对比、只追加回执版本链和独立公开验证入口。
+- M10：按任务类型聚合可追溯的服务历史事实，并用于下一次人工选择服务；不生成永久综合评分。
+- 黑客松阶段明确不建设多租户、复杂账号/RBAC、计费、开放市场、自动付款或主网资金控制。
 
 ## M7 工作区收尾
 

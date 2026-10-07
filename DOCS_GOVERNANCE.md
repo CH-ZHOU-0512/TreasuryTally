@@ -21,6 +21,7 @@ last-reviewed: 2026-10-07
 
 - 路由：`README.md`、`AGENTS.md`
 - 产品：`PRODUCT.md`
+- 前端展示：`FRONTEND_SPEC.md`
 - 架构：`ARCHITECTURE.md`、`DECISIONS.md`、`INTEGRATIONS.md`
 - 契约：`DATA_CONTRACTS.md`，以及未来的 `schemas/`
 - 交付：`DEVELOPMENT_PLAN.md`、`M1_HANDOFF.md`、`TEST_PLAN.md`、`STATUS.md`
@@ -37,6 +38,7 @@ last-reviewed: 2026-10-07
 | 文档入口和阅读路径 | `README.md` |
 | AI 读取和修改约束 | `AGENTS.md` |
 | 产品范围、非目标、完成标准 | `PRODUCT.md` |
+| 前端信息层级、交互展示和设计变量 | `FRONTEND_SPEC.md` |
 | 组件、依赖方向、数据流 | `ARCHITECTURE.md` |
 | 外部端点、网络、合约、探针和降级 | `INTEGRATIONS.md` |
 | 核心对象语义和计算不变量 | `DATA_CONTRACTS.md` |
@@ -74,6 +76,7 @@ last-reviewed: 2026-10-07
 
 - 所有任务：`README.md`、`STATUS.md`。
 - 产品任务：再读 `PRODUCT.md`。
+- 前端任务：再读 `FRONTEND_SPEC.md`，按页面涉及的业务读取产品、架构和契约。
 - 代码或架构任务：再读 `ARCHITECTURE.md` 和相关 ADR。
 - 数据任务：再读 `DATA_CONTRACTS.md` 和目标 schema。
 - M1 并行任务：再读 `M1_HANDOFF.md`，并确认唯一岗位和契约冻结 commit。

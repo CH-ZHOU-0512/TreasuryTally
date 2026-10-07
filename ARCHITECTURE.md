@@ -35,6 +35,18 @@ Streamlit UI
 SQLite Repository stores tasks, attempts, findings and publication state.
 ```
 
+M8–M10 计划在现有端口外增加四个明确职责，不改变确定性引擎的权威：
+
+```text
+Task/Delivery Commitment Port ── EIP-712 signer + chain anchor adapter
+Fund Flow Projection          ── TaskSpec + submission + evidence + findings
+Receipt Verification Explorer ── public URI/hash/feedback → replay
+Service History Projection    ── verified receipts → traceable facts
+```
+
+资金流投影只负责把已有领域事实转换为节点、边和颜色状态，不重新计算金额或结论。服务历史投影同样只聚合已验证回执，
+不能成为新的信誉真值或覆盖原始回执。
+
 M3 中服务端口只接收已确认 `TaskSpec` 与 attempt 编号；团队控制 adapter 负责生成并签名
 `ServiceSubmission`。故障注入状态保存在独立 `ReportDelivery.fault_injection` 元数据中，不写入参考证据，也不伪装为
 第三方生产数据。编排层先校验 canonical report hash 和 EVM 签名，再允许交付进入 repository。
@@ -105,6 +117,14 @@ ERC-8004 adapter 在写入前核对 Sepolia chain ID、受控 service owner、Re
 8. 用户授权后，发布适配器上传脱敏回执；信誉适配器提交其 URI 和哈希。
 9. 读回程序校验链上引用、文件哈希及确定性检查结果。
 
+M8–M10 在此基础上追加：
+
+10. 用户确认任务后生成任务承诺；服务身份对接单和报告哈希签名，链上锚定 adapter 的选择以真实接口探针为前置条件。
+11. 资金流投影把参考事件、服务声明和 Finding 映射为稳定视觉语义，点击边可回到完整事件键和浏览器链接。
+12. 首次失败生成返工包；第二次交付与首次交付并排留档，并通过父回执/替代关系形成版本链。
+13. 独立验证入口从公开 URI、回执哈希、任务哈希或反馈交易恢复对象关系并重放确定性结论。
+14. 服务历史投影按任务类型聚合可验证事实，供下一次人工选择服务使用。
+
 本地回执存储使用只创建、不覆盖的 JSON 文件。独立重放入口重新校验 `receipt_hash`、嵌套 `spec_hash`、任务链接，
 并仅根据参考完整性、证据充分性和 confirmed error 重新推导 PASS/FAIL/INCONCLUSIVE；它不依赖原聊天历史、UI、
 数据库连接或模型服务。
@@ -158,5 +178,10 @@ SQLite 将任务、交付 attempt 和验证结果放在三张独立表中。`(ta
 
 ## 页面适配边界
 
-Streamlit 使用宽布局，但关键内容以卡片和可换行字段呈现，不依赖宽表格。桌面端允许并排编辑与指标对照；760px 及以下将
-多列强制折叠为单列，按钮占满可用宽度，长哈希与 JSON 可换行或横向滚动。响应式样式只属于 `app/`，不会进入领域层。
+Streamlit 定位为链上报表验收工具，而不是开发工作台。首屏只保留一句价值说明、“上传报表 → 确认范围 → 链上核验”三步和
+当前唯一主操作；Agent、RPC、Blockscout、哈希、Registry 与状态机细节进入默认折叠的验证依据区。结果页先展示三态、声称金额、
+链上有效金额、差异和资金流图，再展示 Finding、返工和发布动作。
+
+页面使用宽布局，但关键内容以卡片和可换行字段呈现，不依赖宽表格。桌面端允许资金流与问题列表并排；760px 及以下强制
+折叠为单列，按钮占满可用宽度，长哈希与 JSON 可换行或横向滚动。资金流颜色不能是唯一语义，还必须配合图标、文本和
+可访问标签。响应式样式和可视化投影 adapter 只属于 `app/`，不会进入领域层。
