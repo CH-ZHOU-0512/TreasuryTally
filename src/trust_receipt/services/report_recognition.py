@@ -20,6 +20,7 @@ from trust_receipt.services.header_recognition import (
 )
 from trust_receipt.services.report_conversion import (
     ALIASES,
+    CONSTANT_FIELDS,
     ConversionInputError,
     ReportConversionCandidate,
     _header_key,
@@ -73,6 +74,11 @@ def recognize_report(
         "recognition_mode": "strict-json" if kind == "json" else recognizer.mode if recognizer else "unconfigured",
         "model_id": recognizer.model_id if recognizer and kind != "json" else None, "amount_unit": amount_unit,
     }
+    if amount_unit not in (None, "base", "token"):
+        base["amount_unit"] = None
+        return RecognizedReport(**base, issues=("金额单位只允许 base 或 token。",))
+    if constants and any(key not in CONSTANT_FIELDS or not isinstance(value, str) for key, value in constants.items()):
+        return RecognizedReport(**base, issues=("整表补充仅允许文本链编号、代币地址和精度。",))
     if not payload or len(payload) > MAX_REPORT_BYTES or not filename or len(filename) > 255 or "\x00" in filename:
         return RecognizedReport(**base, issues=("文件必须非空、文件名有效且大小不超过 1 MB。",))
     if kind == "json":
@@ -140,11 +146,20 @@ def recognize_report(
             if amount_unit != expected:
                 return RecognizedReport(**base, issues=("补充金额单位与原表明确单位冲突。",))
     converted = convert_report_table(table, mapping, constants)
+    warnings = ["报表读取不代表链上通过；原声明与重复事件保持不变，作者身份仍未验证。"]
+    if converted.derived_fields:
+        warnings.append("未提供的摘要由明细计算，不是服务商原声明；请在范围确认时核对来源。")
+    if "amount" in mapping:
+        warnings.append("代币单位金额按明确精度精确缩放，没有四舍五入。")
+    if "block_hash" not in mapping:
+        warnings.append("原表无区块哈希，保留 null；没有从链上补写交付。")
+    if recognizer.mode == "offline-test":
+        warnings.append("离线 mock 识别测试，不是真实模型或链上证据。")
     return RecognizedReport(
         **base, conversion=converted, report=converted.report,
         json_payload=converted.json_payload if converted.ready else None,
         issues=converted.issues, missing_fields=converted.missing_fields,
-        warnings=(*converted.warnings, "模型仅识别表头；报表数值来自原文件，作者身份仍未验证。"),
+        warnings=tuple(warnings),
     )
 
 

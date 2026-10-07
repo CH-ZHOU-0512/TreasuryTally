@@ -195,6 +195,7 @@ def test_missing_summary_is_derived_and_duplicates_preserved():
     assert result.ready and result.conversion.derived_summary
     assert result.report.claimed_count == 2 and len(result.report.transfers) == 2
     assert result.warnings
+    assert not any("明确采用" in warning or "转换" in warning for warning in result.warnings)
 
 
 @pytest.mark.parametrize("name,data", [
@@ -288,3 +289,10 @@ def test_schema_accepts_sdk_json_arrays_but_rejects_coerced_scalar_or_extra_valu
     ):
         with pytest.raises(ValueError):
             HeaderRecognition.model_validate(invalid)
+
+
+@pytest.mark.parametrize("kwargs", [{"constants": {"chain_id": 11155111}}, {"amount_unit": "guessed"}])
+def test_invalid_local_conditions_block_without_calling_model(kwargs):
+    model = MockModel()
+    result = recognize_report(FIXTURE.read_bytes(), "a.csv", recognizer(model), **kwargs)
+    assert not result.ready and result.issues and not model.calls

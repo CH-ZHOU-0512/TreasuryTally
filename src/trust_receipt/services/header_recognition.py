@@ -39,11 +39,13 @@ Return HeaderRecognition 1.0 covering every supplied index exactly once. Do not 
 Only assign the listed domain fields or ignore. Mark uncertain/competing roles ambiguous=true.
 Do not infer chain IDs, addresses, hashes, event IDs, decimals, amounts, rows or total/count values.
 Preserve explicit total/count/source columns. Do not interpret a vague amount as a known unit.
+For one clearly named amount column without units, use field=amount, ambiguous=false: the application
+will ask the user for units. ambiguous=true means uncertainty about the column's ROLE, not units alone.
 No tools, code, web access or file access are allowed. Missing data is not permission to invent it.
 """
 PRIVATE_OR_INSTRUCTION = re.compile(
-    r"private|secret|password|credential|api.?key|signature|authorization|jwt|mnemonic|note|remark|"
-    r"email|customer|姓名|备注|私密|敏感|密钥|口令|客户|邮箱|忽略|执行|指令|系统提示|"
+    r"private|confidential|secret|password|credential|api.?key|signature|authorization|jwt|mnemonic|note|remark|"
+    r"email|customer|姓名|备注|私密|机密|敏感|密钥|口令|客户|邮箱|忽略|执行|指令|系统提示|"
     r"ignore|instruction|system|assistant|prompt|execute|https?://|@|0x[0-9a-f]{10}|"
     r"[a-z0-9_-]{32,}|[0-9]{8,}", re.I,
 )
@@ -57,6 +59,9 @@ BUSINESS_LABEL = re.compile(
 
 def model_headers(table: ReportTable) -> tuple[tuple[int, str], ...]:
     """No samples: filenames and rows cannot reach this model payload."""
+    keys = [_header_key(label) for label in table.headers]
+    if len(set(keys)) != len(keys):
+        raise ConversionInputError("表头存在归一化冲突，请修正原表列名。")
     labels = []
     for index, label in enumerate(table.headers):
         if (
