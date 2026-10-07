@@ -15,7 +15,35 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
-### M14 报告运行集成本地验收（2026-10-08，运行通过，未发布）
+### M14 箭头修复后最终本地运行复验（2026-10-08，通过，未发布）
+
+在前项本地集成之上原样消费 M13 最小 `cf4f6122cde83420d8cb9f7922487b0c064340cf`，
+映射为最终运行代码 `6a102da8df6a07accad21e6898b63024d719aa33`。未修改事实、金额、事件身份、
+Node/sharp 锁、受信 launcher 或主环境生成的 Python 锁；新增 card-edge-geometry.js 按已有规则进入新 wheel。
+下述 07cdf4a 验收只属修复前历史，不能覆盖本次新资源。
+
+- 新代码独立完整非 external：572 passed / 16 deselected / 1 条既有 websockets warning，108.08 秒；
+  Ruff、pip check、21 Schema、1000 行、diff 门与无凭据 MVP 双回执重放/冷恢复 valid=true 通过。
+- 新完整镜像 `trust-receipt:report-runtime-6a102da`，实际 image ID
+  `sha256:072bb9703f938ec10d158cde9a1ae4f72639d2220eff8173c270c3c00ca49dc2`；
+  新离线 release 镜像 `trust-receipt:report-release-6a102da`，实际 image ID
+  `sha256:c11df3873a12981083e0cf615bad3948957db48f0b11f480cb55ced3dd69b027`；
+  两者 inspect revision 均精确为上述 6a102da 完整 SHA，不使用旧镜像换标。
+- 新提交归档 SHA-256 `75f1383caea4be85625c25d72b37c37902e158ae8caa3d508471302028e3ae15`；
+  由此构建的 wheel SHA-256 `3251c26daefa9484c3f964c28fc58ccaffe3be273c9ad77777f053324843a651`。
+  release 在 network=none 完成无索引/无依赖 wheel 安装与 pip check、source/wheel/实际入口门。
+- 两个新镜像分别独立实跑七例真实 SSR→PNG→DOCX/PDF、全部报告资产/字体 source/wheel parity、
+  view/hash 绑定与许可证、cgroup memory/swap/pids、seccomp/父 socket/匿名管道、缺依赖与任意参数拒绝全部通过。
+  不挂 source/app/launcher 覆盖，不挂真实 env、key、用户数据；渲染 network=none、只读、资源界限与前项一致。
+- 两个新镜像分别实跑 Linux Node 20 组直线/曲线/反向/resize/zoom/pan 几何测试通过，测试只读挂载固定检查脚本。
+  实际 AppTest 由页面单应用 renderer 主动生成五格式加独立 JSON 六下载，正确格式、完整 view 缓存及原回执/结论不变。
+  新完整镜像独立 `/app` 初始入口 115 源文件匹配 wheel、exception=0、品牌区存在；release 同项在离线构建时实际通过。
+- M13 独立视觉证据已核读 card-contact-review.md：新 86 页重渲染，14 个变更图表页逐个原始分辨率复查，
+  72 页哈希与其先前逐页审查页一致。归属 M13，不写成 M14 重看了 86 页；纵向箭头待修复项已由此新版本替代。
+- 未进行浏览器/HTTP 下载、真人测试、真实模型/RPC复测或线上任务恢复；未推送、主线合并、部署、
+  公开上传、写链或修改生产数据/配置。本地运行与格式验收通过不等于生产已切换或全状态浏览器视觉矩阵已完成。
+
+### M14 报告运行集成本地验收（2026-10-08，修复前历史，未发布）
 
 M14 独立 `codex/report-runtime-integration` 从 M12 `5f59055` 整合 M13 export `0a0883a`（映射 `d408f1c`）、
 运行接线 `2a9c90e` 与 M12 最终下载 UI `ecaa992`（映射 `2c198a5`），不修改主 checkout、共享环境或线上配置。
