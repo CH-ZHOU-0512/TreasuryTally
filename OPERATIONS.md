@@ -77,8 +77,8 @@ ERC-8004 写探针默认关闭；只有完成地址、身份、余额和测试�
 `M0_ENABLE_WRITES=true`。该探针只提交值为 0、带有 `trust-receipt-m0` 标签的中性测试反馈。
 
 公开合约地址和测试代币地址需与 [INTEGRATIONS.md](INTEGRATIONS.md) 的已核实记录一致；不要从未知来源复制地址。
-OpenAI 或 DeepSeek 真实 M4 探针分别要求对应 API key 与固定模型名；只跑离线测试时可以留空。`PINATA_JWT` 留空时只禁用
-M6 的真实公共上传，不影响本地回执与离线 M6 测试。
+OpenAI 或 DeepSeek 真实 M4 探针分别要求对应 API key 与固定模型名；只跑离线测试时可以留空。`PINATA_JWT` 留空时
+Pinata/IPFS adapter 不可用，但配置完整的 HTTPS 内容寻址 fallback 仍可执行真实公共发布。
 
 M6 缺少 `PINATA_JWT` 且未配置 HTTPS fallback 时，页面明确阻塞公共上传；本地测试仍使用隔离目录 adapter 完整验证脱敏、
 上传后哈希核验与新进程重放。
@@ -165,8 +165,8 @@ MCP 工具与产品级 `SAMPLED` 诊断，整个过程不得输出 Bearer key。
 本地首次启动默认进入明确标注的离线 fixture 演示，不调用模型网络。切换到 OpenAI 或 DeepSeek 时，必须同时配置对应 API key
 和固定模型名；选择“真实 Sepolia RPC”还必须配置 `ETH_RPC_URL`，可用 `RPC_CONFIRMATIONS` 调整确认数。缺少配置会在页面
 显示阻塞。工作区 ID 对应独立本地数据库、私有回执目录和运行时生成的无资产签名账户；进程重启后输入同一 ID 可恢复最新任务
-及两个 attempt，历史 AI 文本不会重新生成。页面不会执行公共上传、ERC-8004 写入或其他 M6 动作，回执 publication 状态保持
-`NOT_SUBMITTED`。
+及两个 attempt，历史 AI 文本不会重新生成。M6 公共发布和 ERC-8004 写入分别要求页面内显式授权；缺少 publisher 或写链配置
+时按钮保持禁用，已发布但尚未写链的回执保持 `NOT_SUBMITTED`。
 
 ## 验证
 
@@ -175,10 +175,13 @@ MCP 工具与产品级 `SAMPLED` 诊断，整个过程不得输出 Bearer key。
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m pip check
 .\.venv-blockscout\Scripts\python.exe -m pip check
-Get-ChildItem -Recurse -File -Include *.py,*.toml,*.json,*.yaml,*.yml | `
-  Where-Object { $_.FullName -notmatch '\\(\.venv|\.venv-blockscout|references|\.tmp)\\' } | `
-  ForEach-Object { if ((Get-Content -LiteralPath $_.FullName).Count -gt 1000) { $_.FullName } }
+.\.venv\Scripts\python.exe scripts\export_schemas.py --check
+.\.venv\Scripts\python.exe scripts\check_file_sizes.py
+.\.venv\Scripts\python.exe scripts\run_mvp_demo.py
 ```
+
+最后一条是无需凭据的 M7 演示：执行服务 A `FAIL`、切换服务 B `PASS`、两个 attempt 持久化、两份回执独立重放和进程恢复。
+输出 `"valid": true` 才算成功；其 `publication_mode=not-executed` 明确表示该命令不代替真实 M6 公共发布与写链验收。
 
 M4 离线门槛与真实模型探针分别运行：
 

@@ -41,10 +41,18 @@ Copy-Item .env.example .env
 .\.venv\Scripts\Activate.ps1
 ```
 
-当前核心纵向闭环可通过测试直接运行，无需外部密钥：
+无需外部密钥的一条命令 MVP 演示会执行“服务 A 漏项 `FAIL` → 切换服务 B `PASS`”，保存两个 attempt 与两份回执，
+再以新会话路径恢复并独立重放两份回执：
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests\m3
+.\.venv\Scripts\python.exe scripts\run_mvp_demo.py
+```
+
+命令成功时输出 `"valid": true`、确定性算式 `120000 - 30000 + 20000 = 110000`、两个 attempt 和两次有效重放。
+它明确使用离线 fixture，不上传公共文件或写链。需要保留演示数据库与私有回执时，传入一个空目录：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_mvp_demo.py --output-directory .tmp\mvp-demo
 ```
 
 M5 页面入口为：
@@ -60,6 +68,19 @@ Finding、受限解释与本地回执预览。工作区 ID 可在进程重启后
 脱敏回执到 Pinata/IPFS 或内容寻址 HTTPS 公共目录，并在另一次显式授权后提交 ERC-8004；缺少配置时保持 `NOT_SUBMITTED`，
 不会用本地 mock 冒充公开发布。
 实际进展请查看 [STATUS.md](STATUS.md)。
+
+## 完整验收
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m "not external"
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe scripts\export_schemas.py --check
+.\.venv\Scripts\python.exe scripts\check_file_sizes.py
+```
+
+真实模型、RPC、Blockscout、公共回执和 ERC-8004 属于外部验收面，配置与命令见 [OPERATIONS.md](OPERATIONS.md)，
+最新实测证据见 [STATUS.md](STATUS.md)。外部探针缺少凭据时明确跳过，不能用离线演示替代真实通过。
 
 ## 仓库边界
 

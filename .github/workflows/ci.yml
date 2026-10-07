@@ -21,3 +21,6 @@ jobs:
       - run: python -m pytest -m "not external"
       - run: python -m ruff check .
       - run: python -m pip check
+      - run: python scripts/export_schemas.py --check
+      - run: python scripts/check_file_sizes.py
+      - run: python scripts/run_mvp_demo.py

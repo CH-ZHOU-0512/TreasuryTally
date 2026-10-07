@@ -31,7 +31,7 @@ last-reviewed: 2026-10-07
 | 网络 | Sepolia | 已验证 | RPC `eth_chainId` |
 | Chain ID | `11155111` | 已验证 | RPC 返回 `11155111` |
 | RPC 端点 | 公共 Sepolia RPC，来自 `ETH_RPC_URL` | 已验证 | 无密钥公共端点；请求超时 30 秒 |
-| Blockscout MCP | `http://127.0.0.1:8000` | 本地 CLI 已验证，HTTP 工具调用待实测 | M0 探针 |
+| Blockscout MCP | `http://127.0.0.1:8000` | 本地与生产 HTTP 工具调用已验证 | M0/M5 探针 |
 | 测试 ERC-20 | Sepolia WETH `0x7b79…7f9` | 已验证 | block `11855664` 的真实 Transfer |
 | Identity Registry | `0x8004A818…4BD9e` | 已验证 | 上游部署记录、链上 proxy bytecode、owner/tokenURI 读回 |
 | Reputation Registry | `0x8004B663…88713` | 已验证 | 上游部署记录、链上 proxy bytecode、Identity Registry 关联 |

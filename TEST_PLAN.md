@@ -6,7 +6,7 @@ authority-for:
   - test-matrix
   - quality-gates
   - acceptance-evidence
-last-reviewed: 2026-10-06
+last-reviewed: 2026-10-07
 ---
 
 # 测试与验收计划
@@ -67,6 +67,8 @@ last-reviewed: 2026-10-06
   无 AI 产物校验错误和两个独立回执。
 - 同一工作区 ID 在 Streamlit 进程重启后必须恢复已确认任务及两个 attempt，不重新生成历史 AI 文本。
 - 桌面宽屏可并排显示编辑与指标；760px 及以下强制单列，长地址、Finding、回执 JSON 和主要按钮不产生不可操作的水平溢出。
+- M7 无凭据演示必须完成服务 A `FAIL`、切换服务 B `PASS`、两个 attempt 留档、两份回执独立重放及新进程路径恢复；
+  输出必须显式标注 `publication_mode=not-executed`，不得冒充 M6 外部验收。
 
 ## 人工标注数据集
 
@@ -105,8 +107,9 @@ last-reviewed: 2026-10-06
 - Ruff 检查通过。
 - `pip check` 无破损依赖。
 - 涉及外部系统的能力必须报告“已实测”或“未实测”，不能用 mock 结果代替实测声明。
-- GitHub Actions 的普通质量门只运行 `not external` 测试、Ruff 和 `pip check`；外部探针没有显式密钥时保持跳过，
-  不得以 mock 或空配置标记为外部成功。
+- GitHub Actions 的普通质量门运行 `not external` 测试、Ruff、`pip check`、Schema 重生成检查、1000 物理行限制和
+  无凭据 MVP 演示；治理文档 metadata 与链接检查包含在契约测试中。外部探针没有显式密钥时保持跳过，不得以 mock 或
+  空配置标记为外部成功。
 
 ## 标准命令
 

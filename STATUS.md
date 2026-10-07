@@ -21,7 +21,7 @@ M1 已完成：领域契约、Pydantic 模型、8 份 JSON Schema、契约测试
 M4 受限 AI 编排、供应商 adapter、离线对抗测试及真实 DeepSeek 结构化调用已完成。M5 Streamlit 产品页面、
 fixture 路径与真实 DeepSeek + Sepolia RPC + Blockscout 产品闭环均已完成；桌面、移动端和进程重启恢复均已做真实浏览器检查。
 M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反向代理公开访问。M6 公共回执发布与 ERC-8004 关联均已
-完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。当前进入 M7 验收封装。
+完成真实 Sepolia 产品闭环：公共内容哈希、链上反馈、事件读回和 SQLite 终态一致。M7 本地验收封装已完成；尚未推送或合并。
 
 ## 已完成
 
@@ -148,7 +148,19 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
   已在区块 11860021 确认，feedback index 为 1，Gas 732,373 / 895,600。
 - 独立进程已复核交易成功、数据库 `CONFIRMED`、Service ID、Reviewer、PASS 值、双标签、公共 URI、内容哈希、nonce、区块和
   feedback index 全部一致；公网重新下载哈希亦一致。生产应用健康，持久化 `M6_ENABLE_WRITES=false` 已恢复。
-- 最新非 external 质量门为 148 项通过、8 项 external 明确排除；Ruff、pip check、12 份 Schema 重生成检查和 1000 行限制通过。
+
+## M7 验收封装进展
+
+- 新增无凭据演示入口 `scripts/run_mvp_demo.py`：真实执行离线 fixture 的服务 A `FAIL`、切换服务 B `PASS`、两个 attempt
+  追加留档、两份回执独立重放及进程恢复；输出显式标记 `publication_mode=not-executed`，不冒充 M6 外部验收。
+- README 与运维手册已补齐一条命令演示和完整质量门；CI 新增 Schema 漂移、1000 物理行限制及演示执行。
+- 新增治理测试，机械校验根目录 Markdown metadata、`doc-id` 唯一性和本地链接；修正旧文档中已过期的 CI、Blockscout、
+  Pinata fallback 与 M6 页面说明。
+- 完整 `pytest` 在临时注入公开 Agent0/ERC 读参数并启动隔离 Blockscout MCP 后为 158 项通过、1 项跳过；唯一跳过项是
+  非 MVP 必需且未配置的 OpenAI 探针。非 external 门为 151 项通过；Ruff、主/Blockscout 环境 `pip check`、12 份 Schema
+  漂移检查、1000 行限制和无凭据演示均通过。
+- 生产匿名页面与健康端点返回 `200`，无 Basic Auth header；公共回执返回 `200` 且 SHA-256 仍为 `0x3b922f…a26e`。
+  应用容器 `healthy`，持久化 `M6_ENABLE_WRITES=false`。
 
 ## 待外部配置验证
 
@@ -156,9 +168,8 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 
 ## 后续阶段外部配置待办
 
-- 提供 `OPENAI_API_KEY`。
-- 提供固定 `OPENAI_MODEL`；DeepSeek 已在本机配置并用于 M5 真实联调。
-- 提供 `PINATA_JWT` 以完成真实公共发布。
+- 可选配置 `OPENAI_API_KEY` 与固定 `OPENAI_MODEL`；MVP 生产路径使用已实测 DeepSeek，不受此项阻塞。
+- 可选配置 `PINATA_JWT` 以验证 IPFS pinning adapter；MVP 已使用真实 HTTPS 内容寻址公共发布完成验收。
 
 ## 已知问题
 
@@ -166,13 +177,14 @@ M5 已部署至广州 Linux 服务器的隔离容器，并通过现有 HTTPS 反
 - ERC-8004 上游参考仓库存在 npm peer dependency 冲突，安装需 `--legacy-peer-deps`。
 - 上游 npm 审计报告 35 个依赖漏洞；该仓库当前仅作参考和合约测试，没有执行自动修复。
 - GitHub Actions 仅覆盖无需密钥的本地质量门；真实 external 探针仍需显式配置后单独执行。
+- Pytest 当前有一条来自第三方 `websockets.legacy` 的弃用 warning；不影响测试结果，后续依赖升级时处理。
 - 广州机房仍无法直接连接 Blockscout Pro API；加密 DNS 能得到正确地址，但目标 SNI/TLS 被重置。生产已通过受认证的
   Vercel 中继解决，RPC 仍是完整性权威源，Blockscout 继续只承担补充抽样。
 
 ## 下一步
 
-启动 M7 验收封装：逐项核对 MVP 完成标准，补齐全量测试证据、README 运行说明与演示脚本；Pinata/IPFS 保持可选增强，
-不阻塞已完成的 HTTPS 公共发布与 ERC-8004 Sepolia 闭环。
+复核 M7 本地提交后决定是否推送/创建 PR。旧 worktree、`.tmp` 诊断文件与用户提供的 SSH PEM 只作为清理候选保留，
+必须在完整收口汇报后取得用户明确确认才可删除。
 
 ## 状态更新规则
 
