@@ -70,7 +70,12 @@ def test_page_exposes_example_template_and_evidence_drilldown():
     assert "加载契约测试示例" in source
     assert "团队构造报表" in source
     assert "下载严格 JSON 空白模板" in source
-    assert "查看差异 {finding_number} 的交易与判定依据" in source
+    evidence = (PROJECT_ROOT / "app" / "report_evidence.py").read_text(encoding="utf-8")
+    assert "render_report_evidence(" in source
+    assert 'st.expander("验证依据 / 技术详情"' in evidence
+    assert 'section == "交易与差异依据"' in evidence
+    assert "execution.result.findings" in evidence
+    assert "execution.fund_flow.model_dump" in evidence
 
 
 def test_real_case_input_preserves_reports_and_requires_new_confirmation():

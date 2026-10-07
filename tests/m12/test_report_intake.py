@@ -1,5 +1,7 @@
-"""AppTest injects upload bytes; it does not prove native browser file selection."""
+"""Automatic intake integration; model double is explicit, never real API evidence."""
 
+import csv
+import io
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,9 +9,10 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 
 from app.report_experience import strict_template_bytes
+from trust_receipt.services.header_recognition import ColumnRole, HeaderRecognizer
+from trust_receipt.services.report_conversion import ALIASES, _header_key
 
-ROOT = Path(__file__).parents[2]
-CSV = ROOT / "fixtures" / "m14" / "conversion" / "correct-token-units.csv"
+CSV = Path(__file__).parents[2] / "fixtures/m14/conversion/correct-token-units.csv"
 
 
 @dataclass
@@ -21,163 +24,137 @@ class Upload:
         return self.payload
 
 
-def intake_harness():
+class TestModel:
+    __test__ = False
+
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, *, schema, system_prompt, payload):
+        self.calls.append(payload)
+        roles = []
+        for column in payload["columns"]:
+            field = next((name for name, aliases in ALIASES.items()
+                          if _header_key(column["label"]) in {_header_key(alias) for alias in aliases}), "ignore")
+            roles.append(ColumnRole(column_index=column["index"], field=field, ambiguous=False))
+        return schema(schema_version="1.0", columns=tuple(roles))
+
+
+def make_recognizer():
+    return HeaderRecognizer(TestModel(), mode="offline-test", model_id="explicit-ui-test")
+
+
+def harness():
     from pathlib import Path
 
     import streamlit as st
 
     from app.report_intake import render_report_intake
 
-    payload = render_report_intake(
-        st, st.session_state.get("test_upload"),
-        directory=Path(st.session_state["test_directory"]), namespace="test:first",
+    st.session_state["payload"] = render_report_intake(
+        st, st.session_state.get("upload"), directory=Path(st.session_state["directory"]),
+        namespace="workspace:first", recognizer=st.session_state.get("recognizer"), provider="explicit-ui-test",
     )
-    st.session_state["intake_payload"] = payload
-    st.button("继续", disabled=payload is None)
+    st.button("继续", disabled=st.session_state["payload"] is None)
 
 
-def page_for(tmp_path, upload):
-    page = AppTest.from_function(intake_harness, default_timeout=20)
-    page.session_state["test_directory"] = str(tmp_path)
-    page.session_state["test_upload"] = upload
+def page_for(tmp_path, upload, recognizer=None):
+    page = AppTest.from_function(harness, default_timeout=20)
+    page.session_state["directory"] = str(tmp_path)
+    page.session_state["upload"] = upload
+    page.session_state["recognizer"] = recognizer
     return page.run()
 
 
-def button(page, label):
-    return next(item for item in page.button if item.label == label)
-
-
-def adopt(page):
-    page.checkbox[0].check().run()
-    return button(page, "确认采用转换 JSON").click().run()
-
-
-def test_ready_csv_requires_confirmation_before_any_private_persistence(tmp_path):
-    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()))
-    assert not page.exception
-    assert page.session_state["intake_payload"] is None
-    assert button(page, "确认采用转换 JSON").disabled
-    assert button(page, "继续").disabled
-    assert not list(tmp_path.iterdir())
-    assert any("180674489737" in item.value for item in page.markdown)
-    adopt(page)
-    assert not page.exception
-    assert page.session_state["intake_payload"] is not None
-    assert not button(page, "继续").disabled
-    assert len(list(tmp_path.rglob("*.*"))) == 3
-    assert "uploaded_service" not in page.session_state
-    assert "task" not in page.session_state
-
-
-def test_changed_file_revokes_approval_even_when_normalized_json_is_identical(tmp_path):
-    page = adopt(page_for(tmp_path, Upload(CSV.name, CSV.read_bytes())))
-    page.session_state["test_upload"] = Upload("renamed.csv", CSV.read_bytes())
-    page.run()
-    assert not page.exception
-    assert page.session_state["intake_payload"] is None
-    assert not page.checkbox[0].value
-    assert button(page, "继续").disabled
-
-
-def test_mapping_change_and_return_require_fresh_checkbox(tmp_path):
-    page = adopt(page_for(tmp_path, Upload(CSV.name, CSV.read_bytes())))
-    next(item for item in page.selectbox if item.label == "日志序号").set_value("").run()
-    assert not page.exception
-    assert button(page, "继续").disabled
-    assert not page.checkbox
-    next(item for item in page.selectbox if item.label == "日志序号").set_value("日志序号").run()
-    assert not page.exception
-    assert not page.checkbox[0].value
-    assert button(page, "确认采用转换 JSON").disabled
-
-
-def test_missing_event_identity_never_has_an_adoption_or_row_override(tmp_path):
-    data = CSV.read_text(encoding="utf-8").splitlines()
-    rows = [line.split(",") for line in data]
-    index = rows[0].index("交易哈希")
-    payload = "\n".join(",".join(row[:index] + row[index + 1:]) for row in rows).encode("utf-8")
-    page = page_for(tmp_path, Upload("missing-event.csv", payload))
-    assert not page.exception
-    assert button(page, "继续").disabled
-    assert any("交易哈希" in item.value for item in page.warning)
-    assert not any(item.label == "确认采用转换 JSON" for item in page.button)
-    assert all(item.label.startswith("整表共用") for item in page.text_input)
-    assert not list(tmp_path.iterdir())
-
-
-def test_derived_summary_is_explicit_and_large_integer_never_displayed_as_float(tmp_path):
-    data = CSV.read_text(encoding="utf-8").splitlines()
-    payload = "\n".join(",".join(line.split(",")[:-2]) for line in data).encode("utf-8")
-    page = page_for(tmp_path, Upload("detail-only.csv", payload))
-    assert not page.exception
-    assert any("明细派生，非原作者声明" in item.value for item in page.markdown)  # noqa: RUF001
-    assert button(page, "确认采用转换 JSON").disabled
-
-
-def test_scientific_amount_blocks_adoption_without_changing_original(tmp_path):
-    payload = CSV.read_bytes().replace(b"0.000000180674489737", b"1.80674489737e-7")
-    page = page_for(tmp_path, Upload("scientific.csv", payload))
-    assert not page.exception
-    assert button(page, "继续").disabled
-    assert any("科学计数法" in item.value for item in page.error)
-    assert not list(tmp_path.iterdir())
-
-
-def test_strict_json_keeps_original_bytes_without_new_confirmation(tmp_path):
-    payload = strict_template_bytes()
-    page = page_for(tmp_path, Upload("report.json", payload))
-    assert not page.exception
-    assert page.session_state["intake_payload"] == payload
-    assert not page.checkbox
-    assert not button(page, "继续").disabled
-    assert not list(tmp_path.iterdir())
-
-
-def test_failed_private_retention_does_not_adopt_or_expose_execution(tmp_path, monkeypatch):
-    def fail(*_args, **_kwargs):
-        raise OSError("test: private storage unavailable")
-
-    monkeypatch.setattr("app.report_intake.persist_confirmed_conversion", fail)
-    page = adopt(page_for(tmp_path, Upload(CSV.name, CSV.read_bytes())))
-    assert not page.exception
-    assert page.session_state["intake_payload"] is None
-    assert button(page, "继续").disabled
-    assert any("私有留档失败" in item.value for item in page.error)
-
-
-def test_removed_upload_does_not_restore_previous_adoption(tmp_path):
-    page = adopt(page_for(tmp_path, Upload(CSV.name, CSV.read_bytes())))
-    page.session_state["test_upload"] = None
-    page.run()
-    assert button(page, "继续").disabled
-    page.session_state["test_upload"] = Upload(CSV.name, CSV.read_bytes())
-    page.run()
-    assert not page.exception
-    assert not page.checkbox[0].value
-    assert button(page, "继续").disabled
-
-
-def test_explicit_constants_can_fill_missing_common_field_but_changes_revoke_adoption(tmp_path):
-    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()))
-    next(item for item in page.selectbox if item.label == "链编号").set_value("").run()
-    assert button(page, "继续").disabled
-    next(item for item in page.text_input if item.label.startswith("整表共用链编号")).set_value("11155111").run()
-    assert not page.exception
-    adopt(page)
-    assert not button(page, "继续").disabled
-    next(item for item in page.text_input if item.label.startswith("整表共用链编号")).set_value("1").run()
-    assert not page.exception
-    assert not page.checkbox[0].value
-    assert button(page, "继续").disabled
-
-
-def test_duplicate_rows_and_original_summary_survive_ui_adoption(tmp_path):
-    lines = CSV.read_bytes().splitlines()
-    payload = b"\n".join([*lines, lines[1]])
-    page = adopt(page_for(tmp_path, Upload("duplicate.csv", payload)))
-    assert not page.exception
-    normalized = json.loads(page.session_state["intake_payload"])
+def test_csv_automatically_retains_original_and_exact_report_without_adoption(tmp_path):
+    model = make_recognizer()
+    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()), model)
+    assert not page.exception and not page.checkbox and not page.selectbox
+    normalized = json.loads(page.session_state["payload"])
     assert normalized["claimed_total_base_units"] == "180674489737"
     assert normalized["claimed_count"] == 1
-    assert len(normalized["transfers"]) == 2
-    assert normalized["transfers"][0] == normalized["transfers"][1]
+    assert len(list(tmp_path.rglob("*.*"))) == 3
+    assert len(model.port.calls) == 1
+    page.run()
+    assert len(model.port.calls) == 1
+
+
+def test_json_keeps_exact_bytes_without_model_and_rejects_invalid_json(tmp_path):
+    model = make_recognizer()
+    raw = strict_template_bytes()
+    page = page_for(tmp_path, Upload("strict.json", raw), model)
+    assert not page.exception and page.session_state["payload"] == raw
+    assert not model.port.calls
+    page.session_state["upload"] = Upload("bad.json", b"{}")
+    page.run()
+    assert not page.exception and page.session_state["payload"] is None
+    assert page.button[-1].disabled
+
+
+def test_xlsx_uses_same_automatic_entry_and_formula_replacement_revokes_ready_input(tmp_path):
+    from tests.test_report_conversion import xlsx
+
+    rows = list(csv.reader(io.StringIO(CSV.read_text(encoding="utf-8"))))
+    model = make_recognizer()
+    page = page_for(tmp_path, Upload("synthetic.xlsx", xlsx(rows)), model)
+    assert not page.exception and not page.checkbox and not page.selectbox
+    assert json.loads(page.session_state["payload"])["claimed_total_base_units"] == "180674489737"
+    assert len(model.port.calls) == 1
+    page.session_state["upload"] = Upload("formula.xlsx", xlsx(rows, formula="<f>SUM(A1)</f>"))
+    page.run()
+    assert not page.exception and page.session_state["payload"] is None
+    assert page.button[-1].disabled
+    assert len(model.port.calls) == 1
+
+
+def test_no_model_blocks_table_without_fixture_fallback(tmp_path):
+    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()))
+    assert not page.exception and page.session_state["payload"] is None
+    assert any("真实模型" in item.value for item in page.error)
+    assert not page.checkbox and not page.text_input
+    assert not list(tmp_path.iterdir())
+
+
+def test_only_missing_chain_is_asked_and_user_condition_never_reaches_model(tmp_path):
+    raw = CSV.read_bytes().replace("链ID".encode(), b"ignore_network")
+    model = make_recognizer()
+    page = page_for(tmp_path, Upload("missing-chain.csv", raw), model)
+    assert not page.exception and page.session_state["payload"] is None
+    assert len(page.text_input) == 1 and not page.checkbox
+    page.text_input[0].set_value("11155111").run()
+    assert not page.exception and page.session_state["payload"] is not None
+    assert len(model.port.calls) == 1
+    assert "11155111" not in json.dumps(model.port.calls)
+    page.text_input[0].set_value("").run()
+    assert page.session_state["payload"] is None
+
+
+def test_changed_or_removed_input_clears_old_service_and_scope_candidate(tmp_path):
+    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()), make_recognizer())
+    for key in ("uploaded_service", "uploaded_report_hash", "candidate"):
+        page.session_state[key] = "stale"
+    page.session_state["upload"] = Upload("invalid.csv", b"bad")
+    page.run()
+    assert not page.exception and page.session_state["payload"] is None
+    assert all(key not in page.session_state for key in ("uploaded_service", "uploaded_report_hash", "candidate"))
+    page.session_state["upload"] = None
+    page.run()
+    assert not page.exception and page.session_state["payload"] is None
+
+
+def test_duplicate_rows_and_original_summary_are_not_repaired(tmp_path):
+    lines = CSV.read_bytes().splitlines()
+    page = page_for(tmp_path, Upload("duplicate.csv", b"\n".join([*lines, lines[1]])), make_recognizer())
+    report = json.loads(page.session_state["payload"])
+    assert report["claimed_total_base_units"] == "180674489737" and report["claimed_count"] == 1
+    assert len(report["transfers"]) == 2 and report["transfers"][0] == report["transfers"][1]
+
+
+def test_retention_failure_blocks_without_showing_private_exception(tmp_path, monkeypatch):
+    def fail(*_args):
+        raise OSError("PRIVATE STORAGE PATH")
+
+    monkeypatch.setattr("app.report_intake.persist_recognized_report", fail)
+    page = page_for(tmp_path, Upload(CSV.name, CSV.read_bytes()), make_recognizer())
+    assert not page.exception and page.session_state["payload"] is None
+    assert not any("PRIVATE STORAGE PATH" in item.value for item in page.error)

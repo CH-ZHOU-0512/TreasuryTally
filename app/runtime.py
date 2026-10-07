@@ -35,6 +35,7 @@ from trust_receipt.orchestration.m10 import M10Workflow
 from trust_receipt.publishing import HttpsDirectoryPublisher, M6Settings, PinataPublisher
 from trust_receipt.reputation import ERC8004ReceiptFeedback
 from trust_receipt.services import FaultMode, TeamControlledReportService
+from trust_receipt.services.report_recognition import HeaderRecognizer, build_header_recognizer
 from trust_receipt.storage.m8 import M8ArtifactStore
 from trust_receipt.storage.sqlite import SQLiteRepository
 from trust_receipt.verification.scope import scope_violation
@@ -63,6 +64,7 @@ class AppRuntime:
     public_bundle_store: PublicBundleStore
     upload_directory: Path
     history_workflow: M10Workflow
+    report_recognizer: HeaderRecognizer | None = None
 
 
 def create_runtime(
@@ -185,6 +187,10 @@ def create_runtime(
             project_root / "receipts" / "private" / "m5" / session_id / "public-history"
         ),
         upload_directory=project_root / "receipts" / "private" / "m5" / session_id / "uploads",
+        report_recognizer=(
+            None if provider == "离线 fixture 演示"
+            else build_header_recognizer(provider, M4AISettings.load(project_root / ".env"))
+        ),
         history_workflow=M10Workflow(
             repository,
             project_root / "receipts" / "private" / "m5" / session_id,

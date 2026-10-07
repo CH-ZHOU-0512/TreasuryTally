@@ -81,7 +81,29 @@ def test_latest_result_puts_next_step_before_evidence_and_keeps_one_main_action(
     button(page, "确认范围，继续").click().run()  # noqa: RUF001
     button(page, "开始核对").click().run()
     assert not page.exception
-    assert any(item.value.startswith("下一步：") for item in page.info)  # noqa: RUF001
-    assert any(item.label == "查看资金流、完整事件与证据" and not item.proto.expanded for item in page.expander)
+    assert any("按已确认差异修正报表" in item.value for item in page.markdown)
+    assert any(item.label == "验证依据 / 技术详情" and not item.proto.expanded for item in page.expander)
+    assert not any(item.label in {"查看完整 AI 说明", "查看资金流、完整事件与证据"} for item in page.expander)
     assert [item.label for item in page.button if item.proto.type == "primary"] == ["核对修正版（最后一次）"]  # noqa: RUF001
     assert button(page, "核对修正版（最后一次）").disabled  # noqa: RUF001
+
+
+def test_ai_original_and_receipt_are_only_in_selected_technical_category():
+    page = practice(AppTest.from_file(str(APP), default_timeout=20).run())
+    page.checkbox[1].check()
+    button(page, "确认范围，继续").click().run()  # noqa: RUF001
+    button(page, "开始核对").click().run()
+    execution = page.session_state["executions"][0]
+    original = execution.explanation.summary
+    assert not any(item.value == original for item in page.markdown)
+    category = next(item for item in page.selectbox if item.label == "查看依据类别")
+    category.set_value("AI 说明").run()
+    assert not page.exception
+    assert any(item.value == original for item in page.markdown)
+    category = next(item for item in page.selectbox if item.label == "查看依据类别")
+    category.set_value("回执与修复历史").run()
+    assert not page.exception
+    assert not any(item.value == original for item in page.markdown)
+    assert len(page.session_state["executions"]) == 1
+    assert page.session_state["executions"][0].receipt == execution.receipt
+    assert any(execution.receipt.receipt_hash in item.value for item in page.json)
