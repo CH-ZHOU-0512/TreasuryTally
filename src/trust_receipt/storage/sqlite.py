@@ -16,7 +16,7 @@ from trust_receipt.models.tasks import TaskSpec
 from trust_receipt.models.verification import VerificationResult
 from trust_receipt.publishing.models import PublicationEvent
 from trust_receipt.services.ports import FaultInjection, ReportDelivery
-from trust_receipt.storage.models import AttemptRecord, StoredTask, TaskState
+from trust_receipt.storage.models import AttemptBlockReason, AttemptRecord, AttemptStatus, StoredTask, TaskState
 
 
 class RepositoryStateError(RuntimeError):
@@ -114,6 +114,8 @@ class SQLiteRepository:
 
     def request_attempt(self, task_id: str) -> int:
         with closing(self._connect()) as connection, connection:
+            # Serialize the read/check/reservation, not just the final UPDATE.
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT state FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
             if row is None:
                 raise KeyError(task_id)
@@ -132,6 +134,44 @@ class SQLiteRepository:
                 "UPDATE tasks SET state = ? WHERE task_id = ?", (TaskState.REQUESTED.value, task_id)
             )
             return count + 1
+
+    def get_attempt_status(self, task_id: str) -> AttemptStatus:
+        """Read task, deliveries and results in one SQLite statement snapshot."""
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                """SELECT t.state, a.attempt, v.result_json
+                   FROM tasks t LEFT JOIN attempts a ON a.task_id = t.task_id
+                   LEFT JOIN verification_results v ON v.submission_id = a.submission_id
+                   WHERE t.task_id = ? ORDER BY a.attempt""", (task_id,),
+            ).fetchall()
+        if not rows:
+            raise KeyError(task_id)
+        state = TaskState(rows[0]["state"])
+        deliveries = [row for row in rows if row["attempt"] is not None]
+        count = len(deliveries)
+        results = [VerificationResult.model_validate_json(row["result_json"])
+                   for row in deliveries if row["result_json"] is not None]
+        completed = len(results)
+        active = None
+        next_attempt = None
+        reason = AttemptBlockReason.STATE_CONFLICT
+        consecutive = [row["attempt"] for row in deliveries] == list(range(1, count + 1))
+        if consecutive and count <= 2:
+            if state is TaskState.CONFIRMED and count == 0:
+                next_attempt, reason = 1, None
+            elif state is TaskState.REQUESTED and completed == count and count < 2:
+                active, reason = count + 1, AttemptBlockReason.IN_FLIGHT
+            elif state in {TaskState.SUBMITTED, TaskState.VERIFYING} and count and completed == count - 1:
+                if deliveries[-1]["result_json"] is None:
+                    active, reason = count, AttemptBlockReason.IN_FLIGHT
+            elif count and completed == count and state.value == results[-1].outcome.value:
+                if state is TaskState.PASS:
+                    reason = AttemptBlockReason.PASSED
+                elif count == 2:
+                    reason = AttemptBlockReason.ATTEMPTS_EXHAUSTED
+                elif state in {TaskState.FAIL, TaskState.INCONCLUSIVE}:
+                    next_attempt, reason = 2, None
+        return AttemptStatus(task_id, state, count, completed, active, next_attempt, reason)
 
     def cancel_attempt_request(self, task_id: str) -> None:
         """Undo a request only when no delivery was persisted for that request."""

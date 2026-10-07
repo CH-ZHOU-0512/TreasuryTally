@@ -33,3 +33,25 @@ class AttemptRecord:
 class StoredTask:
     task: TaskSpec
     state: TaskState
+
+
+class AttemptBlockReason(StrEnum):
+    IN_FLIGHT = "IN_FLIGHT"
+    PASSED = "PASSED"
+    ATTEMPTS_EXHAUSTED = "ATTEMPTS_EXHAUSTED"
+    STATE_CONFLICT = "STATE_CONFLICT"
+    MISSING_RECEIPT = "MISSING_RECEIPT"
+    RECEIPT_CONFLICT = "RECEIPT_CONFLICT"
+
+
+@dataclass(frozen=True)
+class AttemptStatus:
+    """Read-only persisted progress, not a reservation or execution permission."""
+
+    task_id: str
+    state: TaskState
+    persisted_attempts: int
+    completed_attempts: int
+    in_flight_attempt: int | None
+    next_attempt: int | None
+    blocking_reason: AttemptBlockReason | None

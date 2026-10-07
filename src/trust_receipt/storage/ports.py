@@ -7,7 +7,7 @@ from typing import Protocol
 from trust_receipt.models.tasks import TaskSpec
 from trust_receipt.models.verification import VerificationResult
 from trust_receipt.services.ports import ReportDelivery
-from trust_receipt.storage.models import AttemptRecord, StoredTask
+from trust_receipt.storage.models import AttemptRecord, AttemptStatus, StoredTask
 
 
 class TaskRepository(Protocol):
@@ -16,6 +16,8 @@ class TaskRepository(Protocol):
     def get_task(self, task_id: str) -> StoredTask: ...
 
     def list_tasks(self) -> tuple[StoredTask, ...]: ...
+
+    def get_attempt_status(self, task_id: str) -> AttemptStatus: ...
 
     def request_attempt(self, task_id: str) -> int: ...
 

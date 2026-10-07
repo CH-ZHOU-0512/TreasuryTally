@@ -49,6 +49,15 @@ class M8WorkspaceWorkflow:
         restored = self._workflow.restore_latest()
         if restored is None:
             return None
+        return self._restore_snapshots(restored)
+
+    def get_attempt_status(self, task_id):
+        return self._workflow.get_attempt_status(task_id)
+
+    def restore_task(self, task_id):
+        return self._restore_snapshots(self._workflow.restore_task(task_id))
+
+    def _restore_snapshots(self, restored):
         task, executions = restored
         recovered = []
         snapshots = []
