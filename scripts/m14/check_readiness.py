@@ -54,6 +54,10 @@ def main() -> int:
     parser.add_argument("--scope", required=True)
     parser.add_argument("--task-spec", type=Path, required=True)
     parser.add_argument("--expected-total", required=True, help="integer frozen by independent RPC precheck")
+    parser.add_argument("--restore-task-hash", help="run only fresh-context restoration after an app restart")
+    parser.add_argument(
+        "--fault", choices=("unavailable", "conflict"), help="connect only to matching local fault launcher",
+    )
     parser.add_argument("--build", required=True)
     parser.add_argument("--workspace-id", default=f"m14-{uuid4().hex[:12]}")
     parser.add_argument("--public-test-input-confirmed", action="store_true", required=True)
@@ -75,8 +79,13 @@ def main() -> int:
             "task": json.loads(args.task_spec.read_text(encoding="utf-8")),
             "expectedTotal": args.expected_total,
             "reportData": json.loads(payload),
+            "restoreTaskHash": args.restore_task_hash,
+            "fault": args.fault,
         }
-        code = (Path(__file__).with_name("browser_checks.js").read_text(encoding="utf-8")
+        source = "restore_checks.js" if args.restore_task_hash else "browser_checks.js"
+        if args.fault:
+            source = "fault_checks.js"
+        code = (Path(__file__).with_name(source).read_text(encoding="utf-8")
                 .replace("__M14_CONFIG__", json.dumps(config, ensure_ascii=False))
                 .replace("__M14_FLOW__", Path(__file__).with_name("flow_checks.js").read_text(encoding="utf-8")))
         executable = output / "browser-checks.js"
