@@ -10,6 +10,11 @@ from trust_receipt.reporting.renderer import EChartsRenderer, ExportUnavailable
 
 
 def export_pdf(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
+    with renderer.export_slot():
+        return _export_pdf(view, renderer=renderer)
+
+
+def _export_pdf(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter

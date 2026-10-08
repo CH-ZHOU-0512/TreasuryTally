@@ -52,12 +52,10 @@ def test_fixed_argv_no_shell_and_no_credential_environment(failing_input, monkey
 def test_renderer_instance_limits_concurrency(failing_input):
     renderer = EChartsRenderer(node_path=__file__)
     assert renderer._slots.acquire(blocking=False)
-    assert renderer._slots.acquire(blocking=False)
     try:
         with pytest.raises(ExportUnavailable, match="busy"):
             renderer.render(view_for(failing_input))
     finally:
-        renderer._slots.release()
         renderer._slots.release()
 
 

@@ -14,8 +14,10 @@ def font_bytes() -> bytes:
 
 
 def graph_svg(view: BusinessReportView, *, renderer: EChartsRenderer) -> str:
-    return renderer.render(view).svg
+    with renderer.export_slot():
+        return renderer.render(view).svg
 
 
 def graph_png(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
-    return renderer.render(view).png
+    with renderer.export_slot():
+        return renderer.render(view).png

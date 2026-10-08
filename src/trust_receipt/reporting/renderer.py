@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
@@ -28,7 +30,7 @@ class RenderedDiagram:
 
 
 class EChartsRenderer:
-    """Reuse one application-owned instance: at most two concurrent workers.
+    """Reuse one application-owned instance: one complete export at a time.
 
     Paths are trusted deployment configuration, never report/request fields.
     Runtime script has no networking calls; production must deny worker egress.
@@ -38,9 +40,29 @@ class EChartsRenderer:
     def __init__(self, *, node_path: str | None = None, modules_path: str | None = None):
         self._node = node_path or shutil.which("node")
         self._modules = modules_path
-        self._slots = threading.BoundedSemaphore(2)
+        self._export_lock = threading.RLock()
+        self._slots = threading.BoundedSemaphore(1)
+
+    @contextmanager
+    def export_slot(self) -> Iterator[None]:
+        """Nonblocking complete-export budget, reentrant only on its thread.
+
+        Hold through font/layout/ZIP construction and final output bytes, not
+        just Node execution. Callers must share the application-owned instance.
+        Contention does not queue or affect the independent original JSON.
+        """
+        if not self._export_lock.acquire(blocking=False):
+            raise ExportUnavailable("EXPORT_UNAVAILABLE: export busy")
+        try:
+            yield
+        finally:
+            self._export_lock.release()
 
     def render(self, view: BusinessReportView) -> RenderedDiagram:
+        with self.export_slot():
+            return self._render(view)
+
+    def _render(self, view: BusinessReportView) -> RenderedDiagram:
         from trust_receipt.reporting.layout import validate_export_view
 
         validate_export_view(view)

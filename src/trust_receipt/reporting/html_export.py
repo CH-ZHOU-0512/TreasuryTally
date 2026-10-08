@@ -9,6 +9,11 @@ from trust_receipt.reporting.renderer import EChartsRenderer
 
 
 def export_html(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
+    with renderer.export_slot():
+        return _export_html(view, renderer=renderer)
+
+
+def _export_html(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
     validate_export_view(view)
     parts = [
         '<!doctype html><html lang="zh-CN"><meta charset="utf-8">',

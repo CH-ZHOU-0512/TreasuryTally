@@ -71,6 +71,11 @@ def _embed_font(payload: bytes) -> bytes:
 
 
 def export_docx(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
+    with renderer.export_slot():
+        return _export_docx(view, renderer=renderer)
+
+
+def _export_docx(view: BusinessReportView, *, renderer: EChartsRenderer) -> bytes:
     try:
         from docx import Document
         from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
