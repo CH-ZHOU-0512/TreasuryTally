@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -59,12 +61,22 @@ def retain_original(payload: bytes, directory: Path) -> str:
     digest = content_hash(payload)
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / f"{digest[2:]}.json"
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".original-", suffix=".tmp", dir=directory)
+    temporary = Path(temporary_name)
     try:
-        with target.open("xb") as stream:
+        with os.fdopen(descriptor, "wb") as stream:
             stream.write(payload)
-    except FileExistsError:
-        if target.read_bytes() != payload:
-            raise ValueError("private report content hash collision or corrupt file") from None
+            stream.flush()
+            os.fsync(stream.fileno())
+        # A hard link publishes complete bytes without ever replacing existing evidence.
+        # The temporary file is on the same filesystem and is already closed.
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            if target.read_bytes() != payload:
+                raise ValueError("private report content hash collision or corrupt file") from None
+    finally:
+        temporary.unlink()
     return digest
 
 

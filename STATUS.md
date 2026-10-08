@@ -15,7 +15,46 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
-### 最严组合资源修订（2026-10-08，640 MiB 候选，未部署）
+### 自动报表与业务报告最终发布（2026-10-08，已部署）
+
+- 主控推送/合并 [PR #20](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/20)，
+  功能 CI 与主线 CI 实际成功；最小资源修订 [PR #22](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/22)
+  显式等检查成功后合并为 `867ca617c02b493cd9b919133f1187669934d8e0`，合并后 CI 37715820124 成功。
+  主控独立 diff 确认该 main 源码树与 M14 已验 `dc8990583c4b1ccf19f21f3abba6c5d727682630` 完全一致。
+  本次镜像实际 revision 使用 dc899，而非把同树 main SHA 伪装成构建来源。
+- 私有 SSH 传输的运行基底归档 SHA-256 为 `337dd08db0a2fad3daf4f0e51ec720870612a7f56f76622295a5506e383cf150`。
+  最终源码归档为 `14494716a9d9d715e430a8673e466eb0d38ea593e3ebfd0137ab5acb83181b0d`；
+  同源 wheel 为 `380ea09607004674948519b0702d5e7f9e3cb5ed2583a28c1185ab1a3aeb271a`，服务器实核相同。
+  最终 offline/no-index/no-deps release 镜像为
+  `sha256:76836da51f9cb4f820daf501e1c964e7ad2f73c68d1c69ff046983493ad9cd88`。
+- 服务器只读/无网络/无 env、key、用户数据的有界预检通过：入口 115 源文件与 wheel 匹配、AppTest exception=0、
+  七例真实 PNG/DOCX/PDF、字体/资产/许可证/seccomp、真实 SDK 离线构造保持、4 会话 14 view、五格式及原 JSON 六下载。
+  640 MiB/swap=0/pids=128/CPU=1 下峰值 422989824 字节（约 403 MiB），current=351440896，
+  anon=289652736/file=48914432/kernel=12632064，max/oom/oom_kill=0；缓存拒绝与 JSON/结论/历史不变已验证。
+  首轮合成 fixtures 被 SCP 保留 root-only 权限导致严格七例门拒绝；只修合成测试目录可读后原样重跑，未改真实数据权限或跳门。
+- 首次应用切换内部健康及配置通过，但公网根检查因 Nginx 上游旧 IP 缓存超时，按失败门自动回滚旧镜像。
+  定向 `nginx -t`/reload 恢复旧公网 200 后重试；第二次健康后刷新代理上游，最终页面/健康/原始 Logo HTTP 200，
+  独立 TLS WebSocket 握手 101。Nginx 配置哈希与已审查退役路由配置精确相同，未重建代理。
+  当前容器 `86f3985d4c0d2058ab53c88d9ef6593f485fc60325de02cff9bb3942bd2fa931` healthy、OOMKilled=false，
+  实核 Memory=MemorySwap=671088640、PidsLimit=128、NanoCpus=1000000000、drop ALL、no-new-privileges。
+- 原 `.env` SHA-256 保持 `ce0a52c9de223764e09ce9b3650d1283280af3245639d80ec4dce34766960a06`，
+  live=true、M6 writes=false，三个 data/private/public 绝对挂载不变；Blockscout/Nginx ID 与 StartedAt 不变。
+  部署使用独立 `/opt/trust-receipt-releases/report-dc89905/source/deploy` Compose、原 project-directory 与 `-p deploy`；
+  原 `/opt/trust-receipt` 开发源码未覆盖，入口文件哈希实核不变。
+  回滚镜像 `trust-receipt:report-rollback-dc89905` 对应原 5357c9f；旧 source/Compose/明确镜像 override
+  保护在 `/opt/trust-receipt-backups/report-before-dc89905/`，回滚后也须刷新代理上游。
+- 用户明确弃用旧业务后，合计删除十二个旧归档、十九个旧业务源码/备份目录、八个旧容器、旧校园 app-data 卷，
+  精确删除三个旧业务 repository 的 52 个 image tag（不 force、不全局 prune，保留全部信据/容器引用及共享层），
+  两个旧 workflow stop/disable 后删除对应源码和 unit 文件；Nginx/SSL/续期目录/网络/log卷及本项目全部数据与回滚保护。
+  旧文件/数据无已核外部备份，不能保证恢复；目录/image 虚拟大小不能当作实际回收空间。
+  清理后实测可用内存约 1039 MiB；此为动态快照，不是永久保证。
+- 发布不依赖真人测试。没有恢复已暂停的浏览器自动化、真实模型/RPC业务复测、线上历史恢复、公共回执上传或写链。
+  HTTP/WS/合成 AppTest 不等于全状态/手机/200% 放大视觉矩阵或 Logo 首屏加载速度验收。
+  页面首步已上线 CSV/XLSX/JSON 自动识别与规范数据转写，缺条件局部询问，人工范围确认和主动核验仍必需。
+  最后复查容器 healthy/OOMKilled=false、公网健康 200、配置哈希与三个运行服务正常；
+  本地受限临时 SSH 私钥副本已精确删除并核不存在，用户原始 key 文件仍在且未修改。
+
+### 最严组合资源修订（2026-10-08，切换前历史）
 
 512 MiB 提案被后续实测替代：807af6e 新进程同一次先七例 native 导出/seccomp/资产门，
 再保留真实 SDK、4 会话 14 view、全五格式，虽业务通过/OOM=0，但峰值 536870912 恰触硬限，max=1329。
@@ -25,7 +64,7 @@ last-reviewed: 2026-10-08
 配置与运行检查默认同步为 640；压力脚本新增严格零 max 门和 current/anon/file/kernel 诊断，未改业务源/金额/记录/缓存预算。
 新资源代码对应 source/wheel/image 及服务器预检仍待完成；生产当前 app 继续旧 healthy。
 
-### 低内存集成与旧业务清理（2026-10-08，未切换生产）
+### 低内存集成与旧业务清理（2026-10-08，切换前历史）
 
 - M14 原样集成 M13 完整导出预算及 M12 有界缓存，源码分别映射 `1cd6a05`、`1387d12`。
   本分支完整非 external 实跑 605 passed / 16 deselected / 1 既有 warning，280.07 秒；
@@ -870,6 +909,17 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
   故障进程已由 M14 关闭，正常 8534 保留只供手动查看；不再自动操作。未做真实用户测试，完整 M14 技术验收未齐。
 
 ## M15–M16 并行启动（2026-10-07）
+
+- 2026-10-08 原件并发落盘修复（本地完成，待主控集成）：PR24 CI 暴露 M16 两个已批准 challenge 同原件留档时，
+  `xb` 先创建哈希目标、后写入，另一写入者读取半成品而误报损坏。暂停半写的最小测试已先稳定失败。
+  `services.upload.retain_original` 改为同目录私有临时文件完整写入/flush/fsync/close 后硬链接原子创建目标；
+  已有目标仍逐字节核对，不覆盖损坏，不支持硬链接明确失败，仅清理本次 owned temp。
+  新原件专项 9 项，M16/attempt/治理组合 37 passed；原 MCP 并发测试 20 个独立 pytest 轮次全部通过。
+  包含最新报告与 M16 的非 external 全量 629 passed / 16 deselected / 1 条既有 warning（117.60 秒）；
+  Ruff、pip check、21 Schema、文件规模与 diff 门通过。Windows NTFS 实测线程与 spawn 进程并发；
+  Linux 既有本地镜像无 pytest，改用 stdlib 无网络只读挂载探针，暂停半写独立进程、20×8 线程、0600、
+  损坏拒绝及不支持硬链接清理通过，不将该挂载探针计为镜像源码/wheel一致性或生产验收。
+  本轮未推送/合并/部署，未触碰线上数据、真实模型/RPC、公开上传、写链或浏览器；生产仍不包含该修复。
 
 - 2026-10-08：用户授权推送并合并 M16。已合流 GitHub API 核实的主线 `867ca617c02b493cd9b919133f1187669934d8e0`，
   保留现有报表导出与部署记录；服务显示名为 TreasuryTally，8 项工具名称和技术包标识保持兼容。

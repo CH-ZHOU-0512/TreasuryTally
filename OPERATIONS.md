@@ -208,6 +208,37 @@ Python 文件（仅归一化 Git 换行），并用真实 `/app/app/streamlit_ap
 切换前保留旧镜像及源码备份，保留 `.env`、data 与私有/公开回执挂载；仅使用
 `docker compose ... up -d --no-deps --no-build app` 切换已构建应用镜像，不重建其他容器。
 
+若需保持 `/opt/trust-receipt` 开发源码不变，将已验源码/wheel/Compose 放入独立、root-only 发布目录，
+以原 `--project-directory /opt/trust-receipt/deploy` 和实际项目名 `-p deploy` 启动。
+发布前内部解析配置并核对 image、资源、三个绝对挂载、live/writes 开关；不可打印解析出的凭据。
+相对 `.env`、data、receipts 路径仍指向原项目，不复制密钥或用新空目录冒充持久化数据。
+
+```bash
+report_release=/opt/trust-receipt-releases/report-REVISION
+report_image_tag=report-REVISION
+TRUST_RECEIPT_IMAGE_TAG="$report_image_tag" docker compose \
+  --project-directory /opt/trust-receipt/deploy -p deploy \
+  -f "$report_release/source/deploy/docker-compose.prod.yml" \
+  up -d --no-deps --no-build app
+docker exec campus-creator-nginx nginx -t && docker exec campus-creator-nginx nginx -s reload
+```
+
+`REVISION` 必须替换为已核验发布目录/镜像标签。应用重建可能改变 Docker IP；静态 `proxy_pass` 上游名称
+可能仍缓存旧 IP，所以内部 healthy 后须 `nginx -t` 并定向 reload，保持代理容器及配置不变。
+随后实际检查公网根页、健康、静态资源和 WebSocket，不以内部健康代替公网成功。
+失败必须回滚旧镜像/旧配置，并再次刷新代理上游；切换不意味着无需短暂重启。
+
+```bash
+report_backup=/opt/trust-receipt-backups/report-before-REVISION
+docker compose --project-directory /opt/trust-receipt/deploy -p deploy \
+  -f "$report_backup/compose-before.yml" -f "$report_backup/rollback-image.yml" \
+  up -d --no-deps --no-build app
+docker exec campus-creator-nginx nginx -t && docker exec campus-creator-nginx nginx -s reload
+```
+
+旧 Compose、source 归档与回滚 image tag 在切换前保护；备份不含 `.env`、私钥、data 或原始私有回执。
+回滚后同样核对原 `.env` 哈希、三个挂载、公网状态及 Blockscout/代理身份，没有默认模型/RPC业务复测或写链授权。
+
 页面 Logo 保持用户原始 PNG，存放于 `app/static/logo.png`；`.streamlit/config.toml` 启用
 `server.enableStaticServing` 保留原始静态访问；品牌展示使用兼容 `server.baseUrlPath` 的同源 288px 媒体预览 URL，使浏览器复用资源，避免每次重跑
 重复发送大段 base64。OpenAI/Agent0 SDK 仅在对应 adapter 实际使用时加载。生产接入这些改动须经授权重建镜像，
