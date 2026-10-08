@@ -61,9 +61,17 @@ def main():
         page.session_state["report-download-lease"].close()
     assert cache.stats()["bytes"] == 0
     assert accepted > 0 and rejected > 0
+    # Keep the real SDK clients alive while the actual page generates all formats.
+    previous_args = sys.argv
+    try:
+        sys.argv = ["check", str(directory / "fail.view.json"), str(directory / "fail.receipt.json")]
+        runpy.run_path("/opt/trust-receipt-smoke/check_report_downloads.py", run_name="__main__")
+    finally:
+        sys.argv = previous_args
     events = dict(line.split() for line in Path("/sys/fs/cgroup/memory.events").read_text().splitlines())
     assert events["oom"] == events["oom_kill"] == "0"
     print(json.dumps({"sdk_construction_only": True, "sessions": 4, "view_requests": 14,
+                      "warm_sdk_five_actual_formats": True,
                       "accepted": accepted, "budget_rejections": rejected, "max_cached": max_cached,
                       "memory_peak": int(Path("/sys/fs/cgroup/memory.peak").read_text()),
                       "memory_events": events, "json_history_unchanged": True,
