@@ -8,7 +8,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from trust_receipt.agents.models import TaskSpecCandidate
 from trust_receipt.agents.ports import StructuredArtifact
+from trust_receipt.agents.task_draft import generate_task_draft
 
 
 def ChatOpenAI(**kwargs):
@@ -33,14 +35,11 @@ class OpenAIStructuredOutputAdapter:
     ) -> None:
         if not model_name.strip():
             raise ValueError("model_name must be fixed and non-empty")
-        self._model = ChatOpenAI(
-            api_key=api_key,
-            model=model_name,
-            timeout=timeout_seconds,
-            max_retries=max_retries,
-            base_url=base_url,
-            use_responses_api=use_responses_api,
+        self._configuration = dict(
+            api_key=api_key, model=model_name, timeout=timeout_seconds,
+            max_retries=max_retries, base_url=base_url, use_responses_api=use_responses_api,
         )
+        self._model = ChatOpenAI(**self._configuration)
 
     def generate(
         self,
@@ -49,17 +48,18 @@ class OpenAIStructuredOutputAdapter:
         system_prompt: str,
         payload: Mapping[str, Any],
     ) -> StructuredArtifact:
+        messages = [
+            ("system", system_prompt),
+            (
+                "human",
+                "INPUT_JSON:\n"
+                + json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            ),
+        ]
+        if schema is TaskSpecCandidate:
+            return generate_task_draft(ChatOpenAI, self._configuration, schema, messages)
         structured = self._model.with_structured_output(schema, method="json_schema", strict=True)
-        response = structured.invoke(
-            [
-                ("system", system_prompt),
-                (
-                    "human",
-                    "INPUT_JSON:\n"
-                    + json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-                ),
-            ]
-        )
+        response = structured.invoke(messages)
         if isinstance(response, schema):
             return response
         if isinstance(response, BaseModel):

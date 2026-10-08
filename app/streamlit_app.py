@@ -34,6 +34,7 @@ from app.report_exports import document_exporters, reset_report_downloads
 from app.report_graph import render_report_graph
 from app.report_intake import render_report_intake
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
+from app.scope_draft import clear_scope_candidate, render_scope_actions
 from app.service_history import render_workspace_history
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
@@ -114,6 +115,7 @@ def _runtime() -> AppRuntime | None:
     config = (provider, evidence_label, workspace_id)
     if st.session_state.get("runtime_config") != config:
         reset_report_downloads(st)
+        clear_scope_candidate(st.session_state)
         for key in (
             "runtime",
             "candidate",
@@ -165,7 +167,10 @@ def _runtime() -> AppRuntime | None:
 
 def _candidate_editor(runtime: AppRuntime) -> None:
     candidate = st.session_state.candidate
-    if candidate.missing_fields:
+    manual = st.session_state.get("candidate_origin") == "manual"
+    if manual:
+        st.caption("手工范围尚未确认：请逐项填写，表单没有采纳报表中的观察范围，也没有调用模型。")
+    if candidate.missing_fields and not manual:
         st.warning("缺失字段：" + "、".join(field.value for field in candidate.missing_fields))
     for issue in candidate.ambiguities:
         st.warning(f"歧义 · {issue.target.value}：{issue.description}")
@@ -603,7 +608,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
             )
         candidate_source = (input_mode, content_hash(payload) if payload else None)
         if st.session_state.get("candidate_source") != candidate_source:
-            st.session_state.pop("candidate", None)
+            clear_scope_candidate(st.session_state)
             st.session_state.candidate_source = candidate_source
         if payload is not None:
             try:
@@ -634,42 +639,28 @@ def _draft_task(runtime: AppRuntime) -> bool:
             if input_mode == "上传自己的报表":
                 upload_valid = False
                 st.caption("请选择报表；读取失败或必要条件未明确时不能继续，不会用样例替代。")
+        default_request = (
+            "" if input_mode == "上传自己的报表" else (
+            f"核对 Sepolia 案例在区块 {real_case.candidate.start_block} 的转账；下一步可修改所有范围字段。"
+            if input_mode == "加载真实 Sepolia 案例" else
+            "核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。"
+            )
+        )
+        if "scope-request" not in st.session_state or (not st.session_state["scope-request"] and default_request):
+            st.session_state["scope-request"] = default_request
         request = st.text_area(
-            "说明要核对的范围",
-            value=(
-                "" if input_mode == "上传自己的报表" else (
-                f"核对 Sepolia 案例在区块 {real_case.candidate.start_block} 的转账；下一步可修改所有范围字段。"
-                if input_mode == "加载真实 Sepolia 案例" else
-                "核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。"
-                )
-            ),
+            "说明要核对的范围", value=None,
             placeholder="说明链、代币、付款与收款账户、起止区块，以及是否排除内部互转。",
             height=130,
+            key="scope-request",
             disabled=input_mode == "加载真实 Sepolia 案例",
             help="这里不会直接触发链上操作；系统先生成一份可修改候选。",
-        )
+        ) or ""
         st.caption("下一步会展示结构化字段供你逐项确认，不会自动冻结或执行。")
-        if st.button(
-            "整理核对范围",
-            type="secondary" if "candidate" in st.session_state or not upload_valid else "primary",
-            disabled=not upload_valid or (input_mode == "上传自己的报表" and not request.strip()),
-            use_container_width=True,
-        ):
-            try:
-                with st.spinner("正在整理你要核对的条件…"):
-                    st.session_state.candidate = (
-                        real_case.candidate
-                        if input_mode == "加载真实 Sepolia 案例"
-                        else runtime.workflow.draft_task(request)
-                    )
-                st.session_state.pop("draft_error", None)
-            except Exception as error:
-                st.session_state.draft_error = str(error)
-                st.session_state.pop("candidate", None)
-            st.rerun()
-    if "draft_error" in st.session_state:
-        st.error("模型输出被拒绝：" + st.session_state.draft_error)
-        st.info("请修正请求或模型配置后重新生成；不会自动确认或执行。")
+        render_scope_actions(
+            st, runtime, request, valid_report=upload_valid,
+            example=real_case.candidate if input_mode == "加载真实 Sepolia 案例" else None,
+        )
     return upload_valid
 
 
@@ -734,6 +725,7 @@ def main() -> None:
         and st.button("开始下一次报表验收", key="m10-next-task")
     ):
         reset_report_downloads(st)
+        clear_scope_candidate(st.session_state)
         for key in (
             "task", "candidate", "executions", "commitment_pairs", "uploaded_service", "uploaded_report_hash",
             "attempt_error",

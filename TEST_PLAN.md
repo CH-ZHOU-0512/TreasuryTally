@@ -157,6 +157,11 @@ app 单实例 renderer，主动触发五种格式生成，断言原 JSON 加五�
 
 ## AI 测试
 
+- `tests/m4/test_task_draft_deadline.py` 用真实 OpenAI/DeepSeek SDK 加无网络 mock transport 检查
+  超时、连接、429、5xx 与 401 分类、单次请求与关闭连接；挂起 transport 在独立操作预算到期后收到取消，
+  不接纳迟到输出。此离线门不是供应商连通或真实延迟验收。
+- 候选空输出/非法 schema 必须拒绝，非候选 AI 操作保留原 timeout/retry；候选额外输出预算不降低金额与范围校验。
+
 - 对歧义任务必须提出确认，不得自行补全关键地址或区块。
 - 输出必须通过 Pydantic 校验。
 - 未知工具、过滤器或检查类型必须被拒绝。
