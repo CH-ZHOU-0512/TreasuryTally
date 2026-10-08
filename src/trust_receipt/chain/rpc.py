@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any
 
 from web3 import HTTPProvider, Web3
-from web3.exceptions import Web3Exception
+from web3.exceptions import Web3Exception, Web3RPCError
 
 from trust_receipt.chain.models import RpcProbeResult, TransferRecord
 from trust_receipt.integrations.errors import IntegrationError, IntegrationErrorCode
@@ -30,19 +31,52 @@ DECIMALS_ABI = [
 ]
 
 
+def _historical_logs_unavailable(error: Exception, *, method: str | None) -> bool:
+    """Recognize only the observed structured historical-log denial, never persist its body."""
+    if method != "eth_getLogs" or not isinstance(error, Web3RPCError):
+        return False
+    response = error.rpc_response
+    if not isinstance(response, dict):
+        return False
+    detail = response.get("error")
+    if not isinstance(detail, dict) or type(detail.get("code")) is not int or detail["code"] != 4444:
+        return False
+    message = detail.get("message")
+    if not isinstance(message, str):
+        return False
+    message = message.lower()
+    return all(re.search(rf"\b{word}\b", message) for word in ("history", "pruned", "unavailable"))
+
+
 class EvmRpcProbe:
     def __init__(self, rpc_url: str, *, expected_chain_id: int, timeout_seconds: float = 30) -> None:
         provider = HTTPProvider(rpc_url, request_kwargs={"timeout": timeout_seconds})
         self._web3 = Web3(provider)
         self._expected_chain_id = expected_chain_id
 
-    def _read(self, operation: Callable[[], Any]) -> Any:
+    def _read(self, operation: Callable[[], Any], *, method: str | None = None) -> Any:
+        historical_denial = False
         try:
-            return read_with_retry(operation, retryable=lambda exc: not isinstance(exc, ValueError))
+            return read_with_retry(
+                operation,
+                retryable=lambda exc: not isinstance(exc, ValueError)
+                and not _historical_logs_unavailable(exc, method=method),
+            )
         except TimeoutError as exc:
             raise IntegrationError(IntegrationErrorCode.TIMEOUT, "RPC read timed out") from exc
         except (OSError, Web3Exception) as exc:
-            raise IntegrationError(IntegrationErrorCode.UNAVAILABLE, f"RPC read failed: {type(exc).__name__}") from exc
+            historical_denial = _historical_logs_unavailable(exc, method=method)
+            if not historical_denial:
+                raise IntegrationError(
+                    IntegrationErrorCode.UNAVAILABLE, f"RPC read failed: {type(exc).__name__}"
+                ) from exc
+        # Raise outside the handler: no vendor body retained in cause/context.
+        if historical_denial:
+            raise IntegrationError(
+                IntegrationErrorCode.HISTORICAL_DATA_UNAVAILABLE,
+                "RPC cannot provide the requested historical Transfer logs",
+            )
+        raise AssertionError("RPC read ended without a result or failure")
 
     def chain_id(self) -> int:
         chain_id = int(self._read(lambda: self._web3.eth.chain_id))
@@ -84,7 +118,8 @@ class EvmRpcProbe:
                         "toBlock": end,
                         "topics": [TRANSFER_TOPIC],
                     }
-                )
+                ),
+                method="eth_getLogs",
             )
             pages.append(
                 tuple(
@@ -120,7 +155,8 @@ class EvmRpcProbe:
         logs = self._read(
             lambda: self._web3.eth.get_logs(
                 {"address": token, "fromBlock": from_block, "toBlock": to_block, "topics": [TRANSFER_TOPIC]}
-            )
+            ),
+            method="eth_getLogs",
         )
         if not logs:
             raise IntegrationError(

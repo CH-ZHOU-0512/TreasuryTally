@@ -11,6 +11,46 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
+## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
+
+- 新增受限 `HISTORICAL_DATA_UNAVAILABLE`：只识别 eth_getLogs 的结构化整数 4444 加 history/pruned/unavailable 三个独立词，
+  确定拒绝不重试；未知同码/其他方法不误分类，普通 timeout/连接重试不变。新诊断固定安全正文，不保留供应商异常链。
+- 首版 M5 与 M0 专项实际 49 passed / 1 既有 warning；文档治理 2 passed。Ruff、pip check、21 份 Schema、1000 行和 diff 门通过。
+  这些是离线测试，不代表真实模型速度、历史节点恢复或用户完整案例已通过。
+- 广州实际生产镜像/同生产网络下，原节点链 ID、最新区块、decimals 可读，但区块 11855664 的 getLogs 返回 4444；
+  区块哈希匹配上传报表，已知交易 receipt 和整区块 receipts 均为 null，不能作为完整参考证据。
+  两个官方客户端 README 候选仅隔离验证：rpc.sepolia.org 首个 chain ID 响应无法解析 JSON，
+  rpc-sepolia.rockx.com 首个 chain ID 连接失败；两者都未取得完整证据。没有切换生产端点或付费模型调用。
+  用户原文件与原提示词的完整流程尚未执行，当前仍需可用历史 RPC；不以空集合、receipt 子集或抽样宣布成功。
+- 首版源码 overlay 分类实测未匹配：3.070 秒、三次 getLogs、仍 UNAVAILABLE，未部署。随后授权的单次安全特征探针
+  确认 history/pruned/unavailable 同时出现，historical state/not available 不出现；据此收窄到三个独立词组合。
+  另两授权候选 rpc.sepolia.online 连接失败、rpc.bordel.wtf/sepolia 响应不能解析 JSON；均在首个 chain ID 停止。
+- 修正版在广州同生产镜像的明确测试源码 overlay 实测：1.872 秒、一次 getLogs，固定码 HISTORICAL_DATA_UNAVAILABLE，
+  complete=false/evidence_sufficient=false、总额 unknown/null，未创建模型候选或执行 attempt；生产镜像/端点/服务/env 均未改。
+  这是新分类和停止无效重试的服务器验证，不是部署或取得完整历史证据；首次失败 overlay 与随后修正记录分别保留。
+
+## M12 证据不足主区说明与小字精简（2026-10-08，本地验证，未部署）
+
+- 在 `07fe48b` 页面基线上消费已冻结业务视图接口：INCONCLUSIVE 首条 uncertainty 为安全主要原因，
+  默认显示“为什么暂不能判断”及下一步；其余精度/投影限制移到已有验证依据，不复制原异常或猜故障。
+  原样消费 M13 新安全原因 mapper `2b4ffd9` 为本地 `a43cbbd`；不能把本次 UI 回归称服务器用户案例已通过。
+- 按用户新增反馈，核对网络、短代币地址和区块合成一行；保留来源模式、金额单位和实际问题。
+  完整账户、排除规则、适用声明与精度说明集中于现有“核验范围与来源”，不新增折叠层级。
+  确认、公开授权、剩余核对次数、金额、Schema、回执和原 attempt 不变。
+- 新增主原因/安全 fallback/精简身份可见性/技术说明仍可达/有效合成回执原 JSON 媒体保留回归。
+  实际 AppTest 生成阅读副本、切换完整视图并释放衍生缓存后，原 JSON 下载地址仍可读回完全相同字节及原回执哈希；
+  未发现缓存故障依据，因此不改缓存。此项非浏览器 HTTP 下载或真实 Word/PDF 生成。
+- 最终本地 `pytest -m "not external" -q`：643 passed / 16 deselected / 1 既有 warning，133.54 秒。
+  较早完整运行 640 passed / 1 failed：旧 M5 测试硬编码旧中性文案，随后改为核验真实 INCONCLUSIVE、醒目原因和中性语义。
+  Ruff、pip check、21 Schema、1000 行及 diff 门通过。所有本机验证仅为开发回归，不替代广州服务器真实同报表/提示词全流程。
+- 上述 643 项属于消费 mapper 前页面冻结源的完整验证；消费后最终原因投影/M5 页面/业务报告/原技术入口/下载 UI
+  专项实际 57 passed / 1 既有 warning，17.87 秒，另 27 项 mapper 页面定向通过。
+  新增已存 UNAVAILABLE、HISTORICAL_DATA_UNAVAILABLE、未知码且缺图快照的真实读模型到 AppTest 主原因回归，
+  只用显式合成回执，不假称实际 RPC 成功；中性文案断言兼容同一语义的“不能认定”及“暂不能判断”。
+  本轮后续未再执行消费 mapper 后完整测试，最终合流/服务器门由主控记录；静态/pip/21 Schema/1000 行门再次通过。
+- 真实服务器模型/RPC、完整回执、最终同源镜像和发布验收由 M14/主控完成；本会话未重复 live 调用，
+  未恢复浏览器、操作线上用户任务、公开上传、写链、推送或部署。
+
 ## 候选请求超时修复（2026-10-08）
 
 - 仅范围候选采用独立 20 秒异步操作预算、SDK retry=0 与输出 2048 tokens 上限；请求取消后关闭本次连接，

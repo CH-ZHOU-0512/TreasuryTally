@@ -59,6 +59,8 @@ app 单实例 renderer，主动触发五种格式生成，断言原 JSON 加五�
 ### 契约测试
 
 - RPC `eth_getLogs` 请求、返回和错误映射。
+- `tests/m5/test_historical_rpc_failure.py` 验证受限历史拒绝一次读取、其他方法/未知 4444/畸形响应不误分类，
+  普通超时与连接重试不变、供应商正文不进入新诊断或异常链、后页失败不完整与成功空页仍完整。
 - Blockscout MCP 工具参数和分页终止条件。
 - Agent0 身份读取和服务标识。
 - ERC-8004 提交、receipt 和读回字段。

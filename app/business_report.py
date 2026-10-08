@@ -13,12 +13,11 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
         f'<div><small>第 {current.attempt} 次核对 · {escape(report.source_mode_label)}</small>'
         f'<h2 class="attempt-title">{escape(report.conclusion)}</h2></div></section>'
     )
-    st.caption(report.scope.summary)
-    st.caption(f"核验资产：{report.scope.token.short}")
-    st.caption("资金账户：" + "、".join(item.short for item in report.scope.treasuries))
-    st.caption("资助对象：" + "、".join(item.short for item in report.scope.recipients))
-    for exclusion in report.scope.exclusions:
-        st.caption(exclusion)
+    network = "Sepolia" if report.scope.chain_id == 11_155_111 else f"链 {report.scope.chain_id}"
+    st.caption(
+        f"核对范围：{network} · {report.scope.token.short} · "
+        f"区块 {report.scope.start_block:,} 至 {report.scope.end_block:,}"
+    )
     amounts = (current.claimed, current.calculated, current.difference)
     units = {amount.unit for amount in amounts if amount is not None}
     columns = st.columns(3)
@@ -35,13 +34,13 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
                 st.caption(amount.unit)
     if len(units) == 1:
         st.caption(current.claimed.unit)
-    if current.difference_reason:
-        reason = current.difference_reason
-        if report.outcome.value == "INCONCLUSIVE":
-            reason = "证据不足，不能形成服务负面结论：" + reason
-        st.warning(reason)
-    for uncertainty in current.uncertainties:
-        st.caption(uncertainty)
+    inconclusive = report.outcome.value == "INCONCLUSIVE"
+    uncertainties = current.uncertainties
+    if inconclusive:
+        st.markdown("#### 为什么暂不能判断")
+        st.warning(uncertainties[0] if uncertainties else "已保存证据不足，暂时不能判断报表是否符合范围。")
+    elif current.difference_reason:
+        st.warning(current.difference_reason)
 
     if current.findings:
         st.markdown("#### 需要处理的差异")
@@ -75,7 +74,10 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
         st.info("没有可重建的已保存资金流图，原回执结论仍保留。")
     else:
         st.caption("资金流图组件尚未接入，不能把技术准备版本作为完整报告交付。")
-    st.write(report.next_step)
+    if inconclusive:
+        st.info("下一步：" + report.next_step)
+    else:
+        st.write(report.next_step)
     st.markdown("#### 保存报告")
     buttons = st.columns(3)
     with buttons[0]:
@@ -91,6 +93,3 @@ def render_business_report(st, report, *, graph=None, exports=None, receipt_json
         ):
             with column:
                 render_export_download(st, report, label=label, suffix=suffix, mime=mime, export=export)
-    for limitation in report.limitations:
-        st.caption(limitation)
-    st.caption(report.notice)

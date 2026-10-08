@@ -11,6 +11,7 @@ from trust_receipt.m9.models import ReceiptRevision
 from trust_receipt.m9.revisions import validate_revision_pair, verify_receipt_revision_hash
 from trust_receipt.models import FundFlowProjection, Receipt, ServiceSubmission
 from trust_receipt.receipts.replay import replay_receipt
+from trust_receipt.reporting.evidence_reasons import inconclusive_explanation
 from trust_receipt.reporting.formatting import address_view, format_amount
 from trust_receipt.reporting.models import (
     AttemptReport,
@@ -189,8 +190,8 @@ def _attempt(receipt: Receipt, submission: ServiceSubmission, flow: FundFlowProj
         for source in result.reference_sources
     )
     uncertainties = []
-    if result.outcome.value == "INCONCLUSIVE":
-        uncertainties.append("原核验为 INCONCLUSIVE：当前证据不足，不能认定通过或服务失败。具体原因见原 JSON 回执。")
+    if explanation := inconclusive_explanation(result):
+        uncertainties.append(explanation)
     if verified_decimals is None:
         uncertainties.append("没有唯一可信的代币精度，核验金额以最小单位显示。")
     if flow is None:

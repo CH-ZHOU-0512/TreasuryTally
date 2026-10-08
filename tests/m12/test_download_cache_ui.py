@@ -9,6 +9,8 @@ from app import report_exports
 from app.report_download_cache import DownloadCache
 from tests.m12.test_business_report import page_for
 from tests.m12.test_report_exports import view
+from tests.reporting.conftest import report_input
+from trust_receipt.reporting import build_business_report
 
 
 @pytest.fixture
@@ -61,6 +63,25 @@ def test_oversized_ui_rejects_without_cached_download_or_verdict_change(cache):
     next(button for button in page.button if button.label == "生成PDF 报告").click().run()
     assert len(page.get("download_button")) == 2
     assert cache.stats()["bytes"] == 9
+
+
+def test_original_receipt_media_bytes_survive_reading_copy_retirement(cache):
+    item = report_input("insufficient-evidence-page")
+    report = build_business_report(item.receipt, item.submission, fund_flow=item.fund_flow)
+    original = item.receipt.model_dump_json()
+    page = page_for(report, receipt_json=original, exports=(lambda _: b"reading-copy", lambda _: b"pdf"))
+    create_word(page)
+    entry = next(iter(cache._entries.values()))
+    manager = entry.media
+    url = next(element.proto.url for element in page.get("download_button")
+               if element.proto.label == "原 JSON 回执")
+    file_id = url.rsplit("/", 1)[1].rsplit(".", 1)[0]
+    page.session_state["report"] = report.model_copy(update={"notice": "new reading view"})
+    page.run()
+    assert not page.exception and cache.stats()["bytes"] == 0
+    assert manager._storage.get_file(file_id).content == original.encode("utf-8")
+    assert len(page.get("download_button")) == 1
+    assert page.session_state["report"].current.receipt_hash == item.receipt.receipt_hash
 
 
 def test_reset_only_removes_reading_copy_data_and_metadata(cache):

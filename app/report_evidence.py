@@ -17,7 +17,21 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
             "查看依据类别", ("核验范围与来源", "交易与差异依据", "AI 说明", "任务与签名",
                               "回执与修复历史", "其他格式下载", "分享与公开验证"), key="report-evidence-section",
         )
+        snapshot = (
+            report.current if report is not None and report.current.attempt == attempt
+            else report.previous if report is not None else None
+        )
         if section == "核验范围与来源":
+            if report is not None:
+                st.caption(report.scope.summary)
+                st.caption("核验资产：" + report.scope.token.full)
+                st.caption("资金账户：" + "、".join(item.full for item in report.scope.treasuries))
+                st.caption("资助对象：" + "、".join(item.full for item in report.scope.recipients))
+                for detail in (*report.scope.exclusions, *report.limitations, report.notice):
+                    st.caption(detail)
+            if snapshot is not None:
+                for uncertainty in snapshot.uncertainties:
+                    st.caption(uncertainty)
             st.json(st.session_state.task.model_dump(mode="json"))
             st.caption("以下为当前运行配置，不代表历史快照当时使用的模型或证据来源。")
             st.write("当前模型配置：", runtime.mode_label)
@@ -31,10 +45,6 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
             else:
                 st.json([item.model_dump(mode="json") for item in execution.result.reference_sources])
         elif section == "交易与差异依据":
-            snapshot = (
-                report.current if report is not None and report.current.attempt == attempt
-                else report.previous if report is not None else None
-            )
             if snapshot is not None and snapshot.flow_rows:
                 st.dataframe([
                     {"付款账户": row.sender.full, "接收账户": row.recipient.full,

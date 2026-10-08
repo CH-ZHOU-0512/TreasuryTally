@@ -63,6 +63,12 @@ last-reviewed: 2026-10-07
 M5 产品 adapter 使用 `RPC_CONFIRMATIONS`（默认 2）拒绝尚未确认的结束区块，并把范围拆成连续分页；任何页失败都会保留
 来源诊断并返回不完整证据。页面显示 RPC 的权威角色、页数、原始记录数和耗时。
 
+历史日志拒绝仅在 `eth_getLogs` 的结构化 `Web3RPCError.rpc_response.error` 中，整数非标准码 `4444`
+同时含独立词 `history`、`pruned` 与 `unavailable` 三个已核历史拒绝特征时分类为
+`HISTORICAL_DATA_UNAVAILABLE`，立即停止重试。此码不是通用 JSON-RPC 标准；其他方法、未知含义的 4444、
+结构不合法的响应仍按原普通失败政策处理。供应商正文只在 adapter 内存中用于分类，不存储、不记录，
+输出固定安全说明。超时/连接失败的既有最多两次重试不变；不能以部分页、receipt 子集或 Blockscout 抽样补成完整证据。
+
 ## Blockscout MCP
 
 用途：补充地址、交易、代币和分页信息，不作为被评价服务，也不单独承担参考真值。

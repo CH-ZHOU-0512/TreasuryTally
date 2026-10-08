@@ -18,6 +18,15 @@ last-reviewed: 2026-10-07
 Receipt、与其 submission hash 和 submission ID 绑定的 ServiceSubmission，以及可选的既有 FundFlowProjection。
 只投影已计算总额、Finding、来源和事件；不重新汇总转账、不调用 AI、不改变原验收结果。原 Receipt JSON 与 schema 不变。
 
+`AttemptReport.uncertainties` 既有字段保持不变：INCONCLUSIVE 时第 1 条为合并去重后的安全中文证据原因，
+随后才是精度未确认、缺少已存资金流及待核实线索等说明。主要原因只从原 Receipt 中不完整 RPC 来源的
+`details.error_code` 按固定白名单映射；不复制 `details.error`、自由文本 `inconclusive_reason`、URL、密钥或任意异常。
+未知/缺失/非字符串错误码统一安全泛化为需要查看诊断，不从精度标签推测网络故障。
+`HISTORICAL_DATA_UNAVAILABLE` 仅按已存固定码说明节点无法提供所选区块的历史转账证据；
+`UNAVAILABLE` 不推断成历史不可用或超时，不以修改报表/填写精度替代参考证据。
+PASS/FAIL 不生成该不足原因；完整 RPC 的零事件成功不变成未知，补充 Blockscout 降级不覆盖 RPC 成功。
+恢复缺快照时只用原回执的已存字段，不重取网络或生成历史；网页与 Word/PDF 使用同一读模型文字。
+
 金额保留规范最小单位整数字符串；十进制展示用字符串移位，不经 float、不四舍五入为零。差额定义为报表声明减核验金额，
 只在参考完整、证据充分且单位一致时用整数相减。参考缺失、精度冲突或币种冲突时不显示可比较差额，说明原因。
 未知精度显示最小单位，不猜测币种名称。来源时点表示原证据取得时间，不表示导出时重新抓取链上数据。
@@ -247,6 +256,10 @@ status: confirmed | hypothesis
 `evidence_refs` 至少包含一个稳定引用。
 
 ## VerificationResult
+
+RPC 来源诊断可使用固定 `HISTORICAL_DATA_UNAVAILABLE`：仅表示节点明确拒绝所请求历史日志，
+不是报表错误、空转账集合或超时。来源保持 `complete=false`、证据不足，金额/数量不由空集合补零，
+结果仍为 `INCONCLUSIVE`。该码是内部集成枚举和来源 details 字符串，不改变 Receipt 1.0 或公共 Schema。
 
 ```yaml
 run_id: string
