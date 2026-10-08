@@ -22,6 +22,38 @@ last-reviewed: 2026-10-08
 - CSV/XLSX 各最多 6 次必要真实模型调用的追加验收已核准，但须安全修复同源部署并经主控确认后再执行；
   目前两格式实际调用仍为 0。历史 RPC、原文件首次候选失败与真实 AI 工件校验失败仍是未闭环项目。
 
+## AI 安全修复独立发布候选（2026-10-08，正式预检通过，未切生产）
+
+- 候选源 `c474a082392cc969edba26a2af0f803bceb9eeaa` 精确基于线上d897加core3e08/app4fc，
+  只解决可选AI异常正文和旧会话错误显示；与d897差异仅两个业务模块、两个专属测试、SECURITY与STATUS。
+  不包含M16、依赖变化或其他新功能。core117/app27；8项既有proof只更新report_evidence为891a3d…，
+  第9项core.m5为f234f117…且固定两安全码，旧558/188 helper与原失败日志完整保留。
+- 此独立源静止非external实际746 passed / 16 deselected / 1既有warning，184.91秒；
+  Ruff、pip check、21 Schema、1000物理行、diff与无凭据MVP双回执重放/恢复通过。
+  此数量不混合主控含M16联合源码770项或两独立补丁754/757项。
+- 主控确认PR31最新head aa6849b两项CI success并显式批准后，才在新root700私有目录
+  `/opt/trust-receipt-releases/safe-ai-c474a08` 单次离线build，无生产.env/数据/密钥。
+  fresh1176884KiB高于917504KiB门，disk23484428288字节，30分钟内核26记录/0OOM；
+  network=none/no-index/640MiB/swap=0/CPU1，104.62秒完成，20秒间隔实际阶段输出。
+- 镜像 `sha256:8adfeff603dd3ffdf0e2c31ca585023f3db4678ef2626545ad473d7c23e3b605`，revision为c474。
+  tar SHA f28e061dafad0cd6c7321c41da05ebd5e7f5f699665e65c296cd65cf1eb3f8c2；
+  wheel SHA 2f164bd7c0544acd5bd1095dfff2644c73d68f8ee542f5eb4b33b10407692a2f。
+  117源码与wheel逐字节相同，archive不含.env/PEM/DB/pycache/M16。
+- 正式combined独立容器fresh1243916KiB、640MiB/swap=0/pids128/CPU1/dropALL/nnp/networknone：
+  actual入口零exception；7合成案例PNG/nativeWordPDF、4会话14视图8接受6预算拒绝、
+  5实际AppTest格式/6下载、原JSON与历史/视图不变、共享renderer/cache清理均通过。
+  12SDK故障单次/连接关闭/stall取消、7范围错误/手填零模型/显式确认/3非法范围，以及实际M5M8历史拒绝
+  一次getLogs→INCONCLUSIVE/null→保存→新runtime恢复/nativeWordPDF全部通过。
+- 新安全专项实际Pydantic合成输入拒绝，解释/建议只输出固定码；两attempt FAIL→PASS、回执replay/restore/不可变通过。
+  6类旧错误/码变体/非字符串与固定恢复提示经真实AI说明AppTest安全显示，无合成input泄露。
+  此9次是离线adapter调用，不是真实模型；final cgroup peak405344256字节（约386.57MiB），
+  max/oom/oom_kill/pagecache_max/pagecache_oom全部0。build与preflight原日志root600保留。
+- 当前生产仍e2cf/d897，容器74a653cc完整ID/StartedAt、3绝对RW挂载、env/dev/代理配置哈希、
+  Blockscout与Nginx完整ID/StartedAt均实核不变，health200，未自动promote。
+  受限本次临时SSH副本精确删除，原用户key保留；新增真实模型/RPC/公开上传/写链为0。
+  先前真实模型累计10次与失败继续保留，CSV/XLSX追加12矩阵须安全镜像切换后主控确认才执行。
+  未完成真实模型稳定性、原文件完整验收与历史节点完整证据，不把离线预检写为财务PASS。
+
 ## 可选 AI 错误安全码（2026-10-08，核心本地验证，未部署）
 
 - 在精确 main `70d07165a990e949882d2f03d8b814b3a54f06a7` 新独立分支，M5 解释/后续建议异常
