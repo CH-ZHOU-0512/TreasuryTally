@@ -18,7 +18,7 @@ def rpc_error(response=None):
 
 
 def historical_error():
-    return rpc_error({"error": {"code": 4444, "message": f"historical state is not available {SECRET}"}})
+    return rpc_error({"error": {"code": 4444, "message": f"history pruned unavailable {SECRET}"}})
 
 
 @pytest.fixture
@@ -57,6 +57,10 @@ def test_history_denial_once_and_no_vendor_context(probe):
         {"error": {"code": 4444, "message": None}},
         {"error": {"code": 4444, "message": "unrelated failure"}},
         {"error": {"code": 4444, "message": "historical state query invalid"}},
+        {"error": {"code": 4444, "message": "history pruned"}},
+        {"error": {"code": 4444, "message": "history unavailable"}},
+        {"error": {"code": 4444, "message": "pruned unavailable"}},
+        {"error": {"code": 4444, "message": "prehistory unpruned unavailable"}},
         {"error": {"code": 1234, "message": "historical state unavailable"}},
     ],
 )

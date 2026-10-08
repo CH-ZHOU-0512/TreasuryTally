@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -44,7 +45,7 @@ def _historical_logs_unavailable(error: Exception, *, method: str | None) -> boo
     if not isinstance(message, str):
         return False
     message = message.lower()
-    return "historical state" in message and ("not available" in message or "unavailable" in message)
+    return all(re.search(rf"\b{word}\b", message) for word in ("history", "pruned", "unavailable"))
 
 
 class EvmRpcProbe:
