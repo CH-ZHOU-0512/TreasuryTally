@@ -6,6 +6,18 @@ from app.m9_public import render_public_history
 from app.report_exports import render_additional_exports
 
 
+def safe_ai_error_message(error: object) -> str:
+    """Only exact trusted codes/notices become UI text; legacy errors never echo."""
+    fallback = "AI 说明暂不可用，核对结果与原回执不受影响。"
+    if not isinstance(error, str):
+        return fallback
+    return {
+        "RESULT_EXPLANATION_UNAVAILABLE": "AI 结果说明暂不可用，核对结果与原回执不受影响。",
+        "FOLLOW_UP_ADVICE_UNAVAILABLE": "AI 处理建议暂不可用，核对结果与原回执不受影响。",
+        "Restored locally; AI text was not regenerated.": "已恢复核对记录，AI 说明未重新生成。",
+    }.get(error, fallback)
+
+
 def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions, publish, report=None):
     with st.expander("验证依据 / 技术详情", expanded=st.session_state.get("show-report-evidence", False)):
         attempt = st.selectbox(
@@ -63,7 +75,7 @@ def render_report_evidence(st, runtime, executions, artifacts, *, allow_actions,
             else:
                 st.caption("没有可展示的 AI 说明；业务结论来自确定性程序。")
             for error in execution.ai_errors:
-                st.warning(error)
+                st.warning(safe_ai_error_message(error))
             if execution.follow_up:
                 st.json(execution.follow_up.model_dump(mode="json"))
         elif section == "任务与签名":
