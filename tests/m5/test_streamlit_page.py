@@ -76,7 +76,11 @@ def test_page_renders_inconclusive_as_evidence_shortfall() -> None:
 
     assert page.session_state["executions"][0].result.outcome.value == "INCONCLUSIVE"
     assert any(element.value == "#### 为什么暂不能判断" for element in page.markdown)
-    assert any("不能认定通过或服务失败" in warning.value for warning in page.warning)
+    assert any(
+        "通过或服务失败" in warning.value
+        and ("不能认定" in warning.value or "暂不能判断" in warning.value)
+        for warning in page.warning
+    )
     assert [metric.value for metric in page.metric] == ["0.12", "无法确定", "无法确定"]
 
 

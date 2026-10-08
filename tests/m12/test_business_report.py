@@ -7,6 +7,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from tests.reporting.conftest import report_input
+from tests.reporting.test_evidence_reasons import SECRET, saved_incomplete
 from trust_receipt.reporting import build_business_report
 
 ROOT = Path(__file__).parents[2]
@@ -99,6 +100,19 @@ def test_inconclusive_missing_safe_reason_uses_fixed_fallback_not_amount_hint():
     assert not page.exception
     assert page.warning[0].value == "已保存证据不足，暂时不能判断报表是否符合范围。"
     assert not any("private-url" in element.value for element in page.warning)
+
+
+@pytest.mark.parametrize("code", ["UNAVAILABLE", "HISTORICAL_DATA_UNAVAILABLE", None])
+def test_saved_safe_mapper_reason_is_primary_even_without_recovered_flow(code):
+    item, receipt = saved_incomplete(code)
+    view = build_business_report(receipt, item.submission)
+    page = page_for(view)
+    assert not page.exception
+    assert page.warning[0].value == view.current.uncertainties[0]
+    assert [metric.value for metric in page.metric][1:] == ["无法确定", "无法确定"]
+    assert view.outcome.value == "INCONCLUSIVE" and view.current.receipt_hash == receipt.receipt_hash
+    assert not any(SECRET in element.value for element in (*page.warning, *page.caption, *page.info))
+    assert not any("精度" in element.value for element in page.warning)
 
 
 def test_many_same_kind_findings_are_summarized_without_mutating_report():
