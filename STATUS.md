@@ -11,7 +11,19 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
-## 历史证据提示联合集成（2026-10-08，已合并，未部署）
+## 当前验收范围与上线摘要（2026-10-08）
+
+- 当前生产已上线 `d897b5c` / `e2cf19`，具体保护、预检及回滚记录见下方发布节；此前未部署与内存不足段落是明确的历史快照。
+- 用户明确原 `corrected-complete.json` 不是唯一验收范围：主页 `error-missing-transfer.json` 与 `corrected-complete.json`
+  必须实际下载并重传，在同一固定任务保留错误版首次与修正版补交两次核对；还须覆盖 CSV/XLSX 正常上传路径。
+- 主控已授权 M14 在服务器新建隔离测试工作区实测原文件/原提示词及主页双文件流程，必要真实模型调用合计最多 14 次，
+  每阶段一次、不自动重试；CSV/XLSX 追加矩阵待确认。保存、独立运行时恢复及 JSON/Word/PDF 导出均属验收，不仅检查首页可打开。
+- 主页 native AppTest 实际媒体两轮读取已由 M14 实测并校验原字节，零业务调用；这不等于真实链上业务已验收。
+  浏览器自动化仍暂停，不将 native 上传适配或媒体测试记作浏览器 HTTP 上传/下载。
+- 当前历史 RPC 无法提供区块 11855664 完整转账证据。安全返回 INCONCLUSIVE 只能证明证据不足流程正确，
+  不能关闭修正版 PASS / 错误版 FAIL→修正版 PASS 的业务验收，也不能宣称全部正常路径完成；不公开回执、不写链。
+
+## 历史证据提示联合集成（2026-10-08，初次构建前快照）
 
 - [PR #27](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/27) 两项 CI 37723407162 / 37723414539 实际成功后，
   主控显式合并为 `7708322a7b5022122fe2ef5721917de19095693a`；合并后主线 CI 37723670377 实际成功。
@@ -29,7 +41,56 @@ last-reviewed: 2026-10-08
   不把流程运行通过写成财务一致。尚无完整参考历史证据、模型业务实测或新镜像部署；不发布、不写链。
 - 用户新增第一步预设专业核验要求的需求已交 M12 独立后续工作；不混入本轮已冻结发布源。
 
-## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
+## 历史拒绝与范围模板发布（2026-10-08，已上线、真实案例待验）
+
+### 实际上线与保护
+
+- 经主控另行授权，只以最终 e2cf19 image / d897 revision app-only 切换，生产容器
+  `74a653cc890fbd9da9d1d33d327e9ba188f67c9e048af2e575ecf8807e212def`，StartedAt 2026-10-08T04:27:15.164597472Z。
+  running/Health.Status=healthy/OOMKilled=false；实时 core117/wheel 严格 byte、app27、8 源 proof、候选20秒/2048与live/writes=false实核通过。
+- 原 project-directory /opt/trust-receipt/deploy、-p deploy、no-deps/no-build，640 MiB/swap=0/pids128/CPU1/drop ALL/nnp；
+  原 /opt/trust-receipt/data、receipts/private、receipts/public 三个绝对 RW 挂载保留，没有清理用户历史。
+  原 env 哈希 ce0a52c9de223764e09ce9b3650d1283280af3245639d80ec4dce34766960a06，开发入口哈希
+  f7aa2e3b48c2437323c08982692fdb318fb2d23ab59e2f6b4554348b87bf689a 保持不变。
+- Blockscout f4af6faa 与 Nginx 7e786e09 的完整 ID/StartedAt/网络保持不变，未重建；Nginx-t/reload成功，
+  仅原 http2 listen 弃用警告，配置哈希 a2741d5c9f7d6e9ee039d5049bef6426d85a4ae58890dd42578784160df7bdd5 与 SSL 只读挂载不变。
+  公网根页/health/原 Logo HTTP 200；验证 TLS 的 WebSocket 101/Sec-Accept，仅握手不发送业务消息，不声称首屏感知速度已测。
+- 切换前保留旧653 tag trust-receipt:preset-rollback-d897b5c 与 root700备份 /opt/trust-receipt-backups/preset-before-d897b5c，
+  旧 compose/source 备份不含 env/data/回执、文件600；本次未执行回滚。受限临时 SSH 副本精确删除，原用户 key 保留。
+  模型/RPC 业务调用仍为0，未浏览器测试、公开上传或写链。
+- 线上公共 committed fixture 只读盘点：主页错误版106字节/hash307f840ef45c3085e33a8d06344075967b9e35c4924621799c85979fe7a8d4c2，声明0/数量0；
+  修正版702字节/hashc7dbc77b832a6bfa0ed50eb16c15b48285b464802a297d393c74031082b71d6e，声明180674489737/数量1，与用户原corrected字节相同。
+  另有空白JSON模板105字节/hash503d0261e39934c8ed9366945e8776cc50768268bc29a3f19e63847806850f70；没有CSV/XLSX下载对，仅支持上传。
+  实际主页媒体下载→intake→真实模型/RPC→两attempt→恢复/原JSONWordPDF矩阵尚未执行，不以字节相同或合成门代替。
+
+### 同源质量门与发布过程
+
+- 独立源 `d897b5c8ab67336f7f1aba2db7e1fcff56be748c` 为精确 `95da190` 加 M12 原 `136b294`；
+  仅 STATUS 合流冲突保留双方事实。与已合并 main `85592f4` 的 app/非 M16 业务一致，明确不包含 headless/MCP/
+  新上传服务/对应 pyproject 与 M16 tests 变更，不伪装为主线 image revision。
+- 本 checkout 静止完整非 external 实际 717 passed / 16 deselected / 1 既有 warning，167.09 秒；
+  Ruff、pip check、21 Schema、1000 行、diff 与无凭据 MVP FAIL→PASS/双回执 replay/恢复均通过。
+  source tar SHA-256 `7bbd445e3761a96f179b6ac5d6aaa7d9754e27a923028bd6e277258c8c94213b`，
+  wheel SHA-256 `67fa0133a7fa19e21cde095a5edeb121408dd8ce6dfa155f96ac46693283fad6`。
+  实际 core 117 Python 文件逐字节相同；新增 scope_request 属于 app，app 模块数 26→27，不误报 core 118。
+- 新独立私有目录 `/opt/trust-receipt-releases/preset-history-d897b5c`，不覆盖 95/旧失败记录。
+  一次 fresh 954700 KiB、空闲磁盘 23542812672 字节、daemon 正常、生产 Health.Status=healthy/OOMKilled=false 后，
+  原 network=none/no-index/640 MiB/swap=0/CPU=1 的 offline build 在 600 秒总预算内 260.61 秒成功，每 20 秒打印实际阶段。
+  同源 tar 全文件与 context 实核，image `sha256:e2cf19fe284eef425f37e0691f2fdaa0b0bb4eea1f5e58384e4939ed36eb4d10`，revision 为上述 d897。
+- 此精确最终 image 独立正式 combined 门实际通过：fresh 1076924 KiB，640 MiB/swap=0/pids=128/CPU=1/drop ALL/
+  no-new-privileges/network=none，无真实密钥/.env/生产用户数据。core117/wheel 严格 byte、app27、8 项模板及报告源码 proof、真实入口零异常通过。
+  7 案例 PNG/native Word/PDF、4 会话 14 视图、5 种实际 AppTest 格式与原 JSON、固定字体/assets/socket 隔离全部通过，
+  导出预算接受 8/拒绝 6，原回执/历史/视图不改，共享 renderer/cache 清理通过。
+- 12 个 SDK transport 故障注入各一次请求并关闭连接，stall 正确取消；真实新 UI 未填 GUIDED 模板禁用整理、无候选/任务，
+  切 RAW 保留原文后原 7 类错误/手填零模型/显式确认及 3 类非法范围拒绝全部通过。
+  仅另稿调整旧脚本 fixture 显式选择 RAW，不取消产品模板门、不 mock candidate、不覆旧脚本。
+  历史拒绝专项通过实际 M5/M8 保存与新 runtime 恢复，INCONCLUSIVE、计算金额/数量 null、安全历史原因及 native Word/PDF 正常。
+  这些均为合成数据与无网络注入；原用户报表/原提示词真实模型案例未执行，付费模型/RPC 调用仍为 0，不声称金融 PASS。
+- 最终 combined cgroup peak 473489408 字节（约 451.55 MiB），max/oom/oom_kill/pagecache_max/pagecache_oom 均 0。
+  新日志 root600 保留，生产仍旧 `65343fee`，三个保护服务/env/dev checkout 不变、health HTTP 200。
+  本次构建受限 SSH 副本精确删除、原用户 key 保留。上述为切换前独立候选门，不代表真实案例通过；上线事实见前节。
+
+## 历史 RPC 拒绝分类（2026-10-08，分类修复与探针历史；现已上线）
 
 - 新增受限 `HISTORICAL_DATA_UNAVAILABLE`：只识别 eth_getLogs 的结构化整数 4444 加 history/pruned/unavailable 三个独立词，
   确定拒绝不重试；未知同码/其他方法不误分类，普通 timeout/连接重试不变。新诊断固定安全正文，不保留供应商异常链。
@@ -48,7 +109,7 @@ last-reviewed: 2026-10-08
   complete=false/evidence_sufficient=false、总额 unknown/null，未创建模型候选或执行 attempt；生产镜像/端点/服务/env 均未改。
   这是新分类和停止无效重试的服务器验证，不是部署或取得完整历史证据；首次失败 overlay 与随后修正记录分别保留。
 
-## M12 范围模板与预设核验要求（2026-10-08，独立本地分支，未部署）
+## M12 范围模板与预设核验要求（2026-10-08，本地实施历史；现已上线）
 
 - 在 `f807167` 基线上实现首次空输入的范围模板及直接写说明；精度为可选报表声明，不猜填或新增领域字段。
   必要范围未填、重复字段或仍有占位时不请求模型、不锁定模型候选；严格上传、人工确认与主动核对保持不变。
