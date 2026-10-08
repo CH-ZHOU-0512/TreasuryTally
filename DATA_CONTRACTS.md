@@ -660,6 +660,65 @@ schemas/v1/public_verification_bundle.schema.json
 
 ## 精确计算规则
 
+## M16 headless 与 MCP 工具契约
+
+M16 只在本机 `stdio` 进程中暴露现有确定性核心。客户端只能提交不透明 `workspace_handle`，不得提交数据库、回执目录、
+任意文件路径、SQL、Python、Shell、环境变量名或密钥。handle 只由本机配置映射到一个工作区；未知 handle 与跨工作区对象引用
+均拒绝。工具响应不得返回底层路径、原始报告正文、签名、认证头、RPC URL 或密钥。
+
+M15 Skill 消费的冻结 facade 为 `HeadlessTrustReceiptPort`，版本 `1.0`，仅含下列方法：
+
+```text
+draft_task(workspace_handle, user_request) -> TaskCandidateView
+prepare_task_confirmation(workspace_handle, candidate) -> AuthorizationChallenge
+confirm_task(workspace_handle, challenge_id) -> ConfirmedTaskView
+prepare_report_verification(workspace_handle, task_id, report_json) -> AuthorizationChallenge
+verify_report(workspace_handle, challenge_id) -> AttemptResultView
+get_result(workspace_handle, task_id, attempt) -> AttemptResultView
+get_receipt(workspace_handle, task_id, attempt) -> ReceiptView
+replay_receipt(workspace_handle, task_id, attempt) -> ReceiptReplayView
+```
+
+`user_request` 最多 4,000 个字符；`report_json` 是最多 1 MB 的内联 UTF-8 `UploadedReport 1.0`，不得替换为路径或 URI。
+M16 不提供公共发布、写链、任意网络 URL 读取、任意代码或 SQL 工具。
+
+### AuthorizationChallenge
+
+```yaml
+interface_version: "1.0"
+challenge_id: opaque-string
+workspace_handle: opaque-string
+action: CONFIRM_TASK | VERIFY_REPORT
+payload_digest: sha256-hash
+task_id: string | null
+task_spec_hash: sha256-hash | null
+attempt: 1 | 2 | null
+summary: string
+authorization_state: PENDING | APPROVED | CONSUMED | EXPIRED
+expires_at: datetime
+```
+
+`payload_digest` 是授权请求摘要，不只是报告内容哈希：它绑定 interface version、workspace handle、action、内容哈希以及可用时的
+task ID、`spec_hash` 与 attempt。`prepare_*` 只生成待批准挑战，不确认任务、不消费 attempt、不执行 RPC。批准必须由未暴露为 MCP tool 的本机交互命令写入，
+因此模型不能通过补造布尔值、确认短语或重复调用替代用户授权。`confirm_task` 与 `verify_report` 只消费同工作区、未过期且
+payload digest 完全一致的已批准挑战。消费结果持久化；同一 challenge 重复调用返回原任务或原 attempt，不产生重复写入。
+重启后仍维持该幂等语义。第二次 attempt 仍受既有 repository 状态机约束，第三次请求必须拒绝。
+准备和消费报表 challenge 都必须读取 `AttemptStatus`；`REQUESTED`、`SUBMITTED`、`VERIFYING`、缺失回执、回执冲突或状态冲突
+一律阻塞，不自动取消、回滚或重跑。并发消费者最终仍由 SQLite 原子 attempt 预留裁决，失败方不得生成第二份交付。
+
+### Facade 视图
+
+- `TaskCandidateView` 返回严格 `TaskSpecCandidate`、candidate digest 和 `UNCONFIRMED`，不返回确认状态。
+- `ConfirmedTaskView` 返回 `task_id`、`spec_hash`、`CONFIRMED` 和 `idempotent_replay`；不接受客户端指定 task ID、确认时间或哈希。
+- `AttemptResultView` 返回 task ID、不可变 `spec_hash`、submission/attempt、三态 outcome、整数金额字符串、数量、Finding 摘要、
+  证据完整性、来源诊断、receipt hash 以及 `idempotent_replay`。消费者比较两次结果必须同时核对 workspace、task ID 与
+  `spec_hash`；RPC 或配置不足必须显式为 `INCONCLUSIVE` 或 `BLOCKED`，不得用 fixture 结果代替。
+- `ReceiptView` 返回可重放 Receipt 结构，但删除或拒绝原始报告正文、签名、路径和秘密字段。
+- `ReceiptReplayView` 返回 recorded/recomputed outcome、哈希与对象链接检查及 `valid`；它只重放已保存回执，不重新抓链。
+
+工作区 profile 必须显式标记 `LIVE_READ_ONLY` 或 `FIXTURE_TEST_ONLY`。默认是 `LIVE_READ_ONLY`，缺少模型或 RPC 配置时返回
+`BLOCKED`；fixture profile 仅供本地测试并在每个候选、结果和回执响应中携带 `fixture_test_only=true`，不得表述为真实链上验收。
+
 ### 业务报告本地渲染绑定
 
 只读 `RenderedDiagram` 保存完整冻结 view JSON 的 SHA-256、派生 option JSON 的 SHA-256、PNG bytes 与静态 SVG。

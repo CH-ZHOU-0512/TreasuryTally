@@ -396,8 +396,8 @@ Streamlit rerun 保留步骤与关闭状态，公开验证入口不弹上传引�
 - `request_attempt` 读/检查/请求在 SQLite IMMEDIATE 事务内串行化，两连接不能同时预约同一 attempt。
   本轮11项新增状态/故障/并发回归通过；页面接线由 M12 唯一写入，尚未部署或在线恢复用户任务。
 - 修复基线为已知 `origin/main=675728a`；本轮 fetch 因 GitHub 443 连接失败未成功，不称已取实时最新远端。
-- 本地完整 pytest 为340通过、14项外部配置缺失跳过；Ruff、pip check、21份 Schema、1000行限制和diff检查通过。
-  无凭据 FAIL→PASS→回执重放→恢复演示 valid=true；没有外部探针、线上数据操作或部署。
+- M9 分支报告本地完整 pytest 为 340 通过、14 项外部配置缺失跳过；Ruff、pip check、21 份 Schema、1000 行限制和 diff 检查通过。
+  该数字是来源分支记录，M16 消费后以本分支实际重跑为准。没有读取真实线上故障状态，不宣称线上同一原因已修。
 
 ### Logo 首屏与间距修复（已部署，公网冷加载时序待复核）
 
@@ -822,7 +822,7 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
   根目录权威文档与公共 wiring 由当前集成会话统一维护，各线提交专属交接材料供同步。
 - 初始开发授权不包含公开发布、写链或部署；最终交付没有真实用户及真实测试用户，取消招募依赖。
   四个会话均已发送纠正任务，D 改为自助说明、验收矩阵与证据模板；历史分支/目录名保留，不代表真实试用。
-  六个会话已接收恢复协调并回复主控；Skill/MCP 已列 M15/M16 候选，尚未启动实施。
+  六个会话已接收恢复协调并回复主控；该历史快照中的 Skill/MCP 当时仍为 M15/M16 候选，后续已获准分别启动。
 - 四个会话与隔离工作区已创建并下发实施任务；各线从计划基线 `f66b5ad` 开始，尚不代表实现完成。
 
 | 工作包 | 会话 ID | 隔离工作区（C:/Users/Gzhou/.codex/worktrees/ 下） | 交接材料 |
@@ -868,6 +868,27 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
   已有独立真实报表、冷上下文、八类非法上传恢复、确认拒绝、身份、写隔离、键盘和说明路径证据；未验收的重启、
   浏览器故障/来源冲突、第三 attempt 拒绝及原生 200% 缩放等仍保留。新摘要在该分支 `docs/user-trials/readiness-evidence-2026-10-07.md`。
   故障进程已由 M14 关闭，正常 8534 保留只供手动查看；不再自动操作。未做真实用户测试，完整 M14 技术验收未齐。
+
+## M15–M16 并行启动（2026-10-07）
+
+- 2026-10-08：用户授权推送并合并 M16。已合流 GitHub API 核实的主线 `867ca617c02b493cd9b919133f1187669934d8e0`，
+  保留现有报表导出与部署记录；服务显示名为 TreasuryTally，8 项工具名称和技术包标识保持兼容。
+  合流后 M16、attempt 状态与文档治理专项 28 passed；Ruff、pip check、21 Schema、文件规模与 diff 门通过。
+  合流版本完整非 external 实跑 620 passed / 16 deselected / 1 条既有 warning（94.89 秒）。
+  Git HTTPS fetch/push 连接重置，发布改用 GitHub API；PR 合并结果以实际完成记录为准。
+
+- 用户已授权 M15 Skill 与 M16 MCP 在独立会话、分支和工作区实施；两者不改变 M13/M14 尚未齐备的技术验收，也不要求真人测试。
+- M16 已在 `codex/m16-mcp` 从修复基线 `e2a0a9e` 启动，冻结供 M15 消费的 `HeadlessTrustReceiptPort 1.0`：候选、外置授权后确认、
+  报表核验、结果/回执读取与重放。MCP 只使用本机 stdio，不提供发布、写链、任意路径、代码或 SQL。
+- M16 冻结提交为 `cee234d`。headless facade、operator workspace registry、15 分钟一次性外置批准、持久幂等消费、CLI、
+  MCP stdio adapter、客户端配置示例和运行文档已实现；入口只复用现有候选、M5 workflow、UploadedReport、SQLite attempt 与回执重放。
+- M16 已本地消费 attempt 状态修复 `795dddd`（本分支 `7554e9a`），不改 `app/`。准备/消费 challenge 都读取持久化状态，
+  in-flight、缺失/冲突回执明确阻塞，并发 challenge 只有一个可取得原子 attempt 预留；不自动解锁或重跑。
+- M16 15 项与来源修复 11 项合计 26 项专项测试通过，包括真实 stdio initialize/tools/list/tools/call、服务重启、重复调用、
+  并发 request、两次 attempt 上限、跨工作区、路径/SQL/秘密注入、缺模型/RPC 和缺回执阻塞。全仓非 external 为
+  352 passed / 14 deselected；Ruff、主环境 pip check、21 份 Schema、1000 行限制与 diff check 通过；无凭据演示 valid=true。
+  使用的是明确 fixture 测试 profile；未读取真实线上故障状态，也未执行真实模型/RPC、公开上传、写链、推送、合并或部署，
+  不宣称线上同一原因已修，不补记 M13/M14 未齐验收。
 
 ## 业务报告资金流图补充
 
