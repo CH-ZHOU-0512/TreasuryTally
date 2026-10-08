@@ -24,7 +24,7 @@ def harness():
 
 
 def main():
-    from app.report_exports import application_renderer
+    from app.report_exports import application_download_cache, application_renderer
     from trust_receipt.hashing import content_hash
     from trust_receipt.reporting import BusinessReportView
 
@@ -37,6 +37,10 @@ def main():
     assert not page.exception and len(page.get("download_button")) == 1
     prefix = "report-export:" + content_hash(view.model_dump_json().encode()) + ":"
     assert all(prefix + suffix not in page.session_state for suffix in ("docx", "pdf", "html", "png", "svg"))
+    cache = application_download_cache()
+    owner = page.session_state["report-download-lease"].owner
+    view_hash = page.session_state["report-download-view"]
+    assert cache.stats()["bytes"] == 0 and cache.stats()["files"] == 0
     renderer = application_renderer()
     assert renderer._node == "/opt/trust-receipt-renderer/renderer-node"
     assert renderer._modules == "/opt/trust-receipt-renderer/node_modules"
@@ -45,7 +49,8 @@ def main():
                           ("离线 HTML 报告", "html"), ("资金流 PNG", "png"), ("资金流 SVG", "svg")):
         next(button for button in page.button if button.label == "生成" + label).click().run()
         assert not page.exception and not page.error
-        payload = page.session_state[prefix + suffix]
+        payload = cache.get(owner, view_hash, suffix)
+        assert isinstance(payload, bytes)
         if suffix == "docx":
             with ZipFile(io.BytesIO(payload)) as doc:
                 assert "word/document.xml" in doc.namelist()
@@ -56,11 +61,12 @@ def main():
         elif suffix == "html":
             assert b"<svg" in payload and b"Content-Security-Policy" in payload
         else:
-            assert "<svg" in payload
+            assert b"<svg" in payload
         page.run()
         assert not page.exception
-        assert payload == page.session_state[prefix + suffix]
+        assert payload == cache.get(owner, view_hash, suffix)
         sizes[suffix] = len(payload)
+    assert cache.stats()["bytes"] == sum(sizes.values()) and cache.stats()["files"] == 5
     assert len(page.get("download_button")) == 6
     assert page.session_state["receipt"] == original
     assert page.session_state["report"].model_dump_json() == view.model_dump_json()

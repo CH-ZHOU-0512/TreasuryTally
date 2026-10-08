@@ -33,8 +33,9 @@ last-reviewed: 2026-10-08
   最新缓存/下载/业务报告组合 **39 通过、1 条既有 warning**；较早全 M12/reporting 专项 170 通过。
 - 复用已由 bundled 作者生成的合成 PASS 五格式真实 payload，实际 AppTest 五文件 + 独立 JSON 六下载通过，
   总缓存字节与真实五文件长度之和一致（包含约 6.43 MB Word），不是 native 生成/cgroup/浏览器或新文档视觉验收。
-  首轮完整非 external 604 通过 / 16 排除 / 1 warning；随后加强同会话其他控件精确 coordinate 保护，最终全量复跑中，
-  不将首轮 604 计作最后微修后的完整通过。完整 Ruff、pip check、21 schema、1000 行与 diff 门通过；
+  首轮完整非 external 604 通过 / 16 排除 / 1 warning；随后加强同会话其他控件精确 coordinate 保护，
+  M12 最终源码 bec69d33 的完整非 external 实跑 605 通过 / 16 排除 / 1 warning，221.53 秒。
+  此为 M12 独立证据，不是 M14 的运行集成或生产内存门。完整 Ruff、pip check、21 schema、1000 行与 diff 门通过；
   离线 MVP 再次 FAIL→PASS、双回执重放与恢复 valid=true。
 - 经主控确认同步上传文案及全部一致比较为“上传自己的报表”，必填字段只标明 JSON 适用；
   既有 CSV/XLSX/JSON 自动读取、必要局部补充、人工范围确认与主动核验不变，没有新增转换/采用步骤。

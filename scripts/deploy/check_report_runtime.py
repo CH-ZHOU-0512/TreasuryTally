@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib.metadata
 import io
 import json
@@ -50,10 +51,16 @@ def main() -> None:
     from trust_receipt.reporting import BusinessReportView, export_docx, export_pdf
     from trust_receipt.reporting.renderer import EChartsRenderer, ExportUnavailable
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("views", type=Path)
+    parser.add_argument("--memory-mib", type=int, default=2048)
+    parser.add_argument("--pids", type=int, default=256)
+    args = parser.parse_args()
+    assert args.memory_mib > 0 and args.pids > 0
     assert not Path("/app/.env").exists()
-    assert Path("/sys/fs/cgroup/memory.max").read_text().strip() == str(2 * 1024**3)
+    assert Path("/sys/fs/cgroup/memory.max").read_text().strip() == str(args.memory_mib * 1024**2)
     assert Path("/sys/fs/cgroup/memory.swap.max").read_text().strip() == "0"
-    assert Path("/sys/fs/cgroup/pids.max").read_text().strip() == "256"
+    assert Path("/sys/fs/cgroup/pids.max").read_text().strip() == str(args.pids)
     source = Path("/app/src/trust_receipt/reporting/assets")
     installed = Path(importlib.metadata.distribution("trust-receipt").locate_file("trust_receipt/reporting/assets"))
     manifests = [{str(p.relative_to(root)): sha256(p.read_bytes()).hexdigest()
@@ -71,7 +78,7 @@ def main() -> None:
     assert Path("/usr/local/share/doc/node/LICENSE").is_file()
     renderer = EChartsRenderer(node_path=os.environ["REPORT_RENDERER_NODE"], modules_path=str(modules))
     cases = []
-    for file in sorted(Path(sys.argv[1]).glob("*.view.json")):
+    for file in sorted(args.views.glob("*.view.json")):
         view = BusinessReportView.model_validate_json(file.read_bytes())
         rendered = renderer.render(view)
         assert rendered.view_hash == sha256(view.model_dump_json().encode()).hexdigest()

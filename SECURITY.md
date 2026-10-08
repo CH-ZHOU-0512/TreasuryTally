@@ -20,13 +20,20 @@ Finding 数值说明仅选规范整数的既有 amount/count/decimals；证据�
 HTML/SVG 必须转义文本且无脚本、外部图像/字体/样式请求；DOCX/PDF 只由固定模板及本包 OFL 字体生成。
 字体是受审查的程序资源，不接受用户提供路径。导出直接返回 bytes，不持有 Shell、任意文件写入、网络、publisher 或链上端口。
 固定 Node worker 使用 subprocess argv / shell=False，只接业务 view 派生 JSON，禁止用户 code/formatter/image URL。
-不传入凭据、NODE_OPTIONS 或继承的 NODE_PATH；单实例并发 2、20 秒超时、128 MB JS 堆、256 KB stdin、512 KB SVG、
+不传入凭据、NODE_OPTIONS 或继承的 NODE_PATH；单实例 Node 并发 1、20 秒超时、128 MB JS 堆、256 KB stdin、512 KB SVG、
 4 MB PNG、6 MB stdout、260 万像素，sharp 无缓存且线程为 1。JS 堆限不是 native 总内存硬限，部署必须另加 cgroup/Job、pids 和禁止网络出口。
 回包 binding 必须匹配完整 view/option 哈希，导出不接受跨任务 PNG；stderr 不进入用户日志或报告。
 Linux 部署通过受信 `REPORT_RENDERER_NODE` 启动器继承 seccomp 的 socket 拒绝规则，父应用仍可访问 RPC；
 启动器仅允许固定包内脚本和固定 Node 参数，未知 ABI/无法启用隔离时拒绝。`REPORT_RENDERER_MODULES` 仅由运维设置。
 compose 提供 app 与 renderer 合计 2 GiB native 内存硬限、无额外 swap、256 pids、2 CPU、no-new-privileges、drop ALL capabilities；
-它不是每个 worker 独立的 native 内存保证，极端 OOM 可能影响同容器应用。单应用复用一个并发 2 的 renderer，
+它不是每个 worker 独立的 native 内存保证，极端 OOM 可能影响同容器应用。单应用复用一个 renderer，
+`export_slot()` 非阻塞预算覆盖 DOCX/PDF/HTML/PNG/SVG 完整构建生命周期及直接 render，最多一个线程导出；
+同线程嵌套可重入，其他线程立即拒绝，异常时释放。Node 返回后字体嵌入、PDF 排版和 ZIP 打包仍占完整预算。
+该串行预算不等于 native 内存硬限；原 JSON 下载不依赖 renderer 或该预算。
+页面衍生导出缓存全应用最多 16 MiB、单文件最多 8 MiB，每会话只保留当前完整视图五格式；
+会话状态不存格式 payload。框架媒体只释放自身精确 session/coordinate/fileID 引用，
+其他控件仍持有的去重文件继续计预算，原 JSON、原件及业务历史不清理；兼容能力缺失时拒绝注册。
+这些缓存常量是待低内存压力门确认的候选，不代表整机资源足够。
 进程另有 20 秒 CPU、64 fd、8 MB file-size、禁 core dump。worker 网络限制不依赖“代码没有网络调用”的假设。
 文档资源检查上限为每 attempt 400 条投影记录、1000 项 Finding、2 MB view 序列化与单文本 4096 字符、正文 6 万字符。
 绘图独立上限为 200 条保存记录，超限明确不可用；主图最多四条，拥挤并行线仅首条，明确标出总数。

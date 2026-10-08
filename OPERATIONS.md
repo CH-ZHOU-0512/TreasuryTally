@@ -27,8 +27,15 @@ Docker 使用 pinned Node 22.23.3 / Python 3.12 镜像与 renderer lock 的 `npm
 Fontconfig 注册包内字体；renderer-node 只允许固定参数和包内脚本，Linux seccomp 拒绝 socket 创建/连接等操作，
 不影响父应用的模型/RPC socket 能力。未知 ABI、seccomp 不可用或资源不足拒绝导出。
 生产 compose 设置总内存及 swap 2 GiB、256 pids、2 CPU、drop ALL capabilities 和 no-new-privileges；
-这约束应用与两个 renderer 的 native 总资源，不把 JS 堆 128 MB 称为独立 native 内存上限。
-单应用必须复用一个 renderer 实例，并发最多 2，20 秒 timeout；启动器另设 20 秒 CPU、64 fd、8 MB file-size 和禁 core dump。
+这约束应用与 renderer 的 native 总资源，不把 JS 堆 128 MB 称为独立 native 内存上限。
+单应用必须复用一个 renderer 实例；`export_slot()` 非阻塞完整导出预算为 1，Node 并发独立为 1，20 秒 timeout。
+DOCX 字体嵌入、PDF 排版、HTML 构建和 ZIP 打包结束前不释放完整预算，同线程嵌套可重入，竞争线程立即明确繁忙。
+原 JSON 下载独立于该预算；串行通过不代表低内存主机已适配，切换前仍需 SDK 预热、多会话与最坏规模实测。
+启动器另设 20 秒 CPU、64 fd、8 MB file-size 和禁 core dump。
+页面使用总 16 MiB / 单文件 8 MiB 的全应用私有衍生缓存，最多当前视图五格式；
+换视图或工作区清自己的衍生缓存和准确媒体引用，不清原 JSON 与历史。
+去重媒体使用 canonical bytes，其他控件尚未释放的引用仍占预算；超限或不兼容明确导出不可用。
+该候选缓存预算须与最终 source/wheel/image 的真实 SDK 预热、多会话及最坏规模测试共同验收，不是 native 硬限。
 全量镜像以主环境生成的 requirements.lock.txt 为 constraints；app-only release 必须基于已验证的新 renderer runtime，
 旧不含 Node/字体/报告依赖的基底会拒绝构建，不会假称 app-only wheel 更新已补齐运行环境。
 部署方加无网络、native 总内存/pids 限额；缺失依赖、失败或繁忙明确 EXPORT_UNAVAILABLE。Python 正式安装以规范生成的主环境锁为准，
