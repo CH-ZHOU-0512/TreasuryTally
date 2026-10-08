@@ -11,6 +11,24 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
+## 历史证据提示联合集成（2026-10-08，已合并，未部署）
+
+- [PR #27](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/27) 两项 CI 37723407162 / 37723414539 实际成功后，
+  主控显式合并为 `7708322a7b5022122fe2ef5721917de19095693a`；合并后主线 CI 37723670377 实际成功。
+  主线集成源非 external 实跑
+  715 passed / 16 deselected / 1 既有 warning（355.93 秒）；Ruff、pip check、21 Schema、1000 行与 diff 门通过。
+- 生产候选从 `49c5092` 单独合流为 `95da1903060e770abae49a21e3566e080fbb32b5`，不包含主线 M16。
+  该源非 external 实跑 691 passed / 16 deselected / 1 既有 warning（401.50 秒），与主线 715 项归属不同。
+  六个业务文件包含 RPC 分类、安全原因投影及页面精简；117 个 Python 源文件与 wheel 字节一致。
+- 广州服务器构建前可用内存不足 640 MiB 预检加 256 MiB 宿主余量的 896 MiB 门，已拒绝启动构建。
+  授权追加三次只读快照依次为 921010176 / 921735168 / 931880960 字节，均低于 939524096 字节门；
+  仅第三次有明确服务器时间 2026-10-08 11:41:24（Asia/Shanghai），不补造前两次时间。
+  不降低门、不停止现用服务、不清用户缓存；当前生产仍为原 `65343fee…` 健康镜像。
+  只上传私有发布包，未创建镜像或执行新镜像预检；本轮受限临时 SSH 副本已删除，用户原密钥不变。
+- 原 JSON 与原提示词仍待实际上线镜像的完整流程验证；允许得到真实 INCONCLUSIVE，并验证保存、恢复与 JSON/Word/PDF 导出，
+  不把流程运行通过写成财务一致。尚无完整参考历史证据、模型业务实测或新镜像部署；不发布、不写链。
+- 用户新增第一步预设专业核验要求的需求已交 M12 独立后续工作；不混入本轮已冻结发布源。
+
 ## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
 
 - 新增受限 `HISTORICAL_DATA_UNAVAILABLE`：只识别 eth_getLogs 的结构化整数 4444 加 history/pruned/unavailable 三个独立词，
@@ -21,7 +39,8 @@ last-reviewed: 2026-10-08
   区块哈希匹配上传报表，已知交易 receipt 和整区块 receipts 均为 null，不能作为完整参考证据。
   两个官方客户端 README 候选仅隔离验证：rpc.sepolia.org 首个 chain ID 响应无法解析 JSON，
   rpc-sepolia.rockx.com 首个 chain ID 连接失败；两者都未取得完整证据。没有切换生产端点或付费模型调用。
-  用户原文件与原提示词的完整流程尚未执行，当前仍需可用历史 RPC；不以空集合、receipt 子集或抽样宣布成功。
+  用户原文件与原提示词的完整流程尚未执行；财务一致性判定仍需可用历史 RPC，但 INCONCLUSIVE 流程可继续验收，
+  不以空集合、receipt 子集或抽样宣布报表一致。
 - 首版源码 overlay 分类实测未匹配：3.070 秒、三次 getLogs、仍 UNAVAILABLE，未部署。随后授权的单次安全特征探针
   确认 history/pruned/unavailable 同时出现，historical state/not available 不出现；据此收窄到三个独立词组合。
   另两授权候选 rpc.sepolia.online 连接失败、rpc.bordel.wtf/sepolia 响应不能解析 JSON；均在首个 chain ID 停止。
