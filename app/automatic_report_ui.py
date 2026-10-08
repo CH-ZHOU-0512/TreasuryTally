@@ -105,8 +105,8 @@ def render_automatic_report(
     count_source = "明细派生，非原作者声明" if "claimed_count" in derived else "原报表声明"
     st.write(f"总额（最小单位）：{report.claimed_total_base_units} · {total_source}")
     st.write(f"声明笔数：{report.claimed_count} · {count_source}")
-    st.caption("读取与识别不代表链上核验通过，也不认证报表作者；接下来仍需确认范围。")
     with st.expander("查看报表明细与读取来源"):
+        st.caption("读取不代表链上核验通过，也不认证报表作者。")
         st.json(report.model_dump(mode="json"))
         st.code(result.original_hash, language=None)
         st.caption(f"读取方式：{result.recognition_mode} · 原文件和识别来源仅私有留档")

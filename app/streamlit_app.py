@@ -168,9 +168,12 @@ def _runtime() -> AppRuntime | None:
 
 def _candidate_editor(runtime: AppRuntime) -> None:
     candidate = st.session_state.candidate
+    if "candidate_editor_key" not in st.session_state:
+        st.session_state.candidate_editor_key = uuid4().hex
+    editor_key = "scope-editor:" + st.session_state.candidate_editor_key
     manual = st.session_state.get("candidate_origin") == "manual"
     if manual:
-        st.caption("手工范围尚未确认：请逐项填写，表单没有采纳报表中的观察范围，也没有调用模型。")
+        st.caption("请填写核对范围。")
     if candidate.missing_fields and not manual:
         st.warning("缺失字段：" + "、".join(field.value for field in candidate.missing_fields))
     for issue in candidate.ambiguities:
@@ -179,32 +182,39 @@ def _candidate_editor(runtime: AppRuntime) -> None:
         st.caption(f"待确认：{question}")
 
     with st.container(border=True, key="panel-scope"):
-        st.info("待你确认：下面是整理后的核对条件，可直接修改。确认后才会锁定，不会自动开始核对。")
-        with st.form("task_editor"):
+        st.info("核对以下范围，可直接修改。")
+        with st.form(editor_key):
             left, right = st.columns(2)
             with left:
                 st.markdown("**链与资产**")
                 chain_id = st.number_input(
-                    "核对哪条链（链编号）", min_value=1, value=candidate.chain_id or 11_155_111,
-                    help="Sepolia 测试链编号是 11155111；请确认与报表使用的链一致。",
+                    "核对哪条链（链编号）", min_value=1, value=candidate.chain_id,
+                    key=editor_key + ":chain",
                 )
-                token = st.text_input("核对哪种代币（合约地址）", value=candidate.token_address or "")
-                start_block = st.number_input("起始区块（含）", min_value=0, value=candidate.start_block or 0)
-                end_block = st.number_input("结束区块（含）", min_value=0, value=candidate.end_block or 0)
+                token = st.text_input("核对哪种代币（合约地址）", value=candidate.token_address or "",
+                                      key=editor_key + ":token")
+                start_block = st.number_input("起始区块（含）", min_value=0, value=candidate.start_block,
+                                              key=editor_key + ":start")
+                end_block = st.number_input("结束区块（含）", min_value=0, value=candidate.end_block,
+                                            key=editor_key + ":end")
             with right:
                 st.markdown("**参与账户与规则**")
                 treasuries = st.text_area(
-                    "资金账户（每行一个，最多两个）", value="\n".join(candidate.treasury_addresses or ())
+                    "资金账户（每行一个，最多两个）", value="\n".join(candidate.treasury_addresses or ()),
+                    key=editor_key + ":treasuries",
                 )
                 recipients = st.text_area(
-                    "资助对象（每行一个）", value="\n".join(candidate.recipient_addresses or ())
+                    "资助对象（每行一个）", value="\n".join(candidate.recipient_addresses or ()),
+                    key=editor_key + ":recipients",
                 )
                 exclude_internal = st.checkbox(
-                    "排除资金账户之间的内部互转", value=bool(candidate.exclusion_rules)
+                    "排除资金账户之间的内部互转", value=bool(candidate.exclusion_rules),
+                    key=editor_key + ":exclude",
                 )
-                st.caption("本次最多核对 200 条相关记录；不会截断超限报表后当作完整结果。")
+                st.caption("最多 200 条记录")
             st.divider()
-            confirmed = st.checkbox("我已核对以上链、代币、账户、区块与排除规则，确认锁定此范围")
+            confirmed = st.checkbox("我已核对以上链、代币、账户、区块与排除规则，确认锁定此范围",
+                                    key=editor_key + ":confirmed")
             submitted = st.form_submit_button("确认范围，继续", type="primary", use_container_width=True)
 
     if not submitted:
@@ -216,6 +226,9 @@ def _candidate_editor(runtime: AppRuntime) -> None:
         return
     if not confirmed:
         st.error("任务未确认：请先勾选任务边界确认框。")
+        return
+    if any(value is None for value in (chain_id, start_block, end_block)):
+        st.error("任务未确认：请补齐链编号和起止区块。")
         return
     payload = {
         "schema_version": "1.0",
@@ -632,7 +645,6 @@ def _draft_task(runtime: AppRuntime) -> bool:
                     st.write(f"已读取：{report_name}")
                 with st.expander("查看报表留档指纹"):
                     st.code(digest, language=None)
-                st.caption("原报表和读取来源已私有留档；下一步确认核验范围，不会自动开始核对。")
             except (ValueError, OSError):
                 upload_valid = False
                 st.session_state.pop("uploaded_service", None)
@@ -645,7 +657,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
             st.session_state.pop("uploaded_report_hash", None)
             if input_mode == "上传自己的报表":
                 upload_valid = False
-                st.caption("请选择报表；读取失败或必要条件未明确时不能继续，不会用样例替代。")
+                st.caption("请上传报表。")
         default_request = (
             "" if input_mode == "上传自己的报表" else (
             f"核对 Sepolia 案例在区块 {real_case.candidate.start_block} 的转账；下一步可修改所有范围字段。"

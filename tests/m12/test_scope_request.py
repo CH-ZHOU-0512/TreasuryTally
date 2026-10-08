@@ -66,6 +66,7 @@ def test_each_required_field_must_be_explicit(field):
                                            FILLED.replace("记录上限：200", "记录上限：201")])
 def test_incomplete_or_conflicting_guided_input_is_not_ready(text):
     assert not request_ready(text, GUIDED)
+    assert not request_ready(text, RAW)
 
 
 def test_new_empty_guided_only_seeds_once_and_never_calls_model_implicitly():
@@ -90,7 +91,7 @@ def test_existing_raw_input_and_mode_switches_preserve_exact_original(raw):
     assert page.radio[0].value == RAW and page.text_area[0].value == raw
     page.radio[0].set_value(GUIDED).run()
     assert page.text_area[0].value == raw
-    assert button(page, "整理核对范围").disabled
+    assert button(page, "整理核对范围").disabled == (not raw.strip())
     page.radio[0].set_value(RAW).run()
     assert page.text_area[0].value == raw and not calls
     assert "task" not in page.session_state
