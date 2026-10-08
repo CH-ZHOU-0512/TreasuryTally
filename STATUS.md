@@ -15,6 +15,26 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
+### 低内存集成与旧业务清理（2026-10-08，未切换生产）
+
+- M14 原样集成 M13 完整导出预算及 M12 有界缓存，源码分别映射 `1cd6a05`、`1387d12`。
+  本分支完整非 external 实跑 605 passed / 16 deselected / 1 既有 warning，280.07 秒；
+  91 项导出/缓存/UI专项、Ruff、pip check、21 Schema 与 1000 行/diff 门通过。
+- 同源 `ce519c7cf0b64bbfbfbe72866f701f25bd2a7145` 完整/离线 release 镜像真实初始入口 115 源文件与 wheel 一致、exception=0。
+  512 MiB/swap=0/pids=128/CPU=1/network=none/只读下七例 PNG/DOCX/PDF、资产/字体/许可证/seccomp 门与实际五格式加 JSON 六下载通过。
+  离线构造并保留真实 OpenAI/DeepSeek/Web3 SDK，4 会话 14 view 实际生成 Word，再生成五格式通过。
+  六次拒绝实测均为 `download budget exceeded`，不是其他导出错误；JSON/结论/历史未改，OOM/max 事件均为 0。
+  初轮峰值 471818240 字节（约 450 MiB）；后续热轮 318902272 / release 326934528，仍按较高初轮评估。
+  512 配置及最终新源/镜像/服务器门仍须完成，不能用热轮较低峰值声称生产已上线。
+- 用户明确“除了这次 /opt/trust-receipt 及其要用到的东西，之前的都用不上”，按该扩展授权停止六个旧校园/作品集容器，
+  随后删除这六个及两个已停旧作品集容器、旧 `campus-creator_app-data` 卷、十二个 `campus-creator.previous-*` 精确目录及旧作品集源码。
+  先前批准的十二个旧归档亦已删除，逻辑大小共 157326141 字节；旧数据/源码无已核外部备份，不能保证恢复。
+  两个旧 workflow 服务已精确 stop/disable，尚未删除其源码/单位文件；没有全盘 prune 或系统目录清除。
+  Nginx 四个旧业务 proxy 路由改为 410，candidate/真实 nginx -t 和 reload 成功，信据代理/CSP/SSL/公开路径保留。
+  旧配置备份在 `/opt/trust-receipt-backups/retired-sites-20261008/nginx-before.conf`。
+  信据/Blockscout/Nginx 容器 ID 保持、信据 healthy、公网健康 200；可用内存恢复约 901 MiB。
+  本项目目录、数据、回执、回滚镜像/备份、Nginx/SSL/网络/log卷和运行依赖保护；没有模型/RPC请求、浏览器、公开上传或写链。
+
 ### M12 低内存导出页面适配（2026-10-08，本地验证，未部署）
 
 - 最小消费 M13 `4e8bfbea6e5a0556abae57655002c24bb954be16` 为本地 `42d27dd`，未摘其 STATUS。
