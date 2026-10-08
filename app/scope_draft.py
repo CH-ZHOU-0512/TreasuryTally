@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
+from app.scope_request import RAW, has_placeholders
 from trust_receipt.agents import TaskField, TaskSpecCandidate
 from trust_receipt.agents.task_draft import TASK_DRAFT_DEADLINE_SECONDS, TaskDraftError
 
@@ -27,7 +28,7 @@ def blank_manual_candidate():
 
 
 def clear_scope_candidate(state):
-    for key in ("candidate", "candidate_origin", "candidate_request", "draft_error"):
+    for key in ("candidate", "candidate_origin", "candidate_request", "candidate_request_mode", "draft_error"):
         state.pop(key, None)
 
 
@@ -37,9 +38,11 @@ def error_kind(error):
     return "invalid_output" if isinstance(error, ValidationError) else "unavailable"
 
 
-def render_scope_actions(st, runtime, request, *, valid_report, example=None):
+def render_scope_actions(st, runtime, request, *, valid_report, example=None,
+                         request_ready=True, request_mode=RAW):
+    request_ready = request_ready and not has_placeholders(request)
     if (st.session_state.get("candidate_origin") == "model"
-            and st.session_state.get("candidate_request") != request):
+            and (st.session_state.get("candidate_request") != request or not request_ready)):
         clear_scope_candidate(st.session_state)
     if st.session_state.get("provider") != "离线 fixture 演示" and example is None:
         st.caption(
@@ -53,7 +56,8 @@ def render_scope_actions(st, runtime, request, *, valid_report, example=None):
     if st.button(
         "重试整理核对范围" if failed else "整理核对范围",
         type="secondary" if "candidate" in st.session_state or not valid_report else "primary",
-        disabled=not valid_report or (example is None and not request.strip()), use_container_width=True,
+        disabled=not valid_report or (example is None and (not request.strip() or not request_ready)),
+        use_container_width=True,
     ):
         clear_scope_candidate(st.session_state)
         try:
@@ -62,6 +66,7 @@ def render_scope_actions(st, runtime, request, *, valid_report, example=None):
                 st.session_state.candidate = TaskSpecCandidate.model_validate(candidate)
             st.session_state.candidate_origin = "example" if example is not None else "model"
             st.session_state.candidate_request = request
+            st.session_state.candidate_request_mode = request_mode
         except (TaskDraftError, ValidationError) as error:
             st.session_state.draft_error = error_kind(error)
         except Exception:

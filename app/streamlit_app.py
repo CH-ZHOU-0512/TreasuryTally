@@ -35,6 +35,7 @@ from app.report_graph import render_report_graph
 from app.report_intake import render_report_intake
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
 from app.scope_draft import clear_scope_candidate, render_scope_actions
+from app.scope_request import RAW, preserve_scope_inputs, render_scope_request, request_ready
 from app.service_history import render_workspace_history
 from app.styles import APP_CSS
 from trust_receipt.agents import TaskSpecCandidate
@@ -207,6 +208,11 @@ def _candidate_editor(runtime: AppRuntime) -> None:
             submitted = st.form_submit_button("确认范围，继续", type="primary", use_container_width=True)
 
     if not submitted:
+        return
+    if st.session_state.get("candidate_origin") == "model" and not request_ready(
+        st.session_state.get("candidate_request", ""), st.session_state.get("candidate_request_mode", RAW),
+    ):
+        st.error("任务未确认：请先补齐范围说明，不能锁定未填写的占位内容。")
         return
     if not confirmed:
         st.error("任务未确认：请先勾选任务边界确认框。")
@@ -535,6 +541,7 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
 
 
 def _draft_task(runtime: AppRuntime) -> bool:
+    preserve_scope_inputs(st.session_state)
     _section("上传报表", "上传 CSV、Excel .xlsx 或 JSON，系统自动读取并识别报表。")
     panel = (
         st.expander("已读取的报表与原范围说明", expanded=False)
@@ -646,20 +653,23 @@ def _draft_task(runtime: AppRuntime) -> bool:
             "核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。"
             )
         )
-        if "scope-request" not in st.session_state or (not st.session_state["scope-request"] and default_request):
-            st.session_state["scope-request"] = default_request
-        request = st.text_area(
-            "说明要核对的范围", value=None,
-            placeholder="说明链、代币、付款与收款账户、起止区块，以及是否排除内部互转。",
-            height=130,
-            key="scope-request",
-            disabled=input_mode == "加载真实 Sepolia 案例",
-            help="这里不会直接触发链上操作；系统先生成一份可修改候选。",
-        ) or ""
-        st.caption("下一步会展示结构化字段供你逐项确认，不会自动冻结或执行。")
+        if input_mode == "上传自己的报表":
+            request, ready = render_scope_request(st)
+        else:
+            if not st.session_state.get("scope-example-request"):
+                st.session_state["scope-example-request"] = default_request
+            request = st.text_area(
+                "说明要核对的范围", value=None,
+                placeholder="说明链、代币、付款与收款账户、起止区块，以及是否排除内部互转。",
+                height=130, key="scope-example-request", disabled=input_mode == "加载真实 Sepolia 案例",
+                help="这里不会直接触发链上操作；系统先生成一份可修改候选。",
+            ) or ""
+            ready = True
         render_scope_actions(
             st, runtime, request, valid_report=upload_valid,
             example=real_case.candidate if input_mode == "加载真实 Sepolia 案例" else None,
+            request_ready=ready,
+            request_mode=st.session_state["scope-request-mode"] if input_mode == "上传自己的报表" else RAW,
         )
     return upload_valid
 
