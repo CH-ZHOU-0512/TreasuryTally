@@ -96,17 +96,20 @@ def generate_task_draft(
     try:
         return asyncio.run(bounded())
     except (TimeoutError, APITimeoutError):
-        raise TaskDraftError("timeout") from None
+        kind = "timeout"
     except RateLimitError:
-        raise TaskDraftError("rate_limit") from None
+        kind = "rate_limit"
     except APIConnectionError:
-        raise TaskDraftError("connection") from None
+        kind = "connection"
     except APIStatusError:
-        raise TaskDraftError("provider") from None
+        kind = "provider"
     except (
         ValidationError, OutputParserException, json.JSONDecodeError,
         LengthFinishReasonError, ContentFilterFinishReasonError,
     ):
-        raise TaskDraftError("invalid_output") from None
+        kind = "invalid_output"
     except Exception:
-        raise TaskDraftError("unavailable") from None
+        kind = "unavailable"
+    # Raise after leaving the SDK exception handler: even __context__ must not
+    # retain a response object/body if the caller stores this public error.
+    raise TaskDraftError(kind)

@@ -42,6 +42,8 @@ def test_real_sdk_transport_failures_are_single_attempt_and_safe(monkeypatch, ad
         adapter.generate(schema=TaskSpecCandidate, system_prompt="Return JSON.", payload={"user_request": "scope"})
     assert captured.value.kind == kind
     assert "SECRET" not in str(captured.value)
+    assert captured.value.__context__ is None
+    assert captured.value.__cause__ is None
     assert len(calls) == 1
     assert clients[-1].is_closed
     assert clients[-1].timeout.read == 20
