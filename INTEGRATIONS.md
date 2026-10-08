@@ -177,6 +177,9 @@ Finding、三态结论、数据库、发布或写链权限。
 - DeepSeek：要求 `DEEPSEEK_API_KEY` 与非空 `DEEPSEEK_MODEL`；使用官方 `https://api.deepseek.com` 的
   OpenAI-compatible Responses API 和 JSON Schema 输出。
 - 两者统一 30 秒默认超时、只读请求最多重试两次；原始响应必须立即进入 Pydantic 与确定性白名单校验。
+- 范围候选 `TaskSpecCandidate` 例外：独立 20 秒操作预算、SDK 自动重试为 0、输出最多 2048 tokens。
+  使用 async transport 取消等待并关闭本次连接，不用后台同步线程；超时仍失败，不采用迟到候选或自动换供应商。
+  本地关闭连接不能保证供应商终止已经收到的请求或不计费。此策略不改变表头识别、主张/计划/解释的既有配置。
 - 外部测试分别位于 `tests/external/test_openai_ai_probe.py` 和 `test_deepseek_ai_probe.py`，统一使用 `external` marker。
 - 缺少 key 或固定模型名时报告阻塞；离线 mock 只能验证 adapter 映射和安全边界，不能宣称供应商已实测。
 

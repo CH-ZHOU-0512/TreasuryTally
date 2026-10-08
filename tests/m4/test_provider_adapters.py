@@ -16,7 +16,7 @@ def test_deepseek_adapter_uses_compatible_responses_api_without_tools(monkeypatc
             observed["strict"] = strict
             return self
 
-        def invoke(self, messages):
+        async def ainvoke(self, messages):
             observed["messages"] = messages
             return ready_candidate.model_dump(mode="json")
 
@@ -31,6 +31,9 @@ def test_deepseek_adapter_uses_compatible_responses_api_without_tools(monkeypatc
     assert result == ready_candidate
     assert observed["configuration"]["base_url"] == "https://api.deepseek.com"
     assert observed["configuration"]["use_responses_api"] is True
+    assert observed["configuration"]["max_retries"] == 0
+    assert observed["configuration"]["timeout"] == 20
+    assert observed["configuration"]["max_completion_tokens"] == 2048
     assert observed["schema"] is TaskSpecCandidate
     assert observed["method"] == "json_schema"
     assert observed["strict"] is True

@@ -11,6 +11,15 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
+## 候选请求超时修复（2026-10-08）
+
+- 仅范围候选采用独立 20 秒异步操作预算、SDK retry=0 与输出 2048 tokens 上限；请求取消后关闭本次连接，
+  不接纳迟到候选。失败分为 timeout/connection/rate_limit/provider/invalid_output/unavailable，公开消息不含供应商正文。
+  其他 AI 步骤、表头识别及字段/金额/任务确认校验不变。本地取消不保证远端停止生成或计费。
+- 已执行 M4、M5 与文档治理专项：58 项通过；Ruff、pip check、1000 行门和 diff check 通过。
+  OpenAI/DeepSeek 真实 SDK 加无网络 mock transport 检查单次失败、取消和连接关闭，不能称真实模型延迟已改善。
+- 页面安全提示/手动范围入口由 M12 集成中；此补丁尚未发布或部署，生产仍为此前 dc89905 版本。
+
 更新时间：2026-10-08
 
 ## 当前阶段
