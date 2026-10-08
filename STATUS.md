@@ -20,9 +20,36 @@ last-reviewed: 2026-10-08
   OpenAI/DeepSeek 真实 SDK 加无网络 mock transport 检查单次失败、取消和连接关闭，不能称真实模型延迟已改善。
 - 非 external 全量为 621 项通过、16 项外部门排除；独立 Linux SDK mock transport 12 类案例通过，
   0.15 秒测试预算下挂起请求均在约 0.152 秒取消并关闭连接。该诊断不代表最终发布镜像或线上供应商实测。
-- 页面安全提示/手动范围入口由 M12 本地集成通过；此补丁尚未发布或部署，生产仍为此前 dc89905 版本。
+- 页面安全提示/手动范围入口由 M12 集成通过；本次最小超时修复已部署，发布记录如下。
 
-### M12 范围整理安全恢复（本地验证，未部署）
+### 超时修复发布（2026-10-08，已部署）
+
+- [PR #25](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/25) 已合并为
+  `75a1a7961a6ff2f386425ddc049c25c4306af539`；分支、PR 与合并后主线 CI 37720082435 实际成功。
+  生产只采用独立发布源 `49c5092cd4e31b838e5c5c80f65a937d0f40052c`：dc899 基线加候选核心与 M12 UI，
+  不包含主线另行合入的 M16 上传服务变更；镜像 revision 不伪装为最新 main SHA。
+- M12 同业务源码全量离线门为 638 passed / 16 external deselected / 1 既有 warning；
+  M14 核对 app/src/tests/scripts/deploy/依赖声明与该 tested 源完全相同，追加本 checkout 专项 36 passed。
+  source tar SHA-256 `8d26706c025db20d2b5b683ca9e9a10de200ac0dd21e2ea2eb16ff1951032ecd`，
+  wheel SHA-256 `204a733a8d8c9011bb604a0cfd24656f4848469b441704731ea3057953fe4744`，服务器已实核。
+- 最终服务器镜像 `sha256:65343fee4bbe87af570f572f8dae9a6dac17cda9ccb41b05d031c46431992ce5`，
+  116 源文件与 wheel 一致，真实入口 AppTest 零 exception。640 MiB/swap=0/pids=128/CPU=1 下同过程
+  七例导出、SDK 预热、四会话十四 view 与五格式/原 JSON、隔离/字体/资产门通过。
+  两 API 的 SDK mock transport 十二例单次请求、错误分型/取消/关闭连接/无异常正文保留通过；
+  实际镜像入口七类安全错误、显式重试、手工零模型调用、确认门及三类非法范围拒绝通过，attempt 执行为 0。
+  综合 native peak `406515712` 字节（约 388 MiB），memory.events max/oom/oom_kill/pagecache_max/pagecache_oom 全为 0。
+- 仅切换 app 后容器 `0c4b16e0283cb93cfac16a9a2c91c602c8d7c6aa99d8ba109d253bdc81df5df6`
+  healthy、OOMKilled=false；Memory=MemorySwap=671088640，pids=128，CPU=1，drop ALL、no-new-privileges。
+  页面/健康/原 Logo HTTP 200，独立 TLS WebSocket 握手 101；只测试握手，未发送 Streamlit 业务消息。
+  APP_REQUIRE_LIVE=true、M6_ENABLE_WRITES=false、候选预算 20 秒/2048 tokens 实核通过。
+- 原 env 哈希、三个数据/回执挂载、开发目录源码、Blockscout/Nginx ID 与启动时间不变。
+  Nginx 配置哈希仍为 `a2741d5c9f7d6e9ee039d5049bef6426d85a4ae58890dd42578784160df7bdd5`，
+  只执行配置测试与 reload；未重建代理。回滚镜像与无 env/data 的旧部署源码/Compose 位于
+  `/opt/trust-receipt-backups/scope-before-49c5092`；本次切换一次成功，未触发自动回滚。
+- 未做真人/浏览器或真实模型延迟验收，未新增付费模型、RPC、公共上传或写链；不承诺供应商不再超时，
+  也不承诺本地取消后远端停止生成或计费。
+
+### M12 范围整理安全恢复（本地验证记录）
 
 - 从精确发布基线 `867ca61` 消费 M14 `a83c826` 和最终安全修补 `26fc747`，本地分别映射 `9587a56` / `c18a05d`；
   未混入 M16 上传服务、主线其他改动或共享脏工作区。页面只存固定错误 kind，不显示或保留供应商异常正文。
@@ -60,7 +87,7 @@ last-reviewed: 2026-10-08
 - 首次应用切换内部健康及配置通过，但公网根检查因 Nginx 上游旧 IP 缓存超时，按失败门自动回滚旧镜像。
   定向 `nginx -t`/reload 恢复旧公网 200 后重试；第二次健康后刷新代理上游，最终页面/健康/原始 Logo HTTP 200，
   独立 TLS WebSocket 握手 101。Nginx 配置哈希与已审查退役路由配置精确相同，未重建代理。
-  当前容器 `86f3985d4c0d2058ab53c88d9ef6593f485fc60325de02cff9bb3942bd2fa931` healthy、OOMKilled=false，
+  该次切换后容器 `86f3985d4c0d2058ab53c88d9ef6593f485fc60325de02cff9bb3942bd2fa931` healthy、OOMKilled=false，
   实核 Memory=MemorySwap=671088640、PidsLimit=128、NanoCpus=1000000000、drop ALL、no-new-privileges。
 - 原 `.env` SHA-256 保持 `ce0a52c9de223764e09ce9b3650d1283280af3245639d80ec4dce34766960a06`，
   live=true、M6 writes=false，三个 data/private/public 绝对挂载不变；Blockscout/Nginx ID 与 StartedAt 不变。
