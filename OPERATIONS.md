@@ -121,6 +121,22 @@ DATABASE_URL=sqlite:///data/trust_receipt.db
 用户可显式重试或手动填写范围，仍须严格校验和确认；失败不创建任务、不消耗 attempt、不触发链上操作。
 其他 AI 步骤与表头识别预算不变；不新增凭据或环境变量。
 
+候选超时修复使用独立部署目录 `/opt/trust-receipt-releases/scope-49c5092/source`，
+镜像 `trust-receipt:scope-49c5092` 的实际 revision 为 `49c5092cd4e31b838e5c5c80f65a937d0f40052c`。
+不能以仓库最新 main 直接覆盖此发布范围。回滚到修复前已部署镜像时，仅执行 app：
+
+```bash
+docker compose --project-directory /opt/trust-receipt/deploy -p deploy \
+  -f /opt/trust-receipt-backups/scope-before-49c5092/compose-before.yml \
+  -f /opt/trust-receipt-backups/scope-before-49c5092/rollback-image.yml \
+  up -d --no-deps --no-build app
+docker exec campus-creator-nginx nginx -t
+docker exec campus-creator-nginx nginx -s reload
+```
+
+回滚后确认健康、HTTPS 页面/Logo/WebSocket、原 env/挂载/开发源码和受保护服务一致；不调用模型或链上业务。
+`trust-receipt:scope-rollback-49c5092` 固定旧镜像；源码备份不含 env、用户数据或回执，不用它覆盖运行数据。
+
 所有私钥必须是测试网专用密钥。
 
 `AGENT0_SERVICE_ID` 必须指向团队控制的演示身份，`AGENT0_EXPECTED_OWNER` 用于在探针中强制核对所有者。
