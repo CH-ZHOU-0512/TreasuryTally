@@ -910,6 +910,17 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
 
 ## M15–M16 并行启动（2026-10-07）
 
+- 2026-10-08 原件并发落盘修复（本地完成，待主控集成）：PR24 CI 暴露 M16 两个已批准 challenge 同原件留档时，
+  `xb` 先创建哈希目标、后写入，另一写入者读取半成品而误报损坏。暂停半写的最小测试已先稳定失败。
+  `services.upload.retain_original` 改为同目录私有临时文件完整写入/flush/fsync/close 后硬链接原子创建目标；
+  已有目标仍逐字节核对，不覆盖损坏，不支持硬链接明确失败，仅清理本次 owned temp。
+  新原件专项 9 项，M16/attempt/治理组合 37 passed；原 MCP 并发测试 20 个独立 pytest 轮次全部通过。
+  包含最新报告与 M16 的非 external 全量 629 passed / 16 deselected / 1 条既有 warning（117.60 秒）；
+  Ruff、pip check、21 Schema、文件规模与 diff 门通过。Windows NTFS 实测线程与 spawn 进程并发；
+  Linux 既有本地镜像无 pytest，改用 stdlib 无网络只读挂载探针，暂停半写独立进程、20×8 线程、0600、
+  损坏拒绝及不支持硬链接清理通过，不将该挂载探针计为镜像源码/wheel一致性或生产验收。
+  本轮未推送/合并/部署，未触碰线上数据、真实模型/RPC、公开上传、写链或浏览器；生产仍不包含该修复。
+
 - 2026-10-08：用户授权推送并合并 M16。已合流 GitHub API 核实的主线 `867ca617c02b493cd9b919133f1187669934d8e0`，
   保留现有报表导出与部署记录；服务显示名为 TreasuryTally，8 项工具名称和技术包标识保持兼容。
   合流后 M16、attempt 状态与文档治理专项 28 passed；Ruff、pip check、21 Schema、文件规模与 diff 门通过。

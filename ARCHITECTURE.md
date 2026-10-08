@@ -76,6 +76,8 @@ M8 已实现承诺端口和资金流投影：`commitments` 负责 EIP-712 创建
 只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。
 
 `services.upload` 严格解析原始 JSON 声明并私有留档，以独立 local-upload-intake 身份签名；这不认证原始作者。
+原件先写同目录独占临时文件，flush/fsync 并关闭后以不可覆盖硬链接发布哈希路径；跨线程/进程只看见完整原件。
+已有目标仍核对完整字节，文件系统不支持硬链接时明确失败，不回退直接写目标或替换已有证据。
 `services.report_conversion` 及受限 reader 只负责 CSV/XLSX 到 UploadedReport 的确定性格式适配，不执行公式或查询 RPC。
 ADR-032 的 `services.header_recognition` 通过既有 StructuredOutputPort 只让固定真实模型识别安全表头的列角色，
 不发送明细、文件名或私有备注；`services.report_recognition` 绑定真实列、已知字段和原数据，提供统一自动上传用例。
