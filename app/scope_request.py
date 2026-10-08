@@ -34,8 +34,6 @@ def preserve_scope_inputs(state):
 def request_ready(request: str, mode: str = RAW) -> bool:
     if not request.strip() or has_placeholders(request):
         return False
-    if mode == RAW:
-        return True
     fields = {}
     for line in request.splitlines():
         parts = re.split(r"[：:]", line, maxsplit=1)
@@ -44,7 +42,11 @@ def request_ready(request: str, mode: str = RAW) -> bool:
             if key in fields:
                 return False
             fields[key] = value
-    return all(fields.get(key) for key in REQUIRED_FIELDS) and fields["记录上限"] == "200"
+    # The template is scaffolding, not the only accepted language. A template
+    # fragment still needs all its fields; prose is checked by candidate validation.
+    return not fields or (
+        all(fields.get(key) for key in REQUIRED_FIELDS) and fields["记录上限"] == "200"
+    )
 
 
 def render_scope_request(st):

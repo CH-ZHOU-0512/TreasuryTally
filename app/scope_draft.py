@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from app.scope_request import RAW, has_placeholders
 from trust_receipt.agents import TaskField, TaskSpecCandidate
-from trust_receipt.agents.task_draft import TASK_DRAFT_DEADLINE_SECONDS, TaskDraftError
+from trust_receipt.agents.task_draft import TaskDraftError
 
 ERROR_COPY = {
     "timeout": "整理核对范围超时。本次本地等待已停止，没有取得可用候选。",
@@ -28,7 +28,8 @@ def blank_manual_candidate():
 
 
 def clear_scope_candidate(state):
-    for key in ("candidate", "candidate_origin", "candidate_request", "candidate_request_mode", "draft_error"):
+    for key in ("candidate", "candidate_origin", "candidate_request", "candidate_request_mode",
+                "candidate_editor_key", "draft_error"):
         state.pop(key, None)
 
 
@@ -44,15 +45,10 @@ def render_scope_actions(st, runtime, request, *, valid_report, example=None,
     if (st.session_state.get("candidate_origin") == "model"
             and (st.session_state.get("candidate_request") != request or not request_ready)):
         clear_scope_candidate(st.session_state)
-    if st.session_state.get("provider") != "离线 fixture 演示" and example is None:
-        st.caption(
-            f"候选生成使用单次 {TASK_DRAFT_DEADLINE_SECONDS} 秒本地等待预算，不自动重试。"
-            "停止本地等待不代表供应商已取消处理；也不代表已确认范围或链上核验。"
-        )
     failed = "draft_error" in st.session_state
     if failed:
         st.error(ERROR_COPY.get(st.session_state.draft_error, ERROR_COPY["unavailable"]))
-        st.info("上传报表和范围说明已保留。可显式重试，或直接手工填写核验范围；仍需校验和确认，不会自动核验。")
+        st.info("报表和说明已保留。可重试，或直接填写范围。")
     if st.button(
         "重试整理核对范围" if failed else "整理核对范围",
         type="secondary" if "candidate" in st.session_state or not valid_report else "primary",

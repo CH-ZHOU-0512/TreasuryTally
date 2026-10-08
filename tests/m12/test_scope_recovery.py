@@ -8,7 +8,7 @@ from streamlit.testing.v1 import AppTest
 from app.scope_draft import ERROR_COPY, blank_manual_candidate
 from tests.m12.test_conversion_page_flow import button, uploaded_page
 from trust_receipt.agents import TaskField
-from trust_receipt.agents.task_draft import TASK_DRAFT_DEADLINE_SECONDS, TaskDraftError
+from trust_receipt.agents.task_draft import TaskDraftError
 
 
 def scope_harness():
@@ -49,8 +49,8 @@ def test_typed_error_has_distinct_safe_copy_and_preserves_request_without_retry(
     page.run()
     assert len(calls) == 1
     assert not button(page, "重试整理核对范围").disabled
-    assert any(str(TASK_DRAFT_DEADLINE_SECONDS) in item.value and "不自动重试" in item.value
-               for item in page.caption)
+    assert any("报表和说明已保留" in item.value for item in page.info)
+    assert not any("本地等待预算" in item.value for item in page.caption)
 
 
 def test_unknown_exception_is_not_stored_or_displayed():
