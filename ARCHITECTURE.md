@@ -178,6 +178,11 @@ M8–M10 在此基础上追加：
 13. 独立验证入口从公开 URI、回执哈希、任务哈希或反馈交易恢复对象关系并重放确定性结论。
 14. 服务历史投影按任务类型聚合可验证事实，供下一次人工选择服务使用。
 
+M16 在页面之外增加 `HeadlessTrustReceiptPort`。facade 组合既有候选、确认、上传、验证、repository 与回执重放端口；MCP
+adapter 只负责 stdio 协议和输入/错误映射，不导入验证内部函数，不拥有金额或三态判定。工作区 registry 把不透明 handle
+映射到固定本地数据库与私有回执根，MCP 请求永远不接受路径。一次性授权 store 位于对应工作区边界内，准备、批准、消费和
+幂等结果分离；批准命令不注册为 MCP tool。当前不提供 HTTP transport、多租户、公开发布或写链 adapter。
+
 本地回执存储使用只创建、不覆盖的 JSON 文件。独立重放入口重新校验 `receipt_hash`、嵌套 `spec_hash`、任务链接，
 并仅根据参考完整性、证据充分性和 confirmed error 重新推导 PASS/FAIL/INCONCLUSIVE；它不依赖原聊天历史、UI、
 数据库连接或模型服务。

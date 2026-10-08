@@ -175,6 +175,16 @@ D:\HACKTHON\.venv-blockscout\Scripts\python.exe `
 
 默认本地数据写入 `data/`，私有回执写入 `receipts/private/`，两者均不提交版本库。
 
+## 启动 M16 本机 MCP
+
+M16 不启动公网 HTTP。先复制 `docs/m16/mcp-workspaces.example.json` 为 Git 忽略的本机配置，替换随机 workspace handle 与
+私有目录，再按 `docs/m16/codex-mcp.example.json` 配置客户端。启动命令、外置批准流程和工具清单见
+`docs/m16/README.md`。默认 live profile 从项目 `.env` 读取固定模型和 `ETH_RPC_URL`；缺配置返回 `BLOCKED`，不会改用 fixture。
+
+MCP 客户端准备确认或核验后，必须由用户在独立终端运行 `python -m trust_receipt.headless.cli ... approve` 并输入完整动态短语。
+不得把 approval CLI 注册成 MCP tool，也不得为自动化方便增加 `--yes`。服务重启后可安全重试已消费 challenge；第三次 attempt
+仍由 repository 拒绝。当前不部署、不反代、不开放端口。
+
 ### Linux 容器部署
 
 首屏品牌与 CSS 通过 `st.html` 渲染，Logo eager 请求原生媒体管道生成的 288px PNG 预览，两个位置共用内容寻址资源；不重绘或替换原始品牌 PNG。媒体 URL 保留反向代理的 baseUrlPath 前缀，原始静态 URL 作为无媒体运行时的回退。

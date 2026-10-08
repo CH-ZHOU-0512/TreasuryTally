@@ -223,6 +223,15 @@ chain ID、bytecode、交易成功、canonical block、至少两次确认、事�
 未找到交易、确认不足或公开 parent 不可用返回 INCONCLUSIVE；内容或已观察到的对象关系冲突返回 INVALID。
 该入口没有广播方法，不需要 Reviewer 私钥。
 
+## M16 MCP SDK 与传输边界
+
+M16 复用项目现有 `mcp==1.26.0`，不新增依赖或修改 lock。实现按官方 Python SDK 的 stdio server/client 组合核实：server 使用
+`FastMCP.run(transport="stdio")`；测试客户端以 `StdioServerParameters`、`stdio_client`、`ClientSession.initialize()`、
+`list_tools()` 和 `call_tool()` 完成真实 JSON-RPC 握手。stdio 子进程由客户端启动和关闭，stdout 不写业务日志。
+
+本轮不启用 SSE 或 Streamable HTTP，不宣称公网认证或多租户能力。RPC 仍只读并遵守既有超时与最多两次只读重试；缺少
+`ETH_RPC_URL` 时 M16 返回 `BLOCKED` 且不以 fixture 补位。MCP server 不包含公共发布、ERC-8004 广播或其他写链工具。
+
 ## M0 验收命令
 
 ```powershell

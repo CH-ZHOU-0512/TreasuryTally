@@ -117,6 +117,19 @@ app 单实例 renderer，主动触发五种格式生成，断言原 JSON 加五�
 - 可用性：首次访问只出现一句价值说明、三步主流程和一个主按钮；固定演示不依赖口头解释即可走通
   `FAIL → 返工 → PASS → 发布 → 验证`。
 
+### M16 headless / MCP 验收
+
+- 用真实 stdio 子进程执行 MCP `initialize`、`tools/list` 与每类 `tools/call`，不能只调用 adapter Python 函数。
+- 未经本机外置批准的任务确认与报表核验返回 `AUTHORIZATION_REQUIRED`；MCP tool 不提供批准能力。
+- 同一 challenge 重复调用和 server 重启后调用返回相同 task/attempt；第二次 attempt 后准备第三次必须拒绝。
+- 授权摘要绑定 workspace/action/content/task/spec/attempt；同候选跨工作区摘要不同，challenge 不能跨工作区消费。
+  AttemptResultView 必须携带与确认任务和回执一致的 `spec_hash`，供消费者拒绝范围漂移。
+- 准备与消费 challenge 都读取持久化 AttemptStatus；REQUESTED/SUBMITTED/VERIFYING、缺失/冲突回执必须阻塞。两个并发、
+  已批准且绑定同一 next attempt 的 challenge 只能有一个取得预留，另一方不得生成交付。
+- 跨 workspace task/challenge、路径穿越、额外 path/SQL/code/secret 字段、重复 JSON key、浮点金额和超限报告全部拒绝且不回显输入。
+- 默认 live profile 缺模型或 RPC 明确 `BLOCKED` 且不消费 attempt；fixture profile 在全部响应中标记测试来源。
+- 结果、回执和重放只从固定 workspace 读取；不得输出原始报告、签名、底层路径、RPC URL、环境变量或密钥。
+
 ## 前端规范回归
 
 - 字号 token 必须精确对应 `12/14/16/20/24px`；自定义 HTML、原生标题、输入、按钮、说明、JSON 与图节点均纳入检查。
