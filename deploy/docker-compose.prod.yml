@@ -6,8 +6,8 @@ services:
     image: trust-receipt:${TRUST_RECEIPT_IMAGE_TAG:-latest}
     container_name: trust-receipt
     restart: unless-stopped
-    mem_limit: 512m
-    memswap_limit: 512m
+    mem_limit: 640m
+    memswap_limit: 640m
     pids_limit: 128
     cpus: 1
     security_opt:

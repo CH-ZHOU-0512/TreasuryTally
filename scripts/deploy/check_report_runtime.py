@@ -53,7 +53,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("views", type=Path)
-    parser.add_argument("--memory-mib", type=int, default=512)
+    parser.add_argument("--memory-mib", type=int, default=640)
     parser.add_argument("--pids", type=int, default=128)
     args = parser.parse_args()
     assert args.memory_mib > 0 and args.pids > 0
