@@ -16,9 +16,9 @@ last-reviewed: 2026-10-08
 - 当前生产已上线 `d897b5c` / `e2cf19`，具体保护、预检及回滚记录见下方发布节；此前未部署与内存不足段落是明确的历史快照。
 - 用户明确原 `corrected-complete.json` 不是唯一验收范围：主页 `error-missing-transfer.json` 与 `corrected-complete.json`
   必须实际下载并重传，在同一固定任务保留错误版首次与修正版补交两次核对；还须覆盖 CSV/XLSX 正常上传路径。
-- 主控已授权 M14 在服务器新建隔离测试工作区实测原文件/原提示词及主页双文件流程，必要真实模型调用合计最多 14 次，
-  每阶段一次、不自动重试；CSV/XLSX 追加矩阵待确认。保存、独立运行时恢复及 JSON/Word/PDF 导出均属验收，不仅检查首页可打开。
-- 主页 native AppTest 实际媒体两轮读取已由 M14 实测并校验原字节，零业务调用；这不等于真实链上业务已验收。
+- 主控授权的原文件/主页双文件实测已执行累计 10 次模型调用，失败未重试；原候选失败、主页第二 AI 建议被拒绝。
+  主页两次核对已保存回执，并完成独立恢复和 JSON/Word/PDF 导出；CSV/XLSX 追加真实矩阵尚未执行。
+  AI 异常信息安全修复由 M14 核心、M12 页面并行实施，未合并或部署。
   浏览器自动化仍暂停，不将 native 上传适配或媒体测试记作浏览器 HTTP 上传/下载。
 - 当前历史 RPC 无法提供区块 11855664 完整转账证据。安全返回 INCONCLUSIVE 只能证明证据不足流程正确，
   不能关闭修正版 PASS / 错误版 FAIL→修正版 PASS 的业务验收，也不能宣称全部正常路径完成；不公开回执、不写链。
@@ -41,7 +41,38 @@ last-reviewed: 2026-10-08
   不把流程运行通过写成财务一致。尚无完整参考历史证据、模型业务实测或新镜像部署；不发布、不写链。
 - 用户新增第一步预设专业核验要求的需求已交 M12 独立后续工作；不混入本轮已冻结发布源。
 
-## 历史拒绝与范围模板发布（2026-10-08，已上线、真实案例待验）
+## 历史拒绝与范围模板发布（2026-10-08，已上线、真实案例部分通过）
+
+### 原文件与主页案例实际验证
+
+- 在精确线上 e2cf19/d897 image 和同生产网络，用两个新独立私有工作区执行授权原文件/主页案例；
+  不读取旧用户工作区，不公开上传或写链。真实模型累计 10 次，私有诊断 SDK retry=0；不改变生产其他 AI 阶段重试配置。
+  两个临时 case.env 已删除；失败阶段均未重新调用，CSV/XLSX 真实调用仍为 0。
+- 原文件工作区 original-case-d897-a：原702字节与原提示词上传保留通过；第一次候选调用8.462秒失败，
+  诊断 wrapper 丢失原异常类别，只能标记 UNKNOWN，不能据耗时猜测 timeout。tasks/attempts/results/publication/m8 全为0。
+  资源峰值176312320字节，memory.events max/oom/oom_kill/pagecache_max/pagecache_oom 全0。
+- 主页工作区 homepage-case-d897-a：真实原生主页媒体下载和 UploadedFile 再上传通过，候选3.489秒合法且人工确认。
+  首次错误报表完成核对、回执及原生 JSON/Word/PDF 导出；修正版在同任务完成第二核对与回执。
+  SQLite 实际 tasks=1、attempts=2、verification_results=2、m8_artifacts=4、publication_events=0。
+  两次均 INCONCLUSIVE、reference_complete/evidence_sufficient=false，计算金额与数量均 null；不是金融 FAIL→PASS 验收。
+- 主页案例9次真实模型调用：候选及首轮4项全部 schema 合法；第二轮主张、计划、解释合法，
+  最后一项 FollowUpAdvice 在 adapter.generate 内抛出 Pydantic ValidationError，2.751秒。
+  具体字段 loc/type 未保存，不能追回或猜测。严要求全部 AI 工件合法的测试门失败，但产品安全捕获后已保存第二回执；
+  不把这个测试 assert 当作第二核对失败。峰值320294912字节，上述五个内存事件全0。
+- 随后授权独立只读恢复：源新工作区全文件只读挂载，复制到临时目录，network=none、dummy非真实凭据、
+  socket/AI/RPC/attempt/发布/写链入口全部拒绝。新实际 AppTest 会话恢复两个独立回执并 replay valid；
+  第二回执原生 JSON/Word/PDF 导出通过，格式切换原 JSON 不变，源全文件前后 SHA-256 一致，新增模型/RPC调用0。
+  Word6408878字节、SHA d5d426014c3b3ea99679daf7d212466c901b6aef29b6c2b5f0db41662046f808；
+  PDF131286字节、SHA 0d9ee3ea300e8cc4af6693ad7f713808f81f882fafee844ffa4ef4811a424a5d。
+  首次只读脚本缺少/app import路径失败，随后仅修正诊断入口一次；首次日志独立保留，不重跑live阶段。
+- 恢复后的 AI 说明是固定“未重新生成”提示；默认行动来自确定性报告投影，第二次用尽后要求人工复核。
+  但实时错误路径 m5._safe_ai_result_artifacts 拼接 str(error)，AI说明tab原样 warning；可能含 ValidationError input，
+  已交主控/M12处理，不宣称现场 AI 错误已完全脱敏。旧 FollowUp失败记录继续保留。
+- 官方 README 列出的新增候选 https://www.sepoliarpc.space 只在精确线上 image/网络单次只读检查：
+  eth_chainId 首次 ConnectionError 后停止；历史header、decimals、精确from/to getLogs均未调用。
+  未切换生产端点、未读取receipt子集或扫描、未追加模型调用。服务器日志 root600 保留。
+- 当前未完成：原文件完整流程、全部真实 AI 工件稳定门、可用完整历史 RPC、CSV/XLSX真实完整路径。
+  本轮使用原生 AppTest，不是浏览器/真实用户测试；线上存活或离线717门不能代替这些缺口。
 
 ### 实际上线与保护
 
@@ -57,11 +88,12 @@ last-reviewed: 2026-10-08
   公网根页/health/原 Logo HTTP 200；验证 TLS 的 WebSocket 101/Sec-Accept，仅握手不发送业务消息，不声称首屏感知速度已测。
 - 切换前保留旧653 tag trust-receipt:preset-rollback-d897b5c 与 root700备份 /opt/trust-receipt-backups/preset-before-d897b5c，
   旧 compose/source 备份不含 env/data/回执、文件600；本次未执行回滚。受限临时 SSH 副本精确删除，原用户 key 保留。
-  模型/RPC 业务调用仍为0，未浏览器测试、公开上传或写链。
+  上线切换阶段模型/RPC业务调用0；随后真实案例与累计模型10次见前节，未浏览器测试、公开上传或写链。
 - 线上公共 committed fixture 只读盘点：主页错误版106字节/hash307f840ef45c3085e33a8d06344075967b9e35c4924621799c85979fe7a8d4c2，声明0/数量0；
   修正版702字节/hashc7dbc77b832a6bfa0ed50eb16c15b48285b464802a297d393c74031082b71d6e，声明180674489737/数量1，与用户原corrected字节相同。
   另有空白JSON模板105字节/hash503d0261e39934c8ed9366945e8776cc50768268bc29a3f19e63847806850f70；没有CSV/XLSX下载对，仅支持上传。
-  实际主页媒体下载→intake→真实模型/RPC→两attempt→恢复/原JSONWordPDF矩阵尚未执行，不以字节相同或合成门代替。
+  随后实际主页媒体下载/intake/真实两attempt/恢复/原JSONWordPDF已执行，部分门通过与真实AI失败见前节，
+  不以字节相同或合成门代替完整金融验收。
 
 ### 同源质量门与发布过程
 
