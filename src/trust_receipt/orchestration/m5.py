@@ -256,12 +256,13 @@ class M5Workflow:
         follow_up = None
         try:
             explanation = self._ai_service.explain_result(result)
-        except Exception as error:
-            errors.append(f"Result explanation rejected: {error}")
+        except Exception:
+            # Vendor/validation exceptions may embed private model input.
+            errors.append("RESULT_EXPLANATION_UNAVAILABLE")
         try:
             follow_up = self._ai_service.suggest_follow_up(result)
-        except Exception as error:
-            errors.append(f"Follow-up advice rejected: {error}")
+        except Exception:
+            errors.append("FOLLOW_UP_ADVICE_UNAVAILABLE")
         return explanation, follow_up, tuple(errors)
 
     def _save_receipt(self, receipt: Receipt, attempt: int) -> Path | None:

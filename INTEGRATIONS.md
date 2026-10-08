@@ -69,6 +69,12 @@ M5 产品 adapter 使用 `RPC_CONFIRMATIONS`（默认 2）拒绝尚未确认的�
 结构不合法的响应仍按原普通失败政策处理。供应商正文只在 adapter 内存中用于分类，不存储、不记录，
 输出固定安全说明。超时/连接失败的既有最多两次重试不变；不能以部分页、receipt 子集或 Blockscout 抽样补成完整证据。
 
+临时替代节点验证仅使用经授权的端点，不自动切换生产 `ETH_RPC_URL`。
+候选来源包括 [Sepolia 客户端配置 README](https://github.com/eth-clients/sepolia) 的开放 RPC 列表，
+其中 `https://www.sepoliarpc.space` 的定向探针顺序为 chain ID、原范围历史区块头、原代币精度、
+精确 token/from/to 的完整 getLogs；每个方法一次、10秒、不重定向或自动重试，第一处失败立即停止。
+不查询已知 receipt、不扩大扫描范围，不将一个已知事件子集替代完整证据。实际结果仅记 STATUS。
+
 ## Blockscout MCP
 
 用途：补充地址、交易、代币和分页信息，不作为被评价服务，也不单独承担参考真值。
