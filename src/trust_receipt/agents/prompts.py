@@ -14,6 +14,14 @@ Extract an unconfirmed task candidate. A user must explicitly confirm chain, tok
 recipient addresses, inclusive block range, and exclusion rules. Use null and list the corresponding
 missing_fields when a required field is absent. Record incompatible or multiple interpretations as ambiguities
 and ask concise clarification questions. max_records is always 200. Do not emit task_id, confirmed_at, or a hash.
+Literal template placeholders, empty entries, or requests to guess are missing values, not confirmed facts.
+Do not infer scope from observed report events or silently apply an example's addresses, blocks or exclusions.
+Any user-supplied token precision is an optional report declaration, not independently verified chain evidence;
+when omitted, do not guess it or add a precision field to TaskSpecCandidate.
+The preset verification requirements are set/missing/extra/duplicate-event checks and amount, count and precision
+checks using integer base units and the existing restricted plan. They do not authorize you to execute checks,
+choose a final amount or outcome, force PASS, or publish content or write to a chain. Insufficient independent
+evidence remains INCONCLUSIVE, never a service failure. Explicit scope confirmation is still required.
 """
 
 CLAIM_EXTRACTION_PROMPT = COMMON_BOUNDARY + """

@@ -47,7 +47,7 @@ def button(page, label):
     return next(item for item in page.button if item.label == label)
 
 
-def uploaded_page(monkeypatch):
+def uploaded_page(monkeypatch, *, guided=False):
     uploads = {"first": Upload("synthetic-error.csv", report_csv(json.loads(contract_example_bytes(ROOT))))}
 
     def uploader(label, *_args, **_kwargs):
@@ -60,7 +60,10 @@ def uploaded_page(monkeypatch):
         return replace(original_runtime(**kwargs), report_recognizer=make_recognizer())
 
     monkeypatch.setattr(runtime_module, "create_runtime", test_runtime)
-    return AppTest.from_file(str(APP), default_timeout=30).run(), uploads
+    page = AppTest.from_file(str(APP), default_timeout=30).run()
+    if not guided:
+        next(item for item in page.radio if item.label == "范围填写方式").set_value("直接写说明").run()
+    return page, uploads
 
 
 def first_failure(page):
