@@ -74,7 +74,9 @@ def test_page_renders_inconclusive_as_evidence_shortfall() -> None:
     button(page, "确认范围，继续").click().run(timeout=20)  # noqa: RUF001
     button(page, "开始核对").click().run(timeout=20)
 
-    assert any("不能形成服务负面结论" in warning.value for warning in page.warning)
+    assert page.session_state["executions"][0].result.outcome.value == "INCONCLUSIVE"
+    assert any(element.value == "#### 为什么暂不能判断" for element in page.markdown)
+    assert any("不能认定通过或服务失败" in warning.value for warning in page.warning)
     assert [metric.value for metric in page.metric] == ["0.12", "无法确定", "无法确定"]
 
 
