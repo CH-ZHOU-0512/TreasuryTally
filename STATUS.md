@@ -11,7 +11,7 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
-## 历史证据提示联合集成（2026-10-08，已合并，未部署）
+## 历史证据提示联合集成（2026-10-08，初次构建前快照）
 
 - [PR #27](https://github.com/CH-ZHOU-0512/TreasuryTally/pull/27) 两项 CI 37723407162 / 37723414539 实际成功后，
   主控显式合并为 `7708322a7b5022122fe2ef5721917de19095693a`；合并后主线 CI 37723670377 实际成功。
@@ -28,6 +28,33 @@ last-reviewed: 2026-10-08
 - 原 JSON 与原提示词仍待实际上线镜像的完整流程验证；允许得到真实 INCONCLUSIVE，并验证保存、恢复与 JSON/Word/PDF 导出，
   不把流程运行通过写成财务一致。尚无完整参考历史证据、模型业务实测或新镜像部署；不发布、不写链。
 - 用户新增第一步预设专业核验要求的需求已交 M12 独立后续工作；不混入本轮已冻结发布源。
+
+## 历史拒绝与范围模板最终候选（2026-10-08，正式预检通过、未切生产）
+
+- 独立源 `d897b5c8ab67336f7f1aba2db7e1fcff56be748c` 为精确 `95da190` 加 M12 原 `136b294`；
+  仅 STATUS 合流冲突保留双方事实。与已合并 main `85592f4` 的 app/非 M16 业务一致，明确不包含 headless/MCP/
+  新上传服务/对应 pyproject 与 M16 tests 变更，不伪装为主线 image revision。
+- 本 checkout 静止完整非 external 实际 717 passed / 16 deselected / 1 既有 warning，167.09 秒；
+  Ruff、pip check、21 Schema、1000 行、diff 与无凭据 MVP FAIL→PASS/双回执 replay/恢复均通过。
+  source tar SHA-256 `7bbd445e3761a96f179b6ac5d6aaa7d9754e27a923028bd6e277258c8c94213b`，
+  wheel SHA-256 `67fa0133a7fa19e21cde095a5edeb121408dd8ce6dfa155f96ac46693283fad6`。
+  实际 core 117 Python 文件逐字节相同；新增 scope_request 属于 app，app 模块数 26→27，不误报 core 118。
+- 新独立私有目录 `/opt/trust-receipt-releases/preset-history-d897b5c`，不覆盖 95/旧失败记录。
+  一次 fresh 954700 KiB、空闲磁盘 23542812672 字节、daemon 正常、生产 Health.Status=healthy/OOMKilled=false 后，
+  原 network=none/no-index/640 MiB/swap=0/CPU=1 的 offline build 在 600 秒总预算内 260.61 秒成功，每 20 秒打印实际阶段。
+  同源 tar 全文件与 context 实核，image `sha256:e2cf19fe284eef425f37e0691f2fdaa0b0bb4eea1f5e58384e4939ed36eb4d10`，revision 为上述 d897。
+- 此精确最终 image 独立正式 combined 门实际通过：fresh 1076924 KiB，640 MiB/swap=0/pids=128/CPU=1/drop ALL/
+  no-new-privileges/network=none，无真实密钥/.env/生产用户数据。core117/wheel 严格 byte、app27、8 项模板及报告源码 proof、真实入口零异常通过。
+  7 案例 PNG/native Word/PDF、4 会话 14 视图、5 种实际 AppTest 格式与原 JSON、固定字体/assets/socket 隔离全部通过，
+  导出预算接受 8/拒绝 6，原回执/历史/视图不改，共享 renderer/cache 清理通过。
+- 12 个 SDK transport 故障注入各一次请求并关闭连接，stall 正确取消；真实新 UI 未填 GUIDED 模板禁用整理、无候选/任务，
+  切 RAW 保留原文后原 7 类错误/手填零模型/显式确认及 3 类非法范围拒绝全部通过。
+  仅另稿调整旧脚本 fixture 显式选择 RAW，不取消产品模板门、不 mock candidate、不覆旧脚本。
+  历史拒绝专项通过实际 M5/M8 保存与新 runtime 恢复，INCONCLUSIVE、计算金额/数量 null、安全历史原因及 native Word/PDF 正常。
+  这些均为合成数据与无网络注入；原用户报表/原提示词真实模型案例未执行，付费模型/RPC 调用仍为 0，不声称金融 PASS。
+- 最终 combined cgroup peak 473489408 字节（约 451.55 MiB），max/oom/oom_kill/pagecache_max/pagecache_oom 均 0。
+  新日志 root600 保留，生产仍旧 `65343fee`，三个保护服务/env/dev checkout 不变、health HTTP 200。
+  本次受限 SSH 副本精确删除、原用户 key 保留。未切生产，等待主控另审上线与原案例有界调用。
 
 ## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
 
