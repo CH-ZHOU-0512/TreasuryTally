@@ -137,6 +137,23 @@ docker exec campus-creator-nginx nginx -s reload
 回滚后确认健康、HTTPS 页面/Logo/WebSocket、原 env/挂载/开发源码和受保护服务一致；不调用模型或链上业务。
 `trust-receipt:scope-rollback-49c5092` 固定旧镜像；源码备份不含 env、用户数据或回执，不用它覆盖运行数据。
 
+范围模板与历史证据原因发布采用独立 `/opt/trust-receipt-releases/preset-history-d897b5c/source`。
+其 revision 为 `d897b5c8ab67336f7f1aba2db7e1fcff56be748c`，不使用含 M16 的 latest main 替代。
+该发布的 app-only 回滚目标是保留的 `trust-receipt:preset-rollback-d897b5c`（旧 scope-49 镜像），
+与上面 scope-49 本身的回滚目标不同。回滚前核对保护备份及精确镜像，执行：
+
+```bash
+docker compose --project-directory /opt/trust-receipt/deploy -p deploy \
+  -f /opt/trust-receipt-backups/preset-before-d897b5c/compose-before.yml \
+  -f /opt/trust-receipt-backups/preset-before-d897b5c/rollback-image.yml \
+  up -d --no-deps --no-build app
+docker exec campus-creator-nginx nginx -t
+docker exec campus-creator-nginx nginx -s reload
+```
+
+此备份的 `source-before.tar.gz` 不含 env、用户数据或回执。不得用回滚源码覆盖持久化目录；
+不重建 Blockscout/代理，不以握手或首页 200 代替真实报表流程验收。部署、预检与真实案例的实际状态仅在 STATUS 记录。
+
 所有私钥必须是测试网专用密钥。
 
 `AGENT0_SERVICE_ID` 必须指向团队控制的演示身份，`AGENT0_EXPECTED_OWNER` 用于在探针中强制核对所有者。

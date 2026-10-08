@@ -29,7 +29,29 @@ last-reviewed: 2026-10-08
   不把流程运行通过写成财务一致。尚无完整参考历史证据、模型业务实测或新镜像部署；不发布、不写链。
 - 用户新增第一步预设专业核验要求的需求已交 M12 独立后续工作；不混入本轮已冻结发布源。
 
-## 历史拒绝与范围模板最终候选（2026-10-08，正式预检通过、未切生产）
+## 历史拒绝与范围模板发布（2026-10-08，已上线、真实案例待验）
+
+### 实际上线与保护
+
+- 经主控另行授权，只以最终 e2cf19 image / d897 revision app-only 切换，生产容器
+  `74a653cc890fbd9da9d1d33d327e9ba188f67c9e048af2e575ecf8807e212def`，StartedAt 2026-10-08T04:27:15.164597472Z。
+  running/Health.Status=healthy/OOMKilled=false；实时 core117/wheel 严格 byte、app27、8 源 proof、候选20秒/2048与live/writes=false实核通过。
+- 原 project-directory /opt/trust-receipt/deploy、-p deploy、no-deps/no-build，640 MiB/swap=0/pids128/CPU1/drop ALL/nnp；
+  原 /opt/trust-receipt/data、receipts/private、receipts/public 三个绝对 RW 挂载保留，没有清理用户历史。
+  原 env 哈希 ce0a52c9de223764e09ce9b3650d1283280af3245639d80ec4dce34766960a06，开发入口哈希
+  f7aa2e3b48c2437323c08982692fdb318fb2d23ab59e2f6b4554348b87bf689a 保持不变。
+- Blockscout f4af6faa 与 Nginx 7e786e09 的完整 ID/StartedAt/网络保持不变，未重建；Nginx-t/reload成功，
+  仅原 http2 listen 弃用警告，配置哈希 a2741d5c9f7d6e9ee039d5049bef6426d85a4ae58890dd42578784160df7bdd5 与 SSL 只读挂载不变。
+  公网根页/health/原 Logo HTTP 200；验证 TLS 的 WebSocket 101/Sec-Accept，仅握手不发送业务消息，不声称首屏感知速度已测。
+- 切换前保留旧653 tag trust-receipt:preset-rollback-d897b5c 与 root700备份 /opt/trust-receipt-backups/preset-before-d897b5c，
+  旧 compose/source 备份不含 env/data/回执、文件600；本次未执行回滚。受限临时 SSH 副本精确删除，原用户 key 保留。
+  模型/RPC 业务调用仍为0，未浏览器测试、公开上传或写链。
+- 线上公共 committed fixture 只读盘点：主页错误版106字节/hash307f840ef45c3085e33a8d06344075967b9e35c4924621799c85979fe7a8d4c2，声明0/数量0；
+  修正版702字节/hashc7dbc77b832a6bfa0ed50eb16c15b48285b464802a297d393c74031082b71d6e，声明180674489737/数量1，与用户原corrected字节相同。
+  另有空白JSON模板105字节/hash503d0261e39934c8ed9366945e8776cc50768268bc29a3f19e63847806850f70；没有CSV/XLSX下载对，仅支持上传。
+  实际主页媒体下载→intake→真实模型/RPC→两attempt→恢复/原JSONWordPDF矩阵尚未执行，不以字节相同或合成门代替。
+
+### 同源质量门与发布过程
 
 - 独立源 `d897b5c8ab67336f7f1aba2db7e1fcff56be748c` 为精确 `95da190` 加 M12 原 `136b294`；
   仅 STATUS 合流冲突保留双方事实。与已合并 main `85592f4` 的 app/非 M16 业务一致，明确不包含 headless/MCP/
@@ -54,7 +76,7 @@ last-reviewed: 2026-10-08
   这些均为合成数据与无网络注入；原用户报表/原提示词真实模型案例未执行，付费模型/RPC 调用仍为 0，不声称金融 PASS。
 - 最终 combined cgroup peak 473489408 字节（约 451.55 MiB），max/oom/oom_kill/pagecache_max/pagecache_oom 均 0。
   新日志 root600 保留，生产仍旧 `65343fee`，三个保护服务/env/dev checkout 不变、health HTTP 200。
-  本次受限 SSH 副本精确删除、原用户 key 保留。未切生产，等待主控另审上线与原案例有界调用。
+  本次构建受限 SSH 副本精确删除、原用户 key 保留。上述为切换前独立候选门，不代表真实案例通过；上线事实见前节。
 
 ## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
 
