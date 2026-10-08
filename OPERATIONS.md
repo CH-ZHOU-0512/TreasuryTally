@@ -11,6 +11,25 @@ last-reviewed: 2026-10-07
 
 # 本地开发与运行手册
 
+## 当前安全修复镜像的精确回滚
+
+此运行手册仅适用于已切换的 `trust-receipt:safe-ai-c474a08`，不要用旧scope回滚命令替代。
+前一版本e2cf/d897保留为 `trust-receipt:safe-ai-rollback-c474a08`，备份目录root700、文件600，
+不含.env、SQLite或用户回执。故障恢复前只读核实该tag实际image为
+`sha256:e2cf19fe284eef425f37e0691f2fdaa0b0bb4eea1f5e58384e4939ed36eb4d10`。
+
+```bash
+docker compose --project-directory /opt/trust-receipt/deploy -p deploy \
+  -f /opt/trust-receipt-backups/safe-ai-before-c474a08/compose-before.yml \
+  -f /opt/trust-receipt-backups/safe-ai-before-c474a08/rollback-image.yml \
+  up -d --no-deps --no-build app
+docker exec campus-creator-nginx nginx -t
+docker exec campus-creator-nginx nginx -s reload
+```
+
+随后核实app healthy/OOMKilled=false、原3绝对RW挂载、env哈希、保护服务ID/StartedAt与HTTPS健康端点。
+回滚只换应用，不清理数据、不重建代理或Blockscout、不重新执行模型/验收/公开发布或写链；本次没有执行此回滚。
+
 ## 业务报告与本地导出运行边界
 
 报告调用 `build_business_report(receipt, submission, fund_flow=..., previous=..., revisions=...)`，页面的原 JSON 回执下载不变。
