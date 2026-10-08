@@ -11,6 +11,22 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
+## 可选 AI 错误安全码（2026-10-08，核心本地验证，未部署）
+
+- 在精确 main `70d07165a990e949882d2f03d8b814b3a54f06a7` 新独立分支，M5 解释/后续建议异常
+  只生成固定 `RESULT_EXPLANATION_UNAVAILABLE` / `FOLLOW_UP_ADVICE_UNAVAILABLE`。
+  不读取异常 str/repr/message/input，也不改变 ai_errors 的 tuple 结构、AI validator、调用/重试策略或 Receipt Schema。
+  页面 exact allowlist 和旧缓存固定兜底由 M12 独立交付；本核心提交不包含页面或服务器变更。
+- 修复前真实 Pydantic ValidationError（仅合成私有输入标记）复现1项失败：原异常 input 进入 ai_errors。
+  修复后13项新增回归加最近3项工作流共16 passed：两可选阶段、Pydantic/vendor/不可stringify异常、
+  FAIL/INCONCLUSIVE、成功的另一项保留、单次调用、两项同时失败仍能第二次PASS、回执保存/replay/恢复与原字节不变。
+  业务 view 不包含合成输入/vendor正文；此项不是本轮 Word/PDF 或浏览器验证。
+- 静止完整非 external 实跑754 passed / 16 deselected / 1既有第三方弃用warning，196.27秒。
+  全目录Ruff、pip check、21 Schema、1000物理行与diff检查通过；无凭据MVP FAIL→PASS/两回执replay/恢复通过。
+  技能要求的独立只读前置调查与后置绕过/回归复核均未发现此核心边界的具体残留问题。
+- 新增真实模型/RPC/公开上传/写链均0；没有重新调用失败的live阶段，没有切换当前d897生产镜像或生产端点。
+  本修复仅关闭可选AI异常正文传播；模型稳定性、原文件完整验收与完整历史证据阻塞仍保留，不宣称财务PASS。
+
 ## 当前验收范围与上线摘要（2026-10-08）
 
 - 当前生产已上线 `d897b5c` / `e2cf19`，具体保护、预检及回滚记录见下方发布节；此前未部署与内存不足段落是明确的历史快照。
