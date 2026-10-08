@@ -72,7 +72,8 @@ def test_failed_drafting_does_not_silently_substitute_a_sample_scope(monkeypatch
     button(page, "整理核对范围").click().run()
     assert "candidate" not in page.session_state
     assert "task" not in page.session_state
-    assert any("模型输出被拒绝" in item.value for item in page.error)
+    assert any("暂时无法整理核验范围" in item.value for item in page.error)
+    assert not any("test: model unavailable" in item.value for item in page.error)
 
 
 def test_latest_result_puts_next_step_before_evidence_and_keeps_one_main_action():
