@@ -69,11 +69,14 @@ def main():
     finally:
         sys.argv = previous_args
     events = dict(line.split() for line in Path("/sys/fs/cgroup/memory.events").read_text().splitlines())
-    assert events["oom"] == events["oom_kill"] == "0"
+    assert events["max"] == events["oom"] == events["oom_kill"] == "0"
+    memory_stats = dict(line.split() for line in Path("/sys/fs/cgroup/memory.stat").read_text().splitlines())
     print(json.dumps({"sdk_construction_only": True, "sessions": 4, "view_requests": 14,
                       "warm_sdk_five_actual_formats": True,
                       "accepted": accepted, "budget_rejections": rejected, "max_cached": max_cached,
                       "memory_peak": int(Path("/sys/fs/cgroup/memory.peak").read_text()),
+                      "memory_current": int(Path("/sys/fs/cgroup/memory.current").read_text()),
+                      "memory_stat": {key: int(memory_stats[key]) for key in ("anon", "file", "kernel")},
                       "memory_events": events, "json_history_unchanged": True,
                       "scope": "offline synthetic data, no network/client calls/browser/production"}))
 

@@ -25,7 +25,7 @@ HTML/SVG 必须转义文本且无脚本、外部图像/字体/样式请求；DOC
 回包 binding 必须匹配完整 view/option 哈希，导出不接受跨任务 PNG；stderr 不进入用户日志或报告。
 Linux 部署通过受信 `REPORT_RENDERER_NODE` 启动器继承 seccomp 的 socket 拒绝规则，父应用仍可访问 RPC；
 启动器仅允许固定包内脚本和固定 Node 参数，未知 ABI/无法启用隔离时拒绝。`REPORT_RENDERER_MODULES` 仅由运维设置。
-compose 提供 app 与 renderer 合计 2 GiB native 内存硬限、无额外 swap、256 pids、2 CPU、no-new-privileges、drop ALL capabilities；
+compose 提供 app 与 renderer 合计 640 MiB native 内存硬限、无额外 swap、128 pids、1 CPU、no-new-privileges、drop ALL capabilities；
 它不是每个 worker 独立的 native 内存保证，极端 OOM 可能影响同容器应用。单应用复用一个 renderer，
 `export_slot()` 非阻塞预算覆盖 DOCX/PDF/HTML/PNG/SVG 完整构建生命周期及直接 render，最多一个线程导出；
 同线程嵌套可重入，其他线程立即拒绝，异常时释放。Node 返回后字体嵌入、PDF 排版和 ZIP 打包仍占完整预算。
