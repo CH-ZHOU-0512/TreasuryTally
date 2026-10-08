@@ -30,7 +30,7 @@ from app.report_experience import (
     contract_example_bytes,
     strict_template_bytes,
 )
-from app.report_exports import document_exporters
+from app.report_exports import document_exporters, reset_report_downloads
 from app.report_graph import render_report_graph
 from app.report_intake import render_report_intake
 from app.runtime import AppRuntime, ConfigurationBlocked, create_runtime
@@ -113,6 +113,7 @@ def _runtime() -> AppRuntime | None:
             st.caption("生产环境已锁定真实 DeepSeek 与真实 Sepolia RPC；不会回退为离线 fixture。")
     config = (provider, evidence_label, workspace_id)
     if st.session_state.get("runtime_config") != config:
+        reset_report_downloads(st)
         for key in (
             "runtime",
             "candidate",
@@ -506,6 +507,7 @@ def _render_attempts(runtime: AppRuntime, status) -> None:
             source_mode=st.session_state.get("report_snapshot_modes", {}).get(current.receipt.receipt_hash, "recorded"),
         )
     except ValueError:
+        reset_report_downloads(st)
         st.error("报告与原回执的绑定未通过校验。请保留历史并联系维护者，不会生成新的核验结论。")
         return
     render_business_report(
@@ -537,10 +539,10 @@ def _draft_task(runtime: AppRuntime) -> bool:
         with st.expander("没有报表？使用案例或模板", expanded=False):
             input_mode = st.selectbox(
                 "先选一份报表",
-                ("上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"),
+                ("上传自己的报表", "加载真实 Sepolia 案例", "加载契约测试示例"),
                 key="intake-mode",
                 format_func=lambda mode: {
-                    "上传自己的 JSON": "使用我上传的报表",
+                    "上传自己的报表": "使用我上传的报表",
                     "加载真实 Sepolia 案例": "用真实交易案例试一遍",
                     "加载契约测试示例": "离线练习（模拟数据）",
                 }[mode],
@@ -565,14 +567,14 @@ def _draft_task(runtime: AppRuntime) -> bool:
             type=("json", "csv", "xlsx"),
             accept_multiple_files=False,
             max_upload_size=1,
-            disabled=input_mode != "上传自己的 JSON",
+            disabled=input_mode != "上传自己的报表",
         )
         upload_valid = True
         with st.expander("查看上传格式与身份说明"):
             st.caption("表格限制：1 MB、200 行、64 列；XLSX 仅单工作表，金额为文本，不支持公式、宏或外部链接。")
             st.caption("合并单元格也不支持；请把表头和明细整理为逐行逐列的原始值。")
             st.caption("支持 CSV、Excel .xlsx、JSON；旧 .xls 不支持。自动识别不认证作者，也不代表链上通过。")
-            st.caption("必填字段：schema_version、claimed_total_base_units、claimed_count、transfers。")
+            st.caption("JSON 报表必填字段：schema_version、claimed_total_base_units、claimed_count、transfers。")
             st.json(UploadedReport.model_json_schema())
             st.caption("无签名报表使用本地接收身份留档；不表示外部作者或 ERC-8004 服务 owner 已签名。")
         payload = None
@@ -629,13 +631,13 @@ def _draft_task(runtime: AppRuntime) -> bool:
         else:
             st.session_state.pop("uploaded_service", None)
             st.session_state.pop("uploaded_report_hash", None)
-            if input_mode == "上传自己的 JSON":
+            if input_mode == "上传自己的报表":
                 upload_valid = False
                 st.caption("请选择报表；读取失败或必要条件未明确时不能继续，不会用样例替代。")
         request = st.text_area(
             "说明要核对的范围",
             value=(
-                "" if input_mode == "上传自己的 JSON" else (
+                "" if input_mode == "上传自己的报表" else (
                 f"核对 Sepolia 案例在区块 {real_case.candidate.start_block} 的转账；下一步可修改所有范围字段。"
                 if input_mode == "加载真实 Sepolia 案例" else
                 "核对 Sepolia 上两个资金账户在区块 1000–1010 对两个资助对象的代币拨款，排除内部互转。"
@@ -650,7 +652,7 @@ def _draft_task(runtime: AppRuntime) -> bool:
         if st.button(
             "整理核对范围",
             type="secondary" if "candidate" in st.session_state or not upload_valid else "primary",
-            disabled=not upload_valid or (input_mode == "上传自己的 JSON" and not request.strip()),
+            disabled=not upload_valid or (input_mode == "上传自己的报表" and not request.strip()),
             use_container_width=True,
         ):
             try:
@@ -731,6 +733,7 @@ def main() -> None:
         view.can_start_next_task
         and st.button("开始下一次报表验收", key="m10-next-task")
     ):
+        reset_report_downloads(st)
         for key in (
             "task", "candidate", "executions", "commitment_pairs", "uploaded_service", "uploaded_report_hash",
             "attempt_error",

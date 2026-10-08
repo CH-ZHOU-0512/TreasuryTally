@@ -1,5 +1,8 @@
 """Download composition gates; byte doubles do not claim visual/format QA."""
 
+from contextlib import nullcontext
+from types import SimpleNamespace
+
 import pytest
 from streamlit.testing.v1 import AppTest
 
@@ -93,7 +96,7 @@ def test_full_view_binding_invalidates_previous_download():
 ])
 def test_additional_downloads_lazy_cached_and_format_bound(monkeypatch, label, suffix):
     calls = []
-    renderer = object()
+    renderer = SimpleNamespace(export_slot=nullcontext)
     monkeypatch.setattr(report_exports, "application_renderer", lambda: renderer)
 
     def exporter(report, *, renderer):

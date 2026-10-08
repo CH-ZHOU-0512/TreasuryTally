@@ -15,6 +15,33 @@ last-reviewed: 2026-10-08
 
 ## 当前阶段
 
+### M12 低内存导出页面适配（2026-10-08，本地验证，未部署）
+
+- 最小消费 M13 `4e8bfbea6e5a0556abae57655002c24bb954be16` 为本地 `42d27dd`，未摘其 STATUS。
+  `application_renderer()` 仍是受信单应用实例；app 外层复用其 `export_slot()` 包住整个 builder、缓存提交与下载媒体注册，
+  同线程嵌套重入，跨线程立即拒绝、无排队。未自行改 reporting、Node、Docker、锁或共享环境。
+- `app.report_download_cache` 全应用私有衍生字节预算，M14 给定压力候选总 16 MiB / 单文件 8 MiB，
+  每会话仅当前 full view 的五格式。session_state 只留 lease/view 元数据，不留导出 bytes；超过预算明确不可用。
+  切换 view、工作区、下一任务或绑定失败释放衍生缓存及自身准确 session/coordinate/fileID 媒体引用。
+  框架去重采用 canonical bytes；别的会话或同会话其他控件仍持有相同文件时不误删，继续计预算至引用释放。
+  旧实现的衍生 bytes 迁移清理，原 JSON、Receipt、task、executions、数据库和其他业务媒体不清理。
+  session lease 收尾也释放自己的缓存；兼容适配集中于 app，缺所需框架能力在注册前拒绝。
+- 实际固定 Streamlit 1.65.0 的 MediaFileManager/MemoryMediaFileStorage 回归覆盖 4 会话 × 30 视图、
+  8 线程全局预算竞争、同文件去重/引用保护、其他控件准确引用、异常 enqueue 后释放、lease GC、单文件与总容量拒绝。
+  真实 AppTest 连续 30 view 验证旧衍生文件不累积、session_state 无衍生 bytes、原 JSON/历史保留；
+  跨线程繁忙分别拒绝生成和已有下载注册，释放预算后恢复；超限保持原结论。
+  最新缓存/下载/业务报告组合 **39 通过、1 条既有 warning**；较早全 M12/reporting 专项 170 通过。
+- 复用已由 bundled 作者生成的合成 PASS 五格式真实 payload，实际 AppTest 五文件 + 独立 JSON 六下载通过，
+  总缓存字节与真实五文件长度之和一致（包含约 6.43 MB Word），不是 native 生成/cgroup/浏览器或新文档视觉验收。
+  首轮完整非 external 604 通过 / 16 排除 / 1 warning；随后加强同会话其他控件精确 coordinate 保护，最终全量复跑中，
+  不将首轮 604 计作最后微修后的完整通过。完整 Ruff、pip check、21 schema、1000 行与 diff 门通过；
+  离线 MVP 再次 FAIL→PASS、双回执重放与恢复 valid=true。
+- 经主控确认同步上传文案及全部一致比较为“上传自己的报表”，必填字段只标明 JSON 适用；
+  既有 CSV/XLSX/JSON 自动读取、必要局部补充、人工范围确认与主动核验不变，没有新增转换/采用步骤。
+- 16/8 是 M14 指定待最终压力 gate 的候选代码预算，真实 SDK warmup、多会话峰值、memory.peak/OOM、
+  最终 source/wheel/image 门及服务器内存边界仍由 M14 实测，不能拿其此前单轮 512 MiB 检查作上线承诺。
+  浏览器仍暂停；未 push、merge、部署、服务器清理、公开上传、写链或使用真实模型/RPC。
+
 ### 发布前服务器资源检查（2026-10-08，暂缓发布）
 
 用户继续授权提交/推送/合并/部署后，M14 实际安全 fetch 并独立 ls-remote 核实 main 仍为

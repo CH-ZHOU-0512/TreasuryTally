@@ -65,7 +65,9 @@ def test_every_finding_type_has_business_copy_and_next_action():
 
 def test_page_exposes_example_template_and_evidence_drilldown():
     source = (PROJECT_ROOT / "app" / "streamlit_app.py").read_text(encoding="utf-8")
-    assert '"上传自己的 JSON", "加载真实 Sepolia 案例", "加载契约测试示例"' in source
+    assert '"上传自己的报表", "加载真实 Sepolia 案例", "加载契约测试示例"' in source
+    assert "上传自己的 JSON" not in source
+    assert "JSON 报表必填字段" in source
     assert '"真实 Sepolia RPC"' in source
     assert "加载契约测试示例" in source
     assert "团队构造报表" in source

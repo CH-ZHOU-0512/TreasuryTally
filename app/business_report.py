@@ -2,10 +2,11 @@
 
 from html import escape
 
-from app.report_exports import render_export_download
+from app.report_exports import render_export_download, sync_report_downloads
 
 
 def render_business_report(st, report, *, graph=None, exports=None, receipt_json: str):
+    sync_report_downloads(st, report)
     current = report.current
     st.html(
         f'<section class="attempt-card outcome-{escape(report.outcome.value)}">'

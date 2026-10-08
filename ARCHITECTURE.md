@@ -27,6 +27,13 @@ Linux 镜像通过固定 renderer-node 启动器为子进程继承 socket-denyin
 适配层不接受文件路径、模板或外部资源 URL。页面只有一个业务读模型，不从 raw dict 另建金额或风险真值。
 报告是原签名回执的阅读副本，原 JSON 下载继续使用既有对象，不被报告格式替代；下载不改变 publication 状态。
 
+`app.report_download_cache` 拥有应用级有界私有衍生缓存，每会话 lease 只持一个完整 view 的五格式，
+session_state 不持衍生文件 bytes。缓存维护字节账与自己的 Streamlit 媒体注册引用；同文件去重使用 canonical bytes，
+释放旧视图只退休自己的精确媒体引用，其他会话/旧控件仍引用的文件保留且继续计预算，直至引用释放。
+不清原 JSON、Receipt、数据库、execution 或任意其他业务媒体。框架兼容适配集中于 app，升级 Streamlit 须重验，
+接口缺失在媒体注册前拒绝导出，不依赖 renderer 或领域层了解 Streamlit。
+生成、缓存提交与下载媒体注册外层复用同一 renderer.export_slot()；引擎内部同线程重入，跨线程非阻塞拒绝。
+
 ## 架构目标
 
 让确定性核对独立于模型、页面和单一数据供应商运行。核心验收能力必须能从测试或命令行调用；Streamlit 和 LangChain 都只是适配层。
