@@ -11,6 +11,29 @@ last-reviewed: 2026-10-07
 
 # 系统架构
 
+## 业务报告与本地导出边界
+
+`reporting.projection` 从通过既有完整性重放的 Receipt、绑定的 ServiceSubmission、已有 FundFlowProjection 和可选 M9
+版本关系生成冻结 `BusinessReportView`。它是只读解释层：不重新汇总事件、不调用模型或 RPC、不写数据库、不改原金额/结论。
+无资金流快照时不造图；历史恢复应使用 recorded 来源模式，不拿当前运行配置冒充旧证据的取得方式。
+
+`reporting.layout` 定义各格式共享的中文业务内容顺序；`graphics` 委托本地固定 ECharts worker 生成 SVG/PNG，不用 Python 仿制图。
+组合层复用 `EChartsRenderer` 实例，通过固定 argv/JSON stdin 调用包内脚本与独立 pinned sharp 依赖。
+图像绑定完整 view（含 spec/receipt hash）和派生 option 哈希，不接任意用户 JS、SVG、PNG 或路径。
+Node/modules 路径只属于受信部署配置。缺依赖或超时明确 EXPORT_UNAVAILABLE，不回退假格式。
+Linux 镜像通过固定 renderer-node 启动器为子进程继承 socket-denying seccomp；应用本身仍保留模型/RPC 能力。
+容器 cgroup 约束应用与 renderer 合计 native 内存/pids，单应用复用并发 2 的 renderer，不把 JS 堆标志当 native 边界。
+`html_export`、`docx_export`、`pdf_export` 分别负责离线 HTML、真实 DOCX 和 PDF 字节。外部库仅在使用对应导出时加载；
+适配层不接受文件路径、模板或外部资源 URL。页面只有一个业务读模型，不从 raw dict 另建金额或风险真值。
+报告是原签名回执的阅读副本，原 JSON 下载继续使用既有对象，不被报告格式替代；下载不改变 publication 状态。
+
+`app.report_download_cache` 拥有应用级有界私有衍生缓存，每会话 lease 只持一个完整 view 的五格式，
+session_state 不持衍生文件 bytes。缓存维护字节账与自己的 Streamlit 媒体注册引用；同文件去重使用 canonical bytes，
+释放旧视图只退休自己的精确媒体引用，其他会话/旧控件仍引用的文件保留且继续计预算，直至引用释放。
+不清原 JSON、Receipt、数据库、execution 或任意其他业务媒体。框架兼容适配集中于 app，升级 Streamlit 须重验，
+接口缺失在媒体注册前拒绝导出，不依赖 renderer 或领域层了解 Streamlit。
+生成、缓存提交与下载媒体注册外层复用同一 renderer.export_slot()；引擎内部同线程重入，跨线程非阻塞拒绝。
+
 ## 架构目标
 
 让确定性核对独立于模型、页面和单一数据供应商运行。核心验收能力必须能从测试或命令行调用；Streamlit 和 LangChain 都只是适配层。
@@ -53,6 +76,12 @@ M8 已实现承诺端口和资金流投影：`commitments` 负责 EIP-712 创建
 只读 adapter 校验 bytecode、交易、canonical block 与事件绑定，没有广播方法。
 
 `services.upload` 严格解析原始 JSON 声明并私有留档，以独立 local-upload-intake 身份签名；这不认证原始作者。
+`services.report_conversion` 及受限 reader 只负责 CSV/XLSX 到 UploadedReport 的确定性格式适配，不执行公式或查询 RPC。
+ADR-032 的 `services.header_recognition` 通过既有 StructuredOutputPort 只让固定真实模型识别安全表头的列角色，
+不发送明细、文件名或私有备注；`services.report_recognition` 绑定真实列、已知字段和原数据，提供统一自动上传用例。
+页面正常路径不显示映射/JSON 采纳；只在必要时补链/代币/精度或金额单位，模型失败与歧义阻塞。
+校验成功即自动私有留原件、规范数据及识别 provenance；此阶段不确认任务或执行 attempt，后续仍显式确认范围。
+验收仍消费规范 JSON，转换不提供独立证据，也不参与 PASS/FAIL 判断。
 `M8WorkspaceWorkflow` 在生成交付之前取得接单签名，进入 M5 持久化之前验证交付签名，随后将承诺和 reference evidence
 追加到 `M8ArtifactStore`。恢复不重调 AI 或重新取链上快照，而是验证签名、receipt manifest 和确定性结果后重建图。
 旧任务缺少快照时不伪造资金流；M5 和 M8 附加存储之间尚无跨事务提交，崩溃可能产生缺少附加快照的旧格式记录。
@@ -208,4 +237,4 @@ Streamlit 定位为链上报表验收工具，而不是开发工作台。首屏�
 
 页面使用宽布局，但关键内容以卡片和可换行字段呈现，不依赖宽表格。桌面端允许资金流与问题列表并排；760px 及以下强制
 折叠为单列，按钮占满可用宽度，长哈希与 JSON 可换行或横向滚动。资金流颜色不能是唯一语义，还必须配合图标、文本和
-可访问标签。响应式样式和可视化投影 adapter 只属于 `app/`，不会进入领域层。
+可访问标签。页面响应式和交互属于 `app/`；业务报告的只读展示与本地渲染 adapter 属于 `reporting/`，不会进入领域层。

@@ -6,14 +6,258 @@ authority-for:
   - current-status
   - active-work
   - known-blockers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-08
 ---
 
 # 当前项目状态
 
-更新时间：2026-10-07
+更新时间：2026-10-08
 
 ## 当前阶段
+
+### M12 低内存导出页面适配（2026-10-08，本地验证，未部署）
+
+- 最小消费 M13 `4e8bfbea6e5a0556abae57655002c24bb954be16` 为本地 `42d27dd`，未摘其 STATUS。
+  `application_renderer()` 仍是受信单应用实例；app 外层复用其 `export_slot()` 包住整个 builder、缓存提交与下载媒体注册，
+  同线程嵌套重入，跨线程立即拒绝、无排队。未自行改 reporting、Node、Docker、锁或共享环境。
+- `app.report_download_cache` 全应用私有衍生字节预算，M14 给定压力候选总 16 MiB / 单文件 8 MiB，
+  每会话仅当前 full view 的五格式。session_state 只留 lease/view 元数据，不留导出 bytes；超过预算明确不可用。
+  切换 view、工作区、下一任务或绑定失败释放衍生缓存及自身准确 session/coordinate/fileID 媒体引用。
+  框架去重采用 canonical bytes；别的会话或同会话其他控件仍持有相同文件时不误删，继续计预算至引用释放。
+  旧实现的衍生 bytes 迁移清理，原 JSON、Receipt、task、executions、数据库和其他业务媒体不清理。
+  session lease 收尾也释放自己的缓存；兼容适配集中于 app，缺所需框架能力在注册前拒绝。
+- 实际固定 Streamlit 1.65.0 的 MediaFileManager/MemoryMediaFileStorage 回归覆盖 4 会话 × 30 视图、
+  8 线程全局预算竞争、同文件去重/引用保护、其他控件准确引用、异常 enqueue 后释放、lease GC、单文件与总容量拒绝。
+  真实 AppTest 连续 30 view 验证旧衍生文件不累积、session_state 无衍生 bytes、原 JSON/历史保留；
+  跨线程繁忙分别拒绝生成和已有下载注册，释放预算后恢复；超限保持原结论。
+  最新缓存/下载/业务报告组合 **39 通过、1 条既有 warning**；较早全 M12/reporting 专项 170 通过。
+- 复用已由 bundled 作者生成的合成 PASS 五格式真实 payload，实际 AppTest 五文件 + 独立 JSON 六下载通过，
+  总缓存字节与真实五文件长度之和一致（包含约 6.43 MB Word），不是 native 生成/cgroup/浏览器或新文档视觉验收。
+  首轮完整非 external 604 通过 / 16 排除 / 1 warning；随后加强同会话其他控件精确 coordinate 保护，
+  M12 最终源码 bec69d33 的完整非 external 实跑 605 通过 / 16 排除 / 1 warning，221.53 秒。
+  此为 M12 独立证据，不是 M14 的运行集成或生产内存门。完整 Ruff、pip check、21 schema、1000 行与 diff 门通过；
+  离线 MVP 再次 FAIL→PASS、双回执重放与恢复 valid=true。
+- 经主控确认同步上传文案及全部一致比较为“上传自己的报表”，必填字段只标明 JSON 适用；
+  既有 CSV/XLSX/JSON 自动读取、必要局部补充、人工范围确认与主动核验不变，没有新增转换/采用步骤。
+- 16/8 是 M14 指定待最终压力 gate 的候选代码预算，真实 SDK warmup、多会话峰值、memory.peak/OOM、
+  最终 source/wheel/image 门及服务器内存边界仍由 M14 实测，不能拿其此前单轮 512 MiB 检查作上线承诺。
+  浏览器仍暂停；未 push、merge、部署、服务器清理、公开上传、写链或使用真实模型/RPC。
+
+### 发布前服务器资源检查（2026-10-08，暂缓发布）
+
+用户继续授权提交/推送/合并/部署后，M14 实际安全 fetch 并独立 ls-remote 核实 main 仍为
+`e2cfbe24d0e95999057870433956e97310694928`，也是验收分支 merge-base；未混入 M15/M16 或其他支线。
+服务器只读审计为 Linux x86_64、cgroup v2、2 CPU、物理内存 1931 MiB（Docker MemTotal 2025336832），
+可用约 801 MiB，1 GiB swap 已使用 654 MiB，同时运行 app 与其他服务。
+已验收配置的 app 与 renderer 合计 native 2 GiB、swap=0 边界大于整机物理内存；不能将本地隔离成功当作该主机足够余量证明。
+按主控资源不足先停止的发布要求，在新资源决策/明确适配授权前暂缓，不自行降低资源边界、停止其他服务或改线上配置。
+旧 app healthy，三个 data/private/public 挂载和 Blockscout 保持原状；仅核 `.env` 哈希，不读取或输出内容。
+没有推送、PR、合并、部署、线上任务操作、模型/RPC请求、公开上传、写链或浏览器操作；受限临时 SSH 私钥副本用后清理，原文件不变。
+
+### M14 箭头修复后最终本地运行复验（2026-10-08，通过，未发布）
+
+在前项本地集成之上原样消费 M13 最小 `cf4f6122cde83420d8cb9f7922487b0c064340cf`，
+映射为最终运行代码 `6a102da8df6a07accad21e6898b63024d719aa33`。未修改事实、金额、事件身份、
+Node/sharp 锁、受信 launcher 或主环境生成的 Python 锁；新增 card-edge-geometry.js 按已有规则进入新 wheel。
+下述 07cdf4a 验收只属修复前历史，不能覆盖本次新资源。
+
+- 新代码独立完整非 external：572 passed / 16 deselected / 1 条既有 websockets warning，108.08 秒；
+  Ruff、pip check、21 Schema、1000 行、diff 门与无凭据 MVP 双回执重放/冷恢复 valid=true 通过。
+- 新完整镜像 `trust-receipt:report-runtime-6a102da`，实际 image ID
+  `sha256:072bb9703f938ec10d158cde9a1ae4f72639d2220eff8173c270c3c00ca49dc2`；
+  新离线 release 镜像 `trust-receipt:report-release-6a102da`，实际 image ID
+  `sha256:c11df3873a12981083e0cf615bad3948957db48f0b11f480cb55ced3dd69b027`；
+  两者 inspect revision 均精确为上述 6a102da 完整 SHA，不使用旧镜像换标。
+- 新提交归档 SHA-256 `75f1383caea4be85625c25d72b37c37902e158ae8caa3d508471302028e3ae15`；
+  由此构建的 wheel SHA-256 `3251c26daefa9484c3f964c28fc58ccaffe3be273c9ad77777f053324843a651`。
+  release 在 network=none 完成无索引/无依赖 wheel 安装与 pip check、source/wheel/实际入口门。
+- 两个新镜像分别独立实跑七例真实 SSR→PNG→DOCX/PDF、全部报告资产/字体 source/wheel parity、
+  view/hash 绑定与许可证、cgroup memory/swap/pids、seccomp/父 socket/匿名管道、缺依赖与任意参数拒绝全部通过。
+  不挂 source/app/launcher 覆盖，不挂真实 env、key、用户数据；渲染 network=none、只读、资源界限与前项一致。
+- 两个新镜像分别实跑 Linux Node 20 组直线/曲线/反向/resize/zoom/pan 几何测试通过，测试只读挂载固定检查脚本。
+  实际 AppTest 由页面单应用 renderer 主动生成五格式加独立 JSON 六下载，正确格式、完整 view 缓存及原回执/结论不变。
+  新完整镜像独立 `/app` 初始入口 115 源文件匹配 wheel、exception=0、品牌区存在；release 同项在离线构建时实际通过。
+- M13 独立视觉证据已核读 card-contact-review.md：新 86 页重渲染，14 个变更图表页逐个原始分辨率复查，
+  72 页哈希与其先前逐页审查页一致。归属 M13，不写成 M14 重看了 86 页；纵向箭头待修复项已由此新版本替代。
+- 未进行浏览器/HTTP 下载、真人测试、真实模型/RPC复测或线上任务恢复；未推送、主线合并、部署、
+  公开上传、写链或修改生产数据/配置。本地运行与格式验收通过不等于生产已切换或全状态浏览器视觉矩阵已完成。
+
+### M14 报告运行集成本地验收（2026-10-08，修复前历史，未发布）
+
+M14 独立 `codex/report-runtime-integration` 从 M12 `5f59055` 整合 M13 export `0a0883a`（映射 `d408f1c`）、
+运行接线 `2a9c90e` 与 M12 最终下载 UI `ecaa992`（映射 `2c198a5`），不修改主 checkout、共享环境或线上配置。
+主控在项目主 `D:/HACKTHON/.venv` 实际安装 python-docx 1.2.0 / reportlab 4.4.9，Pillow 12.3.0 不变，
+主控实跑 pip check 与 M13 reporting 49 项测试通过；仅新增传递依赖 lxml 6.1.3，无旧包删除或升级。
+M14 原样机械复制主环境 `pip freeze --exclude-editable` 生成产物为 requirements.lock.txt，
+源/目标 SHA-256 同为 `d82759bcdf6af75c548b41ded2dc0146aa4750b0571a7025fd6d299a30200800`。
+独立 Compare-Object 确认仅新增上述 3 条锁项，其余 Git 差异只是 freeze 排序；未手改锁条目。
+requirements.txt 同步三精确导出依赖，与 pyproject 主声明一致，避免开发安装与正式包声明分叉。
+运行接线包括 pinned Node/sharp、字体、许可证、子进程 seccomp、容器 native 总内存/pids 与缓存并发界限。
+最终运行代码 `07cdf4a9b17e94ede57d6a12f8bfeea9df019808`：组合非 external 独立实跑 571 passed /
+16 deselected / 1 条既有 warning；Ruff、pip check、21 Schema、1000 行门、diff check 通过。
+离线 MVP FAIL→PASS、双回执重放与冷恢复 valid=true。没有模型/RPC/公开发布或写链动作。
+
+- 同源完整 Linux 镜像 `trust-receipt:report-runtime-07cdf4a`，实际 revision 为上述完整 SHA，
+  image ID `sha256:b14f4a38cc60ac9c81733e7251a499821f0ebdffef471565ce5be642f945ac72`。
+  新锁 constraints 构建与镜像 pip check 通过；实读 Python 3.12.14、Node 22.23.3、python-docx 1.2.0、
+  reportlab 4.4.9、Pillow 12.3.0、lxml 6.1.3；worker 实查 sharp 0.34.5。
+- 两镜像运行均 network=none、read-only、2 GiB memory/swap=0、256 pids、2 CPU、drop ALL capabilities、
+  no-new-privileges；只读挂 7 个合成 view，无源/app/launcher 覆盖挂载，无真实 env/key/data/私有回执。
+  实际 cgroup 限制断言通过，父 socket 可创建；隔离子进程网络 socket 和 AF_INET socketpair 返回 EPERM，
+  匿名 AF_UNIX stdio socketpair 可用；任意 Node -e 参数拒绝、缺 renderer 明确不可用。
+- 7 例（PASS/FAIL/INCONCLUSIVE/修复/uint256 大额/精度 255/200 条事件）的真实 ECharts SSR→sharp PNG→
+  DOCX/PDF 完成，PNG/view 哈希绑定、字体内嵌、完整报告资产 source/wheel 与安装字体一致；
+  保留 Node/LICENSE、sharp/LICENSE、native README/package.json LGPL 声明。
+- 使用实际 app 单实例 renderer 的 AppTest 主动生成 Word/PDF/HTML/PNG/SVG，六个下载（含独立原 JSON）注册，
+  格式 magic、完整 view 缓存、原 JSON 和业务结论不变；不是预生成 bytes 或 mock exporter。
+  实际 `/app` 初始入口独立通过：115 源文件匹配 wheel、package_origin=/app/src/trust_receipt、exception=0、品牌区存在。
+  Streamlit 输出已有 bare-context/components-v1 弃用提示，不隐瞒或将其写为业务错误修复。
+- 同提交归档 SHA-256 `b9c0c0582455eade9d516005bbefbe83448978b01dfa2ab6b361d0ffb0997e4f`；
+  其 wheel SHA-256 `ea6b1c8c5d8e512a5bb762673cda4fee6c712264ec95f1f6465a20cb90a76804`。
+  `Dockerfile.release --network none` 以已验证新 runtime 为基底完成离线 wheel 安装、pip check、source/wheel 与入口门；
+  `trust-receipt:report-release-07cdf4a` image ID
+  `sha256:fb7e412152f205625a7e17187162099c8238bd565c88d082a403d375b6e15797`，revision 同上，
+  另独立原样重跑 7 例真实导出与 AppTest 五格式门全部通过。release 显式要求 RUNTIME_IMAGE，不默认使用旧基底。
+- 首次运行隔离规则误拦匿名 stdio socketpair，收窄为仅允许 AF_UNIX 后原样重跑通过；
+  一次重构下载 PyArrow 遇构建网络超时，依赖缓存/分层重构后重试成功，未删测试断言或降级渲染格式。
+  早期 smoke 的 .gitignore 资产对比和 HTML PNG-data-url 假设分别按真实 wheel 内容及内联 SVG 契约修正。
+- 纵向内部互转箭头的 M13 视觉修复仍待消费；本门不等于逐页视觉总体通过、浏览器/HTTP 下载、真人测试或线上能力。
+  未推送、主线合并、部署、操作用户 workspace、公开上传或写链；当前生产未改变。
+
+### M12 业务报告导出页面本地接线（2026-10-08）
+
+- 独立 `codex/report-intake-ui` 消费 M13 导出提交 `0a0883a4a963124348823977121d8522164f6f67`
+  为本地 `329b174`。主业务面按需提供真实 Word/PDF 与独立原 JSON；唯一技术入口中的“其他格式下载”
+  提供 HTML/PNG/SVG。页面不公开、写链、调用模型/RPC 或增加 attempt；缓存绑定完整业务 view 与格式。
+- 按 M14 约定以无参数 `st.cache_resource` 共享单应用 renderer，显式传给全部格式；仅读取受信进程环境
+  `REPORT_RENDERER_NODE` / `REPORT_RENDERER_MODULES`，缺失或空配置用固定 `/opt/trust-receipt-renderer/` 路径，
+  不发现 PATH 裸 Node、不硬编码个人 bundle 路径、不接用户配置输入。缺依赖/繁忙/失败提示导出不可用且原 JSON 保留。
+  M14 隔离启动器、Docker 与运维配置仍在独立集成，本页面接线不等于生产运行边界已通过。
+- M12 本次实际执行 `python -m pytest -m 'not external' -q`：**571 通过、16 排除、1 条既有第三方弃用 warning**。
+  新增导出页面测试 8 通过；完整 Ruff、pip check、21 份 schema 可重复检查、1000 物理行限制与 diff 检查通过。
+  离线 MVP 再次 FAIL→PASS，两份独立回执重放与冷恢复有效；未执行外部服务或密钥检查。
+- 根工作区主环境未被本任务安装/修改；只读核验其中 python-docx 1.2.0、reportlab 4.4.9、Pillow 12.3.0。
+  用 loader-selected bundled Python/Node 与 M13 独立 sharp 0.34.5 的只读依赖目录生成一份合成 PASS 的真实
+  DOCX/PDF/HTML/PNG/SVG，AppTest 注册五种真实文件 payload 加独立 JSON 六个下载入口、完整 view 缓存字节一致。
+  此 smoke 使用预先由 bundled 作者生成的真实文件；不是页面实际生产 renderer 执行、HTTP 下载或浏览器验收。
+- M12 实际以原始分辨率查看该 PASS 资金流 PNG 与 PDF 全部 3 页：中文、金额、明细完整，但发现纵向内部互转
+  箭头提前终止、未接下方账户卡片，已交 M13 引擎负责人复查；本轮不能记为视觉完全通过。
+  M12 未重新渲染 DOCX（Windows bundle 缺 canonical LibreOffice），没有交付 QA 文件；M13 的 86 页记录仍只算其独立证据。
+  浏览器自动化继续暂停，未 push、merge、部署、公开上传或写链，未改 Docker/Node 包与锁/共享主环境。
+
+### 自动上传与单一业务报告页面（2026-10-07，本地联调中，未发布）
+
+M12 从 `9fd663c` 消费 M14 自动识别三组核心/记录和有界外部测试提交，取代未发布的手工映射/采用 JSON 入口。
+正常 CSV/.xlsx/JSON 上传后自动读取；仅必要链/资产/精度/金额单位局部询问，首步和修正版共用组件。
+文件/模型/局部条件变化清旧结果与服务；失败不回退旧报表，范围确认和主动核验仍必需。
+`6068b83` 视觉集成版本完整非 external 实跑 554 passed / 16 deselected / 1 既有 warning，Ruff、pip check、21 Schema、1000 行门通过。
+新 UI/缓存 13 项、原值/私有留档入口 8 项及全页自动修正版 3 项均通过；XLSX 合法金额和公式替换阻塞使用显式模型 double。
+本地浏览器实际选 CSV 验证未配真实识别模型的阻塞；严格 JSON 无采纳步骤直接摘要，明确确认范围、主动首轮 FAIL，
+自动读取 JSON 修正版但不自动核验，主动第二轮 PASS 保留原失败、无第三次入口；390px 无页面横向溢出、exception 0。
+
+结果报告按 ADR-033 由 M13 reporting 视图驱动：消费 `4b91d0b`、`8b46ec9`、`e6097c0`，不另造报告/金额模型。
+默认三项正常单位金额、中文结论/范围、同类差异概览及两次业务对比；AI 原文/签名/诊断/JSON 集中一个技术入口。
+错误或混合资产/精度不猜换算，冷恢复不借当前模式冒充原核验；报告公开授权按回执身份隔离。
+消费 M13 ECharts `6a7c79d`（本地 `25d6049`），默认本地隔离 iframe 图、12 条显式分页、前后切换、文字图例已接入；
+完整事件正常单位表放在单一技术入口。4 项新增 AppTest 证明全部 200 条逐页可达、原失败保留、缺图不补造，
+消费 M13 `005b1a9`（本地 `fc66134`），正常可比金额差异说明使用精确代币单位，未知/冲突不猜换算，下一步移除内部工作流术语。
+消费 M13 `677e5b0`（本地 `c28cffd`），事件仅在任务资产、唯一参考精度与事件精度一致时换算，
+否则保留整数最小单位并标「精度未确认」。reporting/报告/图控件组合 60 项通过；既有无凭据演示双回执重放/恢复 valid=true。
+用户暂停浏览器自动操作，本次接图后未调用浏览器或声称视觉验收；手机可读性与真实交互留待人工检查。
+Word/PDF 逐页验收及接线尚未完成；不能称整版报告或导出完成。
+用户随后取消 Canva、明确继续 ECharts；仅消费 M13 `5b939ed` 的三个实现/测试文件和 `3602720` 横向箭头修复，
+不取其状态或 dirty 导出。动态图显示角色卡片、20px 金额/12px 状态，长标签省略但完整事实保留，720px 图内滚动。
+随后消费标签小修 `ef481e1`（本地 `0a2551e`），长单位指向完整明细，未知精度始终明确标「最小单位（精度未确认）」，
+内部互转标签进一步避开卡片；新增实际错误资产 fixture 的可见标签/原整数/完整来源测试。
+最新报告/图控件组合 62 项、Ruff/21 Schema/1000 行/diff 通过，本次小修未重跑全量，不把前次 554 计作新增测试后的全量。
+继续消费 `e68cd25`（本地 `aa40d9f`）的两行避让/单位文案修复，61 项回归、Ruff/1000 行/diff 再次通过。
+该提交不包含「最多前 4」或「并行线仅 1 标签」的逻辑；未将这些尚未交接规则记作网页已实现，仍保持 12 条显式分页。
+M13 确认这些限制仅属于待交静态打印层；随后消费 `9a10773`（本地 `2baed9c`）单条事件高度修复，
+仅调整布局高度和回归测试，62 项报告/图控件通过，不影响完整事件、金额、来源或网页分页。
+紧接消费 `8230a5f`（本地 `77031b2`），按 ECharts 退化跨度将最小布局高度修正为 2，避免单条标签压扁；
+两项修复一并保留，62 项回归、Ruff/1000 行/diff 再次通过，不把第一项单独称为最终视觉效果。
+实际查看更新的离线合成 PNG，确认横向箭头不再被卡片覆盖；不是浏览器/触摸/生产验收，未把 PNG 或此前 imagegen 草案嵌入任务。
+固定 Node/ECharts SSR + pinned sharp 的导出方案已批准并写入 ADR-033，renderer/依赖/运行环境等待各负责人已验提交，
+不把方案批准当实现或逐页检查成功；Word/PDF 仍待接线和验收，不回退 Python 仿制图。
+旧 ADR-031 各项验收为历史事实，不发布旧交互。
+未自行追加真实模型/RPC 调用、真人测试、线上工作区恢复、公共上传/写链、推送、合并或部署；M14 外部识别实跑归属见下项。
+
+### 统一上传与受限模型识别（2026-10-07，本地核心，未发布）
+
+用户最新需求替代旧转换/采纳界面：正常路径统一 CSV / `.xlsx` / JSON 上传，模型只识别表头，
+用户不手动转换或采纳 JSON。旧 `9fd663c` 手动界面不发布；下面 ADR-031 各项作为历史本地证据保留。
+M14 从 `9fd663c` 切 `codex/automatic-report-recognition`，单写受限核心与技术文档；
+M12 从同一基线独立单写 app/PRODUCT/FRONTEND/ADR-032；核心提交已交接，最终页面接线仍由 M12 完成。
+核心 `header_recognition` / `report_recognition` 已实现安全表头、真实列绑定、严格 JSON bypass、
+单位/整表条件局部问题、原声明不修正、失败脱敏/无 fixture fallback、自动私有留档与缓存原件/模型绑定。
+没有模型行值、文件名、私有备注外发，没有新增依赖或修改公共 Schema/签名/金额/attempt 规则。
+核心提交为 `f275825902ad3058f644b6139dab3e9234fc7a6c` 与增量
+`ac2015f5c0f96bd227698f2b7f1f55c39a3a755e`，新增 35 项离线 mock 识别测试通过；
+最终完整非 external 门实际完成 490 passed / 14 deselected / 1 条既有 websockets warning。
+全仓 Ruff、主环境 pip check、21 Schema 重生成检查、1000 物理行限制与 diff check 通过。
+随后有界真实验收使用既有被忽略配置的固定 `DeepSeek:deepseek-flash`，实际 factory/provider/
+recognize_report 路径的 2 项 external 测试通过（1 条既有 warning）；请求超时上限 30 秒、自动重试 0。
+只发送合成业务表头及索引，不发送文件名、行值、金额、地址、哈希、备注或用户文件，没有切换供应商。
+正常 CSV 用时 3.469 秒，API/Schema/真实列绑定通过、ready=true；缺金额单位 CSV 用时 2.375 秒，
+API/Schema/绑定通过，ready=false 且仅提示 `amount_unit`，本地补充 base 后缓存复用 ready=true、无第三次请求。
+脱敏列绑定：0 chain_id、1 token_address、2 transaction_hash、3 log_index、4 block_number、
+5 from_address、6 to_address、7 amount_base_units（缺单位案例为 amount）、8 token_decimals、
+9 claimed_total_base_units、10 claimed_count；schema_version=1.0、所有 ambiguous=false、无 issues/missing_fields。
+只证明这两个合成 CSV 场景的模型识别，不代表完整业务、RPC、真实 XLSX/API 失败场景或生产页面已验收。
+未推送、主线合并、部署或操作用户任务。
+
+### 表格转换独立集成验收（2026-10-07，本地通过，未发布）
+
+M14 新建 `m14-report-conversion-integration/HACKTHON`、`codex/report-conversion-integration`，
+实际重试 fetch 核实 `origin/main=e2cfbe24d0e95999057870433956e97310694928`；整条分支 fast-forward 至
+M12 `2c645ba067c47b28679a3d4754f7111965a830b0`，没有重复摘取转换核心。仅补充 M14 的 STATUS-only
+`095040e` 证据（本地映射 `ef3df38`）、恢复/私有来源集成测试及 TEST_PLAN/本状态记录，不改 app。
+M12 浏览器证据属于下项负责人实测；不写成 M14 重做了完整浏览器矩阵。
+
+- M14 独立全量非 external：455 passed / 14 deselected / 1 条既有第三方 warning（包括新增 1 项转换恢复测试）。
+  全仓 Ruff、主环境 pip check、21 Schema 可复现、1000 物理行和 diff check 通过。
+  无凭据 MVP 演示 FAIL→PASS、两份回执重放与新会话恢复 valid=true。
+- 同源归档/wheel 的隔离 Linux 镜像构建门及独立 `--network none` 运行门通过：101 个源码文件匹配安装 wheel，
+  实际入口导入 `/app/src/trust_receipt`、页面 exception 0、TreasuryTally 产品区存在。没有生产环境、真实密钥或用户数据挂载。
+  该门只证明真实初始页面可运行，不代表外部核验或生产部署。
+- 额外 Linux 测试使用只读测试源码挂载：21 项转换 UI 加 1 项恢复/私有来源测试全部通过。
+  首次挂载包含 Windows 字节码缓存，导致 11 项 inspect 源路径失败；容器独立缓存并原样重跑后 22 passed。
+  不跳过失败断言，不将缓存问题改成应用修复。
+- 新增测试证明采纳不创建任务/attempt，原声明和 local-upload-intake 身份保留；新 workflow 从持久化证据与签名恢复，
+  不重新取证。原 CSV 私有备注、文件名及转换 provenance 不进入本地构造的授权公开包；未授权导出拒绝。
+  只测试序列化，不调用 publisher 或写链。
+- 审查未发现阻断本地合流的新增问题。私有输入使用内容哈希文件名，位于工作区 `receipts/private/.../uploads`，
+  不在 `app/static` 或公共回执目录；签名、Receipt/Schema、发布器、确定性规则和品牌资产与基线无差异。
+  confirmed 参数不是授权令牌，provenance 不是原作者签名；跨文件留档非事务，失败可能留下私有孤立文件。
+  原型不提供多租户访问控制，不适合真实敏感报表；这些限制没有因转换入口而解除。
+- 未进行真实模型/RPC/外部服务核验、真人测试、线上任务恢复、760px 两侧/原生 200% 全状态视觉矩阵，
+  未推送、合并 main、部署、公开上传或写链；生产仍保留既有品牌版本。
+
+### 原始报表转换 UI（2026-10-07，本地完成，未部署）
+
+M12 在独立 `m12-report-intake/HACKTHON` 工作树、`codex/report-intake-ui` 分支从已发布主线
+`e2cfbe24d0e95999057870433956e97310694928` 开发；不修改有未提交改动的旧主 checkout。
+M14 拥有 CSV/XLSX 纯转换核心，M12 唯一写入首次/修正版页面与 PRODUCT/FRONTEND_SPEC/ADR-031。
+转换与明确采纳边界已写入设计文档；UI 确认状态按原字节哈希、文件名、映射、共用条件及工作区/入口隔离，
+改变输入撤销旧采纳，恢复旧设置也不会自动恢复。已消费 M14 `611523d`、`de776dc`、`dc52a71`，
+首步与修正版共用映射、缺失条件、预览和明确采用组件；非法或未采用修正版阻塞执行，不回退旧报表。
+本轮实跑非 external 全量 454 passed / 14 deselected / 1 条既有 warning，含 21 项 UI 采纳/修正新增测试；
+Ruff、pip check、21 Schema、1000 物理行和 diff 检查通过；离线 MVP 双回执重放通过。
+独立本地 8538 浏览器实际上传 CSV/XLSX：CSV 预览、映射失效、原表手机横向容器检查及采用/范围确认后 PASS；XLSX 首次 FAIL、
+公式修正版阻塞、合法修正版明确采用后第二次 PASS，保留首次记录且无第三次入口。
+缺日志身份、Excel 数字金额和公式实际阻塞；共用链编号由用户明确填写，格式转换不认证作者、不代表 PASS。
+1440/390px 输入和结果页无页面横向溢出；完整刷新重开引导，普通 rerun 不重开。
+未执行外部服务、真实链上核验、真人可用性测试、用户线上工作区操作、公开上传、写链、推送、main 合并或部署。
+
+### 首步表格转 JSON（2026-10-07，本地实现，未发布）
+
+M14 核心 `611523d`、结构拒绝增量 `de776dc`、有界解压增量 `dc52a718de7e6802cc48c307608b9f65a2205e94`
+基于 `e2cfbe2`，支持受限 CSV/单工作表 XLSX 到既有
+UploadedReport 的确定性转换候选与确认后私有留档。原始声明、重复行及来源边界不变，不调用 AI/RPC，不创建参考证据。
+最终核心实际验证：转换专项 66 passed；全量非 external 433 passed / 14 deselected / 1 条既有 warning；
+全仓 ruff、pip check、21 Schema 可复现与 diff check 通过。新增代码与测试的物理行数均低于 1000 行。
+核心阶段由 M12 独立接入 UI 并单写 PRODUCT/FRONTEND_SPEC/ADR031；现已完成，界面证据见前项。
+未进行真实用户测试、外部网络核验、推送、合并或部署；生产仍是下述品牌版本，不将本地候选称为上线能力。
 
 ### TreasuryTally 品牌统一（2026-10-07，已合并并部署）
 
@@ -594,6 +838,36 @@ M10 已在独立交付分支接入 M8+M9 工作区与页面并完成本地验收
   已有独立真实报表、冷上下文、八类非法上传恢复、确认拒绝、身份、写隔离、键盘和说明路径证据；未验收的重启、
   浏览器故障/来源冲突、第三 attempt 拒绝及原生 200% 缩放等仍保留。新摘要在该分支 `docs/user-trials/readiness-evidence-2026-10-07.md`。
   故障进程已由 M14 关闭，正常 8534 保留只供手动查看；不再自动操作。未做真实用户测试，完整 M14 技术验收未齐。
+
+## 业务报告资金流图补充
+
+- 在独立 reporting 工作树加入本地固定 Apache ECharts 6.0.0 组件、数据配置接口与自包含图组件；
+  账户节点和转账箭头保留已保存的精确金额、来源及事件引用，不重新计算结论。默认 12 条分页预览明确标注，完整 200 条可逐页访问。
+- reporting 与图接口测试 37 项通过，限定文件 Ruff 通过；五种离线视图各在 390/1440px 完成 SVG SSR 生成检查。
+  此项不是人工视觉验收；独立组件交接时尚未接入页面，本地接线现况见首项，也没有生产部署。
+- 用户已要求暂停浏览器自动操作，由其手动验证。实际手机可读性、交互与页面接线仍待验；
+  浏览器手动验收和页面导出接线仍待联合集成，本分支不能标记全量上线。
+
+- 本地固定 ECharts SSR → sharp 图已进入真实 DOCX/PDF/HTML 导出；未使用 Canva 或 Python 绘图兜底。
+  7 类离线样例覆盖 FAIL、PASS、INCONCLUSIVE、补交历史、极大整数、255 位精度与 200 条微小金额；
+  Word 40 页、PDF 46 页共 86 页按原始 PNG 逐页检查完成。修正单笔节点拉伸和末页账户索引断组；
+  最终重渲染只改变 2 页，其余页面 SHA-256 与已检查页面一致。完整事件引用、金额、原回执和补交历史的格式一致性检查通过。
+- loader bundled Python/Node 与独立 Linux Python 3.12.14 / Node 22.23.3 / sharp 0.34.5 均实际完成 7 类四格式生成与校验；
+  Linux runtime 使用 network none/read-only root、单独输出目录及 CPU/内存/pids 上限，pip check 通过。
+  reporting 专项 49 通过、schema 三组 38 通过；未执行外部 RPC/真实密钥/写链/公开上传，未恢复浏览器自动操作。
+  独立 reporting 工作树实际执行 pytest -m 'not external' -q：416 通过、14 排除、1 条第三方弃用 warning；
+  全目录 Ruff、1000 物理行与 diff 检查通过，wheel 含字体/许可证/固定 worker/npm lock/ECharts，未打入 node_modules 或测试产物。
+  依赖与 renderer 只在独立工作树；主环境锁和生产镜像接线仍由主控/M14 规范生成并联合验证，未部署。
+
+- 2026-10-08 修正 M12 指出的竖向箭头悬空：固定 ECharts 6.0.0 presentation adapter 按实际卡片边界裁剪连线，
+  SSR 与网页组件共用；缩放、平移及 resize 后重新贴边。未修改上游 bundle、金额、事件身份或核验结论。
+  下排跨列金额标签移到线下，避免长金额遮挡内部互转状态/单位。
+  bundled Node 与独立 Linux Node 22.23.3 各实际通过 20 组直线/曲线/反向/resize/zoom/pan 几何检查；
+  两套 runtime 的 7 类四格式生成与格式一致性重验通过。
+  新版 Word/PDF 重新渲染共 86 页，14 个改变的图表页已分别按原始分辨率重查；其余 72 页 SHA-256 与此前已逐页检查的页面相同。
+  此处不是把旧 86 页检查计作本轮新增检查。极大金额与 255 位精度的标签不重叠，完整金额仍保留在明细。
+  本分支非 external 全量 pytest 实跑 417 通过、14 排除、1 条既有第三方 warning；全目录 Ruff、文件规模与 diff 检查通过。
+  最新修正待 M12/M14 消费和联合集成验收；未部署、未恢复浏览器自动操作，旧 wheel 检查不等同本轮新 wheel 检查。
 
 ## 状态更新规则
 

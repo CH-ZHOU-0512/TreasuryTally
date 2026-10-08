@@ -11,6 +11,47 @@ last-reviewed: 2026-10-07
 
 # 本地开发与运行手册
 
+## 业务报告与本地导出运行边界
+
+报告调用 `build_business_report(receipt, submission, fund_flow=..., previous=..., revisions=...)`，页面的原 JSON 回执下载不变。
+`export_html`、`export_docx`、`export_pdf` 与 `graph_png` 返回 bytes，不执行上传、写链或任意路径写入。
+报告仅使用已记录证据，不为导出重取 RPC 或调用 AI。冷恢复使用默认 recorded 模式，实时核验只有确认实际来源后才标 live_rpc。
+
+DOCX 使用 python-docx 1.2.0，PDF 使用 reportlab 4.4.9，PNG 使用 Node 22.23.3 / sharp 0.34.5 的 ECharts SVG 栅格结果；
+Pillow 12.3.0 只校验 PNG。独立 package.json/package-lock.json 位于 `src/trust_receipt/reporting/assets/renderer/`，用 npm ci 安装。
+组合层复用 `EChartsRenderer(node_path=..., modules_path=...)`，所有导出显式传 `renderer=renderer`。
+底层 node_path 省略时从受信 PATH 查找 node；部署页面必须显式使用进程配置，不走 PATH 回退。
+`REPORT_RENDERER_NODE` 固定 `/opt/trust-receipt-renderer/renderer-node`，
+`REPORT_RENDERER_MODULES` 固定 `/opt/trust-receipt-renderer/node_modules`；仅运维受信环境可配置，不接受用户路径或 JS。
+Docker 使用 pinned Node 22.23.3 / Python 3.12 镜像与 renderer lock 的 `npm ci --ignore-scripts`，保留 optional native 包及许可证。
+Fontconfig 注册包内字体；renderer-node 只允许固定参数和包内脚本，Linux seccomp 拒绝 socket 创建/连接等操作，
+不影响父应用的模型/RPC socket 能力。未知 ABI、seccomp 不可用或资源不足拒绝导出。
+生产 compose 设置总内存及 swap 2 GiB、256 pids、2 CPU、drop ALL capabilities 和 no-new-privileges；
+这约束应用与 renderer 的 native 总资源，不把 JS 堆 128 MB 称为独立 native 内存上限。
+单应用必须复用一个 renderer 实例；`export_slot()` 非阻塞完整导出预算为 1，Node 并发独立为 1，20 秒 timeout。
+DOCX 字体嵌入、PDF 排版、HTML 构建和 ZIP 打包结束前不释放完整预算，同线程嵌套可重入，竞争线程立即明确繁忙。
+原 JSON 下载独立于该预算；串行通过不代表低内存主机已适配，切换前仍需 SDK 预热、多会话与最坏规模实测。
+启动器另设 20 秒 CPU、64 fd、8 MB file-size 和禁 core dump。
+页面使用总 16 MiB / 单文件 8 MiB 的全应用私有衍生缓存，最多当前视图五格式；
+换视图或工作区清自己的衍生缓存和准确媒体引用，不清原 JSON 与历史。
+去重媒体使用 canonical bytes，其他控件尚未释放的引用仍占预算；超限或不兼容明确导出不可用。
+该候选缓存预算须与最终 source/wheel/image 的真实 SDK 预热、多会话及最坏规模测试共同验收，不是 native 硬限。
+全量镜像以主环境生成的 requirements.lock.txt 为 constraints；app-only release 必须基于已验证的新 renderer runtime，
+旧不含 Node/字体/报告依赖的基底会拒绝构建，不会假称 app-only wheel 更新已补齐运行环境。
+部署方加无网络、native 总内存/pids 限额；缺失依赖、失败或繁忙明确 EXPORT_UNAVAILABLE。Python 正式安装以规范生成的主环境锁为准，
+不能因为本地 adapter 能调用就声称生产依赖已经就绪。生产 Linux 不依赖 Word/LibreOffice；中文字体随 wheel 打包并保留 OFL 许可证，
+PDF 嵌入子集，DOCX 内嵌字体。资源缺失必须显示导出不可用，不生成假后缀；原 JSON 下载不受渲染器影响。
+带图 HTML 也需要 ECharts worker，不能声称 Node 缺失仍可导出完整 HTML。
+Linux 还需 Fontconfig：将打包的 ReportSans-Regular.ttf 安装到镜像字体目录并执行 fc-cache；
+worker 用固定 fc-match 探针核对 TreasuryTally Report Sans，字体缺失拒绝导出。原生 npm 包保留 README/package.json
+许可声明与 sharp LICENSE；@img/sharp-libvips-linux-x64 1.2.4 声明 LGPL-3.0-or-later，不能只保留 sharp 的 Apache 许可证。
+图超过 200 条保存记录明确不可用，不能把局部图称为完整图；文档边界检查的 400 条只用于拒绝资源超限，非绘图能力承诺。
+
+作者与 QA artifact 使用 loader-selected bundled Python；Windows bundle 不含 LibreOffice，不能调用会回退桌面 soffice 的渲染路径。
+专属 QA Dockerfile 位于 `tests/reporting/qa/Dockerfile`，只用于离线测试报告。构建可拉取字体/工具依赖，实际渲染必须 `--network none`，
+不挂 .env、密钥、data 或私有回执；使用单独可写输出目录、CPU/内存/pids 上限与 timeout，逐页检查生成 PNG。
+可复用经过核实的本地 Debian 工具基础镜像，但必须记录来源与独立 QA 工具版本，不当作 loader bundled renderer。
+
 ## 已准备环境
 
 - 主 Python 3.12 虚拟环境：`D:\HACKTHON\.venv`
@@ -326,3 +367,23 @@ Ganache 启动输出中的默认开发密钥不是生产凭据，但日志仍应
 - 本地数据库损坏时先复制 `data/` 作为证据，再重建开发数据库。
 - 私有回执不得为了“清理”而移动到公开目录。
 - 参考仓库如被意外修改，先查看 `git status`，不得使用破坏性重置覆盖未知改动。
+
+## 首步报表转换
+
+入口保留严格 JSON，同时支持 UTF-8（含 BOM）或 GB18030 CSV、仅一个可见工作表的无宏 XLSX。
+CSV 支持逗号、分号、制表符；编码与原始字节哈希显示在转换记录中。PDF、截图、旧 XLS、UTF-16 CSV 不支持。
+不是任意 Excel 导入器：公式、外部链接、日期及非 General 数值格式、合并单元格、多工作表、超限内容拒绝，不静默抽样。
+XLSX 使用有界标准库 ZIP/XML reader，无新增 Excel 依赖；文本支持 inline string、共享字符串及富文本 run。
+
+ADR-032 统一上传后，JSON 直接严格解析；CSV/XLSX 由已配置的 OpenAI/DeepSeek 固定模型识别安全表头，
+数值仍确定性读取。正常路径不要求手动映射、转换或采用 JSON。仅缺链 ID、代币地址、精度时局部补充整表条件；
+普通金额单位不明确时询问最小单位或代币单位。缺事件身份/地址/金额、竞争字段或声明单位不明时修正原表，不猜值。
+XLSX 金额及声明总额必须为文本；原声明即使错误也不改写，缺失摘要注明由明细计算，并在范围确认时说明来源。
+模型只收到受限安全表头，没有文件名或行值；沿用 M4 凭据名称和供应商端点，识别超时最多 30 秒，无 SDK 自动重试。
+缺配置、超时或无效输出保持阻塞，显式重试不消耗 attempt，不静默回退离线识别。缓存按文件/模型绑定；局部条件调整
+可以重用已绑定的识别角色，无需重新外发。成功后自动私有留档，再接既有 intake，仍须范围确认与主动核对。
+
+新自动入口原件、规范 JSON、来源记录保存在私有目录 `recognition-originals/`、`recognition-json/`、
+`recognition-provenance/`，含内容哈希、原文件名、模型模式/固定标识、实际角色、映射、用户补充和派生字段。
+旧 `conversion-*` 文件不删除；来源记录不包含密钥，也不是原作者签名。
+保留与正式提交没有跨文件事务；失败可能留下内容寻址的私有孤立文件，但不会自动签名、上传公开文件或覆盖历史交付。

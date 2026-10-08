@@ -49,24 +49,18 @@ def test_page_walks_fail_to_pass_without_overwriting_attempt_one() -> None:
     assert any(item.label == "开始核对" for item in page.button)
 
     button(page, "开始核对").click().run(timeout=20)
-    assert [metric.value for metric in page.metric] == ["120000", "110000", "10000", "2"]
+    assert [metric.value for metric in page.metric] == ["0.12", "0.11", "0.01"]
+    assert page.session_state["executions"][0].submission.claimed_total_base_units == "120000"
+    assert page.session_state["executions"][0].result.calculated_total_base_units == "110000"
 
     # AppTest cannot set file uploads; inject the corrected delivery adapter.
     page.session_state["uploaded_service"] = page.session_state["runtime"].services["服务 B · 完整交付"]
     page.run()
     button(page, "核对修正版（最后一次）").click().run(timeout=20)  # noqa: RUF001
-    assert [metric.value for metric in page.metric] == [
-        "120000",
-        "110000",
-        "10000",
-        "2",
-        "110000",
-        "110000",
-        "0",
-        "0",
-        "FAIL",
-        "PASS",
-    ]
+    assert [metric.value for metric in page.metric] == ["0.11", "0.11", "0"]
+    assert [item.result.outcome.value for item in page.session_state["executions"]] == ["FAIL", "PASS"]
+    assert page.session_state["executions"][0].submission.claimed_total_base_units == "120000"
+    assert page.session_state["executions"][1].submission.claimed_total_base_units == "110000"
     assert not page.exception
 
 
@@ -81,7 +75,7 @@ def test_page_renders_inconclusive_as_evidence_shortfall() -> None:
     button(page, "开始核对").click().run(timeout=20)
 
     assert any("不能形成服务负面结论" in warning.value for warning in page.warning)
-    assert [metric.value for metric in page.metric] == ["120000", "无法确定", "无法确定", "1"]
+    assert [metric.value for metric in page.metric] == ["0.12", "无法确定", "无法确定"]
 
 
 def test_live_mode_is_selectable_with_configured_rpc(monkeypatch) -> None:

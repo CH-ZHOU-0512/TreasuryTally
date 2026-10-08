@@ -6,10 +6,20 @@ services:
     image: trust-receipt:${TRUST_RECEIPT_IMAGE_TAG:-latest}
     container_name: trust-receipt
     restart: unless-stopped
+    mem_limit: 2g
+    memswap_limit: 2g
+    pids_limit: 256
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     env_file:
       - ../.env
     environment:
       APP_REQUIRE_LIVE: "true"
+      REPORT_RENDERER_NODE: /opt/trust-receipt-renderer/renderer-node
+      REPORT_RENDERER_MODULES: /opt/trust-receipt-renderer/node_modules
       BLOCKSCOUT_MCP_URL: http://trust-receipt-blockscout:8000
     volumes:
       - ../data:/app/data

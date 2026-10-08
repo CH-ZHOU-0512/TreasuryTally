@@ -11,6 +11,33 @@ last-reviewed: 2026-10-07
 
 # 测试与验收计划
 
+## Linux 报告运行接线门
+
+`scripts/deploy/check_report_runtime.py` 仅在无密钥、无网络、无生产数据挂载的镜像运行，输入 7 个合成 view：
+验证实际隔离 launcher → ECharts SSR → sharp PNG → DOCX/PDF 字节、view hash、内嵌字体及 source/wheel 全报告资产一致。
+同时实际断言 renderer socket 创建返回 EPERM、父应用仍可创建 socket、任意 Node 参数被拒绝、缺 renderer 不兜底。
+验证时设置 `--memory 2g --memory-swap 2g --pids-limit 256 --cpus 2 --cap-drop ALL --security-opt no-new-privileges`
+及 `--network none`；这证明受控本地渲染，不声称 RPC 连通、生产部署或新增逐页视觉审批。
+实际 `/app` 初始入口另由 `scripts/deploy/check_image.py` 检查源码/wheel、AppTest exception 和品牌区，不能替代下载状态矩阵。
+`scripts/deploy/check_report_downloads.py <synthetic.view.json> <synthetic.receipt.json>` 在同样隔离边界使用实际
+app 单实例 renderer，主动触发五种格式生成，断言原 JSON 加五格式共六个下载入口、正确格式和完整 view 缓存。
+它不使用预生成下载 bytes 或 mock exporter，不执行浏览器/HTTP 下载，也不声称完整真人可用性验收。
+
+## 业务报告与导出验证
+
+- 固定 ECharts worker 核验资源哈希、只接派生 JSON、拒绝未知键/image/code；测试缺依赖、超时、并发上限、回包 binding 错误与凭据环境不转发。
+- 用独立 Linux Python 3.12 / Node 22.23.3 / sharp 0.34.5 无网络运行 SSR→PNG→DOCX/PDF，与 bundled 作者验证分别记录。
+  Windows 成功不是部署就绪；全部页须另检查，缺 font/Node 不允许 Python 仿制回退。
+
+- 12 份冻结案例投影必须保持原 outcome、最小单位总额与事件引用；报告不得改变 Receipt 字节或 schema。
+- 覆盖 1 最小单位/18 精度、超大整数、零与有符号差额；未知精度、DECIMAL_ERROR、错误与混合资产不得伪装为可比正常金额。
+- 完整性篡改、不同任务/attempt/金额的图、错误版本关系必须拒绝；两次交付保留原 FAIL，缺关系只写未核实。
+- Finding 的私有备注、模型英文全文、凭据型 URL、签名和原件不得进入任何报告；HTML/SVG 转义、无外部请求；长度/规模超限拒绝。
+- DOCX/PDF 由同一 view 输出，校验正文中文、精确金额、同一 spec/receipt hash、两次 outcome、全部 200 事件引用、嵌入字体和可打开结构。
+- 使用 loader 选定的 bundled runtime authoring，并在首次创建产物前执行对应 artifact marker；Windows 缺 bundled LibreOffice 时禁止回退桌面安装版。
+- 文档必须渲染为逐页 PNG 并检查所有页：中文字体、分页、图例、长地址/哈希、微小金额、200 条记录、三态和双 attempt；文本或 magic bytes 检查不代替视觉门。
+- 隔离 QA 容器是独立验收工具链，不是生产依赖或 bundled LibreOffice；生成代码不能硬编码本机 Office、bundled runtime 或 QA 容器路径。
+
 ## 测试目标
 
 证明系统能在限定范围内完整、精确、可重复地核对报表，并能把供应商错误、基础设施故障和证据不足区分开。
@@ -167,5 +194,34 @@ M0 验收使用：
 ```
 
 ## 验收记录
+
+### CSV/XLSX 首步转换
+
+运行 `python -m pytest tests/test_report_conversion.py`。覆盖编码/分隔符、精确整数换算、超精度不舍入、Excel 数值金额拒绝、
+重复行及错误声明不修复、缺字段不猜测、列映射冲突与显式常量、共享字符串与富文本、公式（含错误命名空间）、
+宏/外部关系/多工作表、XML 实体与 UTF-16、日期/自定义数值格式、ZIP 展开/不支持的压缩方式与表格上限、确认前不留档、原件哈希绑定、
+幂等追加与损坏留档拒绝。专项不调用网络或模型、不使用真实密钥、不替代外部核验。
+UI 另测未采用候选不得形成正式上传、改文件/改映射使确认失效、JSON 旧路径和补交/恢复状态保持原约束。
+集成测试 `tests/m8/test_conversion_recovery.py` 检查转换采纳不创建任务、原声明和本地身份不改写，
+新工作流仅从持久化证据与签名恢复；原 CSV 私有备注/文件名及 provenance 不进入本地构造的授权公开包。
+此测试只验证序列化与授权拒绝，不调用 publisher，不表示公开文件已上传。
+
+### 执行记录位置
+
+ADR-032 识别专项 `tests/test_report_recognition.py`：模型输入仅安全表头、私有/注入标签过滤，严格 JSON 不调用模型，
+完整真实列绑定/索引/类型/额外字段检查、已有声明/source 不忽略、歧义/普通金额单位阻塞、显式整表条件、
+缓存文件与模型绑定、错误脱敏、不回退 fixture、自动私有留档与原件变化拒绝。mock 测试不计真实 API 识别。
+真实 OpenAI/DeepSeek 表头识别外部验收须单列，禁止自动发送真实敏感报表或私有样本。
+
+受限真实探针 `tests/external/test_report_recognition_probe.py` 仅构造合成 CSV：正常字段绑定、
+缺金额单位的局部问题两例。通过实际 factory/provider/recognize_report 路径，只发送业务表头与索引，
+不发送合成行值或文件名。读取既有被忽略配置（可用 `M14_PROBE_ENV_FILE` 指向既有文件），
+固定选择已有 DeepSeek，否则仅在 DeepSeek 未配置时选择已有 OpenAI；运行后不切换供应商重试。
+每例最多一次真实请求、超时上限 30 秒、自动 retry=0；补单位使用已绑定缓存，不增加请求。
+缺配置明确 skip、不回退 fixture；输出仅 mode/model_id、耗时、Schema/列角色与本地状态。
+该门不执行 RPC、私有留档、任务创建、公开上传或写链，不代表真实 XLSX 或完整业务验收；
+实际执行结果仅记录在 STATUS.md。
+旧采纳 UI 测试仅为 ADR-031 历史实现；ADR-032 页面需另测直接上传、必要局部问题、缓存失效、显式重试、
+非法输入不回退旧 service、范围确认和两 attempt 恢复，不继续要求采纳 JSON。
 
 测试执行结果写入 CI 日志或发布检查记录；当前进度摘要写入 [STATUS.md](STATUS.md)。不要在本文复制瞬时通过数量。
