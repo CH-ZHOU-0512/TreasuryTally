@@ -11,6 +11,18 @@ last-reviewed: 2026-10-08
 
 # 当前项目状态
 
+## 历史 RPC 拒绝分类（2026-10-08，待集成部署）
+
+- 新增受限 `HISTORICAL_DATA_UNAVAILABLE`：只识别 eth_getLogs 的结构化整数 4444 加明确历史状态不可用特征，
+  确定拒绝不重试；未知同码/其他方法不误分类，普通 timeout/连接重试不变。新诊断固定安全正文，不保留供应商异常链。
+- M5 与 M0 专项实际 49 passed / 1 既有 warning；文档治理 2 passed。Ruff、pip check、21 份 Schema、1000 行和 diff 门通过。
+  这些是离线测试，不代表真实模型速度、历史节点恢复或用户完整案例已通过。
+- 广州实际生产镜像/同生产网络下，原节点链 ID、最新区块、decimals 可读，但区块 11855664 的 getLogs 返回 4444；
+  区块哈希匹配上传报表，已知交易 receipt 和整区块 receipts 均为 null，不能作为完整参考证据。
+  两个官方客户端 README 候选仅隔离验证：rpc.sepolia.org 首个 chain ID 响应无法解析 JSON，
+  rpc-sepolia.rockx.com 首个 chain ID 连接失败；两者都未取得完整证据。没有切换生产端点或付费模型调用。
+  用户原文件与原提示词的完整流程尚未执行，当前仍需可用历史 RPC；不以空集合、receipt 子集或抽样宣布成功。
+
 ## 候选请求超时修复（2026-10-08）
 
 - 仅范围候选采用独立 20 秒异步操作预算、SDK retry=0 与输出 2048 tokens 上限；请求取消后关闭本次连接，

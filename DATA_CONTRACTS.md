@@ -248,6 +248,10 @@ status: confirmed | hypothesis
 
 ## VerificationResult
 
+RPC 来源诊断可使用固定 `HISTORICAL_DATA_UNAVAILABLE`：仅表示节点明确拒绝所请求历史日志，
+不是报表错误、空转账集合或超时。来源保持 `complete=false`、证据不足，金额/数量不由空集合补零，
+结果仍为 `INCONCLUSIVE`。该码是内部集成枚举和来源 details 字符串，不改变 Receipt 1.0 或公共 Schema。
+
 ```yaml
 run_id: string
 task_id: string
